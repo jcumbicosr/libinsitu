@@ -1,122 +1,164 @@
 #!/usr/bin/env python
 import datetime
+import glob
 import os.path
 import sys
-import glob
-from datetime import timedelta
+from datetime import datetime
 from os.path import basename
 
-from lib.cdl import parse_cdl, cdl2netcdf, updateAttributes
-from lib.log import debug, info, warning
+from cftime import date2num, num2date
 from netCDF4 import Dataset
-import numpy as np
-from csv import DictReader
-import pandas as pd
 
 from lib.brsn_reader import read_bsrn
+from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
+from lib.handlers.BSRN import read_chunck
+from lib.log import debug, info, warning, logger
 
+DATE_FORMAT = '%Y-%m-%d'
 CDL_PATH = "res/cdl/base.cdl"
 
-def read_chunck(filename) :
 
-    data, metadata = read_bsrn(filename)
 
-    mapping = dict(
-        ghi = GHI_VAR,
-        dni = DIR_VAR,
-        dhi = DIF_VAR,
-        temp_air = TEMP_VAR,
-        relative_humidity = HUMIDITY_VAR,
-        pressure = PRESSURE_VAR)
 
-    data = data[list(mapping.keys())]
-    return data.rename(columns = mapping)
 
-def get_cdl(properties) :
-    with open(CDL_PATH, "r") as f :
-        return parse_cdl(f, properties)
+def init_nc(netcdf, properties) :
 
-def init_nc(ncfile, properties) :
-    cdl = get_cdl(properties)
-    cdl2netcdf(ncfile,cdl)
+    with open(CDL_PATH, "r") as f:
+        cdl =  parse_cdl(f, properties)
 
-def update_nc(netcdf, properties) :
+    cdl2netcdf(netcdf, cdl)
 
-    cdl = get_cdl(properties)
-
-    updateAttributes(netcdf, cdl)
-
+    # Init scalar vars
     netcdf.variables[LONGITUDE_VAR][0] = properties["Longitude"]
     netcdf.variables[LATITUDE_VAR][0] = properties["Latitude"]
     netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
     netcdf.variables[STATION_NAME_VAR][:] = properties["ID"]
 
+def getTimeResolution(ncfile) :
+    """Returns time resolution, in seconds, as saved in meta data"""
+
+    val = ncfile.variables[TIME_VAR].resolution
+    val, unit = val.split()
+    val = int(val)
+    if "min" in unit :
+        return val * 60
+    elif "sec" in unit:
+        return val
+    else:
+        raise Exception("Unknown unit for time resolution : '%s'" % unit)
+
+def date2int(ncfile, dates) :
+    return date2num(dates, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+
+def int2date(ncfile, ints) :
+    return num2date(ints, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+
+def check_boundaries(var, data) :
+
+    for bound_name, sense in dict(Range_LowerBoundary=-1, Range_UpperBoundary=1).items() :
+
+        if bound_name in var.ncattrs():
+            bound = parse_value(var.__dict__[bound_name])
+            idx = data < bound if sense == -1 else data > bound
+            if idx.any() :
+                warning("%d items of %s are %s than boundary : %f",
+                        idx.sum(),
+                        var.name,
+                        "<" if sense == -1 else ">",
+                        bound)
 
 def main(network, station_id, out_filename, in_files) :
 
-    # Get properties for this station
-    properties = getStationInfo(network, station_id)
-    resolution = int(properties["TimeResolution"])
-    start_date = datetime.datetime.strptime(properties["StartDate"], '%Y-%m-%d')
-    start_date64 = np.datetime64(start_date)
-
-    # Open or create netCDF file
-    mode = 'a' if os.path.exists(out_filename) else 'w'
-    ncfile = Dataset(out_filename, mode=mode)
-
-    if not TIME_VAR in ncfile.variables :
-        info("%s was not there. Creating it", ncfile)
-        init_nc(ncfile, properties)
-
-    # Update attributes of file
-    update_nc(ncfile, properties)
-
     # Sort input files
     in_files = sort_files(in_files)
+
+    # Get properties for this station
+    properties = getStationInfo(network, station_id)
+    properties["CurrentTime"] = datetime.now().isoformat()
+
+    # Open or create netCDF file
+    if not os.path.exists(out_filename) :
+        info("File '%s' was not there. Initalizing it.", out_filename)
+        ncfile = Dataset(out_filename, mode="w")
+        init_nc(ncfile, properties)
+    else:
+        ncfile = Dataset(out_filename, mode="a")
 
     # Loop on input files
     for infile in in_files :
 
         info("Processing chunk : %s", infile)
 
-        data = read_chunck(infile)
+        # Safe execution : do not stop on error
+        try:
+            process_chunck(infile, ncfile)
+        except Exception as e :
+            logger.exception(e)
 
-        # Transform time to seconds since start date and time idx
-        time_seconds = pd.Series(data.index.values - start_date64).dt.total_seconds().values.astype(int)
-        time_idx = time_seconds // (60 * resolution)
 
-        # Warning if data not adjacent to previous one
-        ntime = len(ncfile.dimensions[TIME_DIM])
-        previous_end_time = start_date + timedelta(minutes=resolution) * ntime
-        chunck_start_time = start_date + timedelta(minutes=resolution) * min(time_idx)
 
-        debug("Startime: %s. Preivous end: %s", chunck_start_time, previous_end_time)
+def process_chunck(infile, ncfile):
 
-        if chunck_start_time > previous_end_time :
-            warning("New chunk not adjacent to previous data. Missing data between '%s' and '%s'. Will be replaced with NaN.",
-                    previous_end_time,
-                    chunck_start_time)
+    # Read chunk of data
+    data = read_chunck(infile)
 
-        elif chunck_start_time < previous_end_time :
-            warning(
-                "Data was already present between %s and %s. Overriding.",
-                previous_end_time,
-                chunck_start_time)
+    # Time resolution, in seconds
+    resolution_s = getTimeResolution(ncfile)
 
-        # Store time values
-        ncfile.variables[TIME_VAR][time_idx] = time_seconds
+    # Transform time to seconds since start date and time idx
+    chunk_dates = data.index.to_pydatetime()
+    debug(chunk_dates=chunk_dates)
+    times_int = date2int(ncfile, chunk_dates)
+    time_idx = times_int // resolution_s
 
-        # Store data values
-        for var in DATA_VARS :
-            ncfile.variables[var][time_idx] = data[[ var ]]
+    # Ensure all timestamps fall into resolution
+    exact = ((times_int % resolution_s) == 0).all()
+    if not exact:
+        wrong_times_int = times_int[times_int % resolution_s != 0]
+        wrong_times_str = ",".join(str(date) for date in int2date(ncfile, wrong_times_int))
+        raise Exception("Timestamps do not fit timeresolution of %d seconds : %s" % (resolution_s, wrong_times_str))
+
+    # Warning if data not adjacent to previous one
+    next_time_int = 0 if len(ncfile.variables[TIME_VAR]) == 0 else ncfile.variables[TIME_VAR][-1] + resolution_s
+    next_time = int2date(ncfile, next_time_int)
+    chunk_start = min(chunk_dates)
+    chunk_end = max(chunk_dates)
+    chunk_end_int = date2int(ncfile, chunk_end)
+
+    info("Chunck range %s to %s", chunk_start, chunk_end)
+
+    if chunk_start > next_time:
+        warning(
+            "New chunk not adjacent to previous data. Missing data between '%s' and '%s'. Values will be filled with NaN.",
+            next_time,
+            chunk_start)
+
+    elif chunk_start < next_time:
+        warning(
+            "Data was already present between %s and %s. Overriding data.",
+            chunk_start,
+            next_time)
+
+    # Fill time variable with proper values
+    new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
+    ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
+
+    # Store data values
+    for varname in DATA_VARS:
+        var = ncfile.variables[varname]
+        samples = data[[varname]].values
+
+        check_boundaries(var, samples)
+
+        var[time_idx] = samples
+
 
 def sort_files(files) :
     """ Sort filenames named like xxxMMYY*"""
     def yearmonth(path):
         file = basename(path)
         res =  file[5:7] + '' + file[3:5]
-        print(file, res)
         return res
 
     return sorted(files, key=yearmonth)

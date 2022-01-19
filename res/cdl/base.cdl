@@ -36,8 +36,8 @@ variables:
 		Time:long_name = "Time of the end of period" ; 
 		Time:standard_name = "time" ; 
 		Time:abbreviation = "Date/Time" ;
-		Time:units = "seconds since {StartTime}" ;
-		Time:time_origin = "{StartTime}" ;
+		Time:units = "seconds since {StartDate} 00:00:00" ;
+		Time:time_origin = "{StartDate} 00:00:00" ;
 		Time:resolution = "{TimeResolution} min"
 		Time:axis = "T" ; 
 		Time:calendar = "gregorian" ;
@@ -125,7 +125,7 @@ variables:
 		:cdm_data_type = "TimeSeries" ;
 		:Conventions = "CF-1.6" ;
 		:cdm_timeseries_variables = "station_name,latitude,longitude" ;        
-        :creation_date = "{}" ;
+        :creation_date = "{CurrentTime}" ;
 		:StationInfo_StationFullName = "{FullName}" ;
 		:StationInfo_Abbreviation = "{}" ;
 		:StationInfo_latitude = "{Latitude}" ;

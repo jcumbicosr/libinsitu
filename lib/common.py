@@ -1,7 +1,5 @@
 import logging
 from csv import DictReader
-from logging import *
-
 import numpy as np
 
 TIME_DIM = 'time'
@@ -52,10 +50,10 @@ def is_uniform(vector) :
 def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
     try :
-        return float(val)
+        return int(val)
     except:
         try:
-            return int(val)
+            return float(val)
         except:
             if val.startswith('"') :
                 val = val.strip('"')

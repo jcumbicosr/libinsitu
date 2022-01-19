@@ -101,28 +101,35 @@ def parse_cdl(lines, attributes) :
     return res
 
 
-def updateAttributes(ncfile, cdl) :
 
-    # Var attributes
+def cdl2netcdf(ncfile, cdl: CDL) :
+    """Init NetCDF file from a CDL"""
+
+    for dimname, dim in cdl.dimensions.items() :
+
+        # Already there, skipping
+        if dimname in ncfile.dimensions :
+            continue
+
+        info("Adding dimension '%s'", dimname)
+        ncfile.createDimension(dimname, dim)
+
     for varname, vardef in cdl.variables.items() :
-        var = ncfile[varname]
+
+        # Already there, skipping
+        if varname in ncfile.variables:
+            continue
+
+        info("Adding variable '%s'", varname)
+        var = ncfile.createVariable(varname, vardef.type, vardef.dimensions, zlib=True)
+
+        # Set attributes
         for key, val in vardef.attributes.items():
             var.setncattr(key, val)
 
     # Global attributes
     for key, val in cdl.global_attributes.items():
         ncfile.setncattr(key, val)
-
-def cdl2netcdf(ncfile, cdl: CDL) :
-    """Init NetCDF file from a CDL"""
-
-    for key, dim in cdl.dimensions.items() :
-        ncfile.createDimension(key, dim)
-
-    for varname, var in cdl.variables.items() :
-        ncfile.createVariable(varname, var.type, var.dimensions, zlib=True)
-
-    updateAttributes(ncfile, cdl)
 
 
 

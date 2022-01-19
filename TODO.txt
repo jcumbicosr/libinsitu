@@ -4,3 +4,4 @@
 
 Question YM :
 - Quels checks de validité / outil ?
+- Ne mettre que les variables présentes ?
