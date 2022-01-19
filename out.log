@@ -1,0 +1,8 @@
+[10:20:40] INFO     processing file : out.nc                                                                                                                                                         check_nc.py:15
+           CRITICAL Unhandled exception: Traceback (most recent call last):                                                                                                                               log.py:25
+                      File "/home/rjolivet/insitu-etl/./tools/check_nc.py", line 27, in <module>                                                                                                                   
+                        check_file(nc_file=file)                                                                                                                                                                   
+                      File "/home/rjolivet/insitu-etl/./tools/check_nc.py", line 19, in check_file                                                                                                                 
+                        time = ds.variables[TIME_VAR]                                                                                                                                                              
+                    KeyError: 'Time'                                                                                                                                                                               
+                                                                                                                                                                                                                   

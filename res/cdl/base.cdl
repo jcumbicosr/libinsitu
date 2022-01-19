@@ -1,0 +1,143 @@
+netcdf base {
+
+dimensions: 
+	time = UNLIMITED ;
+	ncshort = 3 ;
+
+variables:
+
+	char station_name(ncshort) ;
+		station_name:long_name = "station_name" ;
+		station_name:cf_role = "timeseries_id" ;
+
+    float latitude ;
+		latitude:long_name = "station latitude" ; 
+		latitude:standard_name = "latitude" ; 
+		latitude:units = "degrees_north" ; 
+		latitude:_CoordinateAxisType = "Lat" ;
+		latitude:axis = "Y" ;
+
+	float longitude ;
+		longitude:long_name = "station longitude" ; 
+		longitude:standard_name = "longitude" ; 
+		longitude:units = "degrees_east" ; 
+		longitude:_CoordinateAxisType = "Lon" ;
+		longitude:axis = "X" ;
+
+	float elevation ;
+		elevation:long_name = "Elevation above mean seal level" ; 
+		elevation:standard_name = "height_above_mean_sea_level" ; 
+		elevation:units = "m" ; 
+		elevation:axis = "Z" ; 
+		elevation:comment = "" ;
+		
+	int64 Time(time) ;
+		Time:parameter = "DATE/TIME" ;
+		Time:long_name = "Time of the end of period" ; 
+		Time:standard_name = "time" ; 
+		Time:abbreviation = "Date/Time" ;
+		Time:units = "seconds since {StartTime}" ;
+		Time:time_origin = "{StartTime}" ;
+		Time:resolution = "{TimeResolution} min"
+		Time:axis = "T" ; 
+		Time:calendar = "gregorian" ;
+
+    float GHI(time) ; 
+		GHI:parameter = "Short-wave downward (GLOBAL) radiation" ;
+		GHI:long_name = "Global Horizontal Irradiance" ; 
+		GHI:standard_name = "surface_downwelling_shortwave_flux_in_air" ; 
+		GHI:abbreviation = "SWD" ;
+		GHI:units = "W m-2" ; 
+		GHI:Range_LowerBoundary=-10.0 ;
+		GHI:Range_UpperBoundary=3000 ;
+		GHI:Description="BSRN: 2 global 2, mean" ; # XXX Check
+		
+	float DIF(time) ; 
+		DIF:parameter = "Diffuse radiation" ; 
+		DIF:long_name = "Diffuse radiation" ; 
+		DIF:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ; 
+		DIF:abbreviation = "DIF" ;
+		DIF:units = "W m-2" ; 
+		DIF:Range_LowerBoundary=-10.0 ;
+		DIF:Range_UpperBoundary=3000 ;
+		DIF:Description="BSRN: 4" ;
+	
+	float DIR(time) ; 
+		DIR:parameter = "Direct radiation" ; 
+		DIR:long_name = "Direct radiation" ; 
+		DIR:standard_name = "direct_downwelling_shortwave_flux_in_air" ; 
+		DIR:abbreviation = "DIR" ;
+		DIR:units = "W m-2" ; 
+		DIR:Range_LowerBoundary=-10.0 ;
+		DIR:Range_UpperBoundary=3000 ;
+		DIR:Description="BSRN: 3" ;
+		
+	float T2(time) ; 
+		T2:parameter = "Air temperature at 2 m height" ; 
+		T2:long_name = "Air temperature at 2 m height" ; 
+		T2:standard_name = "air_temperature" ; 
+		T2:abbreviation = "T2" ;
+		T2:units = "K" ; 
+		T2:Range_LowerBoundary=123.0 ;
+		T2:Range_UpperBoundary=372.9 ;
+		T2:Description="BSRN: 21 air temperature at 2 m height" ;
+		
+	float RH(time) ; 
+		RH:parameter = "Humidity, relative" ; 
+		RH:long_name = "relative humidity" ; 
+		RH:standard_name = "relative_humidity" ; 
+		RH:abbreviation = "RH" ;
+		RH:units = "1" ; 
+		RH:Range_LowerBoundary=0.0 ;
+		RH:Range_UpperBoundary=1.0 ;
+		RH:Description="BODC CHUMZZ01, BSRN: 22 relative humidity" ;
+		
+	float P(time) ; 
+		P:parameter = "Station pressure" ; 
+		P:long_name = "air pressure at station height" ; 
+		P:standard_name = "air_pressure" ; 
+		P:abbreviation = "PoPoPoPo" ;
+		P:units = "Pa" ; 
+		P:Range_LowerBoundary=0.0 ;
+		P:Range_UpperBoundary=110000.0 ;
+		P:Description="BSRN:pressure at station height" ;
+		
+        // Global attributes
+
+		:description = "BSRN station" ;
+		:project = "BSRN_to_nc" ;
+		:creator_name = "BSRN_to_nc Project" ;
+		:creator_type = "OIE" ;
+		:title = "L0 timeseries from of the Baseline Surface Radiation Network (BSRN)" ;
+		:history = "Created file : 06/05/2021" ;
+		:license = "http://bsrn.awi.de/data/conditions-of-data-release" ; 
+        :summary = "extraction in netCDF format of data acquired by a BSRN station" ;
+		:keywords = "meteorology, mio, OSU Pytheas, CNRS, station, time, HTMNET, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure, Earth Science > Oceans > Ocean Pressure > Water Pressure, Earth Science > Oceans > Ocean Temperature > Water Temerature" ;
+		:keywords_vocabulary = "GCMD Science Keywords" ;
+		:production = "OIE" ;
+		:contact = "Lionel MENARD" ;
+		:institution = "OIE / MINES ParisTech" ;
+		:source = "BSRN Network" ;
+        :record = "LR 0100 Basic measurements (global, direct,diffuse, downward long-wave, air temperature, relative humidity, pressure)" ;
+		:infoUrl = "https://bsrn.awi.de/" ;
+		:references = "bsrn.awi.de" ;
+		:featureType = "TimeSeries" ;
+		:cdm_data_type = "TimeSeries" ;
+		:Conventions = "CF-1.6" ;
+		:cdm_timeseries_variables = "station_name,latitude,longitude" ;        
+        :creation_date = "{}" ;
+		:StationInfo_StationFullName = "{FullName}" ;
+		:StationInfo_Abbreviation = "{}" ;
+		:StationInfo_latitude = "{Latitude}" ;
+		:StationInfo_longitude = "{Longitude}" ;
+		:StationInfo_elevation = "{Elevation}" ;
+        :StationInfo_Address =  "{Location}" ;
+		:StationInfo_FirstDatasetInArchive = "{StartDate}" ;
+		:StationInfo_UpwardFluxes_inLR_ = "{LR}" ;
+		:StationInfo_SurfaceType = "{SurfaceType}" ;
+		:StationInfo_TopographyType = "{TopographyType}" ;
+		:StationInfo_Rural_UrbanII = "{RuralUrban}" ;
+		:StationInfo_Comment = "{Comment}" ;
+}
+        
+        

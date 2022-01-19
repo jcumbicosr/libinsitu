@@ -1,3 +1,6 @@
 * Check time resolution in csv file
 * Check significant digits for each var
 * Order files
+
+Question YM :
+- Quels checks de validité / outil ?
