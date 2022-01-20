@@ -1,6 +1,8 @@
 import logging
 from csv import DictReader
 import numpy as np
+from cftime import num2date, date2num
+from pandas import DataFrame
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -45,6 +47,11 @@ def is_uniform(vector) :
     ref = np.arange(vector[0], vector[-1] + step, step)
     return np.array_equal(ref, vector)
 
+def date2int(ncfile, dates) :
+    return date2num(dates, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+
+def int2date(ncfile, ints) :
+    return num2date(ints, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
 
 
 def parse_value(val) :
@@ -61,5 +68,12 @@ def parse_value(val) :
 
 def nc2df(ncfile) :
     """Read netCDF file into Dataframe, indexed by time"""
-    time = ncfile.variables[TIME_VAR]
+    time = int2date(ncfile, ncfile.variables[TIME_VAR])
+    df = DataFrame(
+        dict((var, ncfile.variables[var][:]) for var in DATA_VARS if var in ncfile.variables),
+        index=time)
+
+    return df
+
+
 

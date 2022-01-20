@@ -5,15 +5,12 @@ import os.path
 import sys
 from datetime import datetime
 from os.path import basename
-
-from cftime import date2num, num2date
 from netCDF4 import Dataset
-
-from lib.brsn_reader import read_bsrn
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
-from lib.handlers.BSRN import read_chunck
+from lib.handlers import HANDLERS
 from lib.log import debug, info, warning, logger, LogContext
+import argparse
 
 DATE_FORMAT = '%Y-%m-%d'
 CDL_PATH = "res/cdl/base.cdl"
@@ -43,12 +40,6 @@ def getTimeResolution(ncfile) :
         return val
     else:
         raise Exception("Unknown unit for time resolution : '%s'" % unit)
-
-def date2int(ncfile, dates) :
-    return date2num(dates, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
-
-def int2date(ncfile, ints) :
-    return num2date(ints, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
 
 def check_boundaries(var, data) :
     for bound_name, sense in dict(Range_LowerBoundary=-1, Range_UpperBoundary=1).items() :
@@ -82,24 +73,29 @@ def main(network, station_id, out_filename, in_files) :
     # Loop on input files
     for infile in in_files :
 
-        info("Processing chunk : %s", infile)
-
         # Safe execution : do not stop on error
         try:
-            with LogContext(file=os.path.basename(infile)) :
-                process_chunck(infile, ncfile)
+            with LogContext(file=os.path.basename(infile)):
+                process_chunck(network, station_id, infile, ncfile)
         except Exception as e :
+
+            # Do not fail : just log and process the next file
             logger.exception(e)
 
 
 
-def process_chunck(infile, ncfile):
+def process_chunck(network, station_id, infile, ncfile):
+    info("processing chunk : %s", infile)
 
-    # Read chunk of data
-    data = read_chunck(infile)
+    # Get proper handler for this network
+    handler = HANDLERS[network]
+
+    # Read data
+    data = handler.read_chunk(infile)
 
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
+
 
     # Transform time to seconds since start date and time idx
     chunk_dates = data.index.to_pydatetime()
@@ -135,6 +131,14 @@ def process_chunck(infile, ncfile):
             chunk_start,
             next_time)
 
+    # Warning if resolution seems different
+    if len(times_int) >= 2:
+        actual_resolution = times_int[1] - times_int[0]
+        if actual_resolution != resolution_s:
+            warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)",
+                    actual_resolution,
+                    resolution_s)
+
     # Fill time variable with proper values
     new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
     ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
@@ -160,18 +164,18 @@ def sort_files(files) :
 
 if __name__ == '__main__':
 
-    # TODO Use arg instead
-    NETWORK = "BSRN"
-    STATION_ID = "BUD"
+    parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
+    parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
+    parser.add_argument('infiles', metavar='<file|dir>', nargs='+', help='Input files or folders')
+    parser.add_argument('--network', '-n', metavar='<NETWORK>', help='Network name', required=True)
+    parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
+    args = parser.parse_args()
 
-    out_filename = sys.argv[1]
-    dir = sys.argv[2]
+    network = args.network.upper()
+    station_id  = args.station_id.upper()
 
-    if os.path.isdir(dir) :
-        files = glob.glob(dir + "/*.gz")
-    else :
-        files = sys.argv[2:]
+    #if os.path.isdir(dir) :
+    #    files = glob.glob(dir + "/*.gz")
 
-
-    with LogContext(network=NETWORK, station_id=STATION_ID) :
-        main(NETWORK, STATION_ID, out_filename, files)
+    with LogContext(network=network, station_id=station_id) :
+        main(network, station_id, args.out, args.infiles)

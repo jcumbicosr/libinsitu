@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import jsonpickle
+from future.utils import raise_from
 from rich.logging import RichHandler
 import json
 import os
@@ -43,8 +44,8 @@ def wrap(log_f) :
 
 # Uncaught exception hook
 def log_except_hook(*exc_info):
-    text = "".join(traceback.format_exception(*exc_info))
-    logging.critical("Unhandled exception: %s", text)
+    trace = "".join(traceback.format_exception(*exc_info))
+    logger.critical("Unhandled exception. %s", trace)
 
 
 def obj2json(obj) :
@@ -63,6 +64,10 @@ class LogContext(object):
     def __exit__(self, et, ev, tb):
         for key in self.context.keys():
             delattr(log_context_data, key)
+
+        if ev != None :
+            raise_from(Exception("Context : %s" % str(self.context)), ev)
+            return True
 
 
 class RichHandlerContext(RichHandler) :
@@ -116,6 +121,7 @@ debug = wrap(logger.debug)
 info = logger.info
 warning = logger.warning
 error = logger.error
+critical = logger.critical
 
 sys.excepthook = log_except_hook
 
