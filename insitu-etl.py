@@ -13,14 +13,10 @@ from lib.brsn_reader import read_bsrn
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
 from lib.handlers.BSRN import read_chunck
-from lib.log import debug, info, warning, logger
+from lib.log import debug, info, warning, logger, LogContext
 
 DATE_FORMAT = '%Y-%m-%d'
 CDL_PATH = "res/cdl/base.cdl"
-
-
-
-
 
 def init_nc(netcdf, properties) :
 
@@ -55,9 +51,7 @@ def int2date(ncfile, ints) :
     return num2date(ints, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
 
 def check_boundaries(var, data) :
-
     for bound_name, sense in dict(Range_LowerBoundary=-1, Range_UpperBoundary=1).items() :
-
         if bound_name in var.ncattrs():
             bound = parse_value(var.__dict__[bound_name])
             idx = data < bound if sense == -1 else data > bound
@@ -92,7 +86,8 @@ def main(network, station_id, out_filename, in_files) :
 
         # Safe execution : do not stop on error
         try:
-            process_chunck(infile, ncfile)
+            with LogContext(file=os.path.basename(infile)) :
+                process_chunck(infile, ncfile)
         except Exception as e :
             logger.exception(e)
 
@@ -178,5 +173,5 @@ if __name__ == '__main__':
         files = sys.argv[2:]
 
 
-
-    main(NETWORK, STATION_ID, out_filename, files)
+    with LogContext(network=NETWORK, station_id=STATION_ID) :
+        main(NETWORK, STATION_ID, out_filename, files)

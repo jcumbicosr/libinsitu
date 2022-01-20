@@ -127,7 +127,7 @@ variables:
 		:cdm_timeseries_variables = "station_name,latitude,longitude" ;        
         :creation_date = "{CurrentTime}" ;
 		:StationInfo_StationFullName = "{FullName}" ;
-		:StationInfo_Abbreviation = "{}" ;
+		:StationInfo_Abbreviation = "{ID}" ;
 		:StationInfo_latitude = "{Latitude}" ;
 		:StationInfo_longitude = "{Longitude}" ;
 		:StationInfo_elevation = "{Elevation}" ;
