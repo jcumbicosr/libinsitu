@@ -9,13 +9,14 @@ from pathlib import Path
 from typing import List, Optional
 
 import jsonpickle
-from future.utils import raise_from
-from rich.logging import RichHandler
 import json
 import os
 import threading
 
 # Get log level from env var LOGLEVEL
+from rich.logging import RichHandler
+from six import raise_from
+
 LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
 
 # Global var holding context data
@@ -30,8 +31,7 @@ class ThreadingLocalContextFilter(logging.Filter):
         self.attributes = attributes
 
     def filter(self, record):
-        for a in self.attributes:
-            record.context = ":".join(getattr(log_context_data, a, '-') for a in self.attributes)
+        record.context = ":".join(getattr(log_context_data, a, '-') for a in self.attributes)
         return True
 
 # Wrapper for easy debug function
