@@ -174,8 +174,12 @@ if __name__ == '__main__':
     network = args.network.upper()
     station_id  = args.station_id.upper()
 
-    #if os.path.isdir(dir) :
-    #    files = glob.glob(dir + "/*.gz")
+    files = []
+    for file_or_dir in args.infiles :
+        if os.path.isdir(file_or_dir) :
+            files += list(glob.glob(file_or_dir + "/*.gz"))
+        else:
+            files.append(file_or_dir)
 
     with LogContext(network=network, station_id=station_id) :
-        main(network, station_id, args.out, args.infiles)
+        main(network, station_id, args.out, files)
