@@ -4,7 +4,7 @@ import glob
 import os.path
 import sys
 from datetime import datetime
-from os.path import basename
+from os.path import basename, dirname
 from netCDF4 import Dataset
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
@@ -14,6 +14,8 @@ import argparse
 
 DATE_FORMAT = '%Y-%m-%d'
 CDL_PATH = "res/cdl/base.cdl"
+DONE_SUFFIX = '.done'
+ERR_SUFFIX = '.err'
 
 def init_nc(netcdf, properties) :
 
@@ -53,7 +55,18 @@ def check_boundaries(var, data) :
                         "<" if sense == -1 else ">",
                         bound)
 
-def main(network, station_id, out_filename, in_files) :
+def older_than(file1, file2) :
+    """Return True if file1 is older than file2"""
+    return os.stat(file1).st_mtime < os.stat(file2).st_mtime
+
+def touch(filename):
+    if os.path.exists(filename):
+        os.utime(filename)
+    else:
+        with open(filename,'a') as f:
+            pass
+
+def main(network, station_id, out_filename, in_files, args) :
 
     # Sort input files
     in_files = sort_files(in_files)
@@ -73,14 +86,37 @@ def main(network, station_id, out_filename, in_files) :
     # Loop on input files
     for infile in in_files :
 
+        # Icremental mode : check status files
+        status_folder = args.status_folder or dirname(infile)
+        status_file = os.path.join(status_folder, basename(infile) + DONE_SUFFIX)
+
+        if args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
+            info("File %s is older than status file %s : Skipping", infile, status_file)
+            continue
+
         # Safe execution : do not stop on error
         try:
             with LogContext(file=os.path.basename(infile)):
                 process_chunck(network, station_id, infile, ncfile)
+
+            # Incremental mode : touch status file
+            if args.incremental:
+                touch(status_file)
+
         except Exception as e :
+
+            # Write .err file
+            if args.incremental:
+                touch(os.path.join(status_folder, basename(infile) + ERR_SUFFIX))
+
+            # Don't intercept Ctrl-C : cancel the whole process
+            if isinstance(e, KeyboardInterrupt) :
+                raise e
 
             # Do not fail : just log and process the next file
             logger.exception(e)
+
+
 
 
 
@@ -162,6 +198,13 @@ def sort_files(files) :
 
     return sorted(files, key=yearmonth)
 
+def dir_path(path):
+    if os.path.isdir(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"{path} is not a valid folder")
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
@@ -169,6 +212,8 @@ if __name__ == '__main__':
     parser.add_argument('infiles', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', metavar='<NETWORK>', help='Network name', required=True)
     parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
+    parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
+    parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path, help='Separate folder for .done/.err files')
     args = parser.parse_args()
 
     network = args.network.upper()
@@ -182,4 +227,4 @@ if __name__ == '__main__':
             files.append(file_or_dir)
 
     with LogContext(network=network, station_id=station_id) :
-        main(network, station_id, args.out, files)
+        main(network, station_id, args.out, files, args)
