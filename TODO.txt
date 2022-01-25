@@ -5,3 +5,22 @@
 Question YM :
 - Quels checks de validité / outil ?
 - Ne mettre que les variables présentes ?
+
+Changement de StartDate :
+* CAB : 2005-12-01 => 2005-02-01
+* CLH : 2000-06-01 => 2000-05-01
+* DAR : 2000-06-01 => 2002-03-01
+* ENA : missing => 2015-01-01
+
+Erreur de lecture:
+    car0405Version1.dat.gz
+
+Autres :
+    flo0799.dat.gz : idx = data < bound if sense == -1 else data >
+                    bound
+                    TypeError: '<' not supported between instances of
+                    'str' and 'int'
+
+
+    nya0811.dat.gz: "utf8 codec"
+

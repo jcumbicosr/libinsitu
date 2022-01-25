@@ -76,12 +76,24 @@ def main(network, station_id, out_filename, in_files, args) :
     properties["CurrentTime"] = datetime.now().isoformat()
 
     # Open or create netCDF file
+    new = False
     if not os.path.exists(out_filename) :
         info("File '%s' was not there. Initalizing it.", out_filename)
         ncfile = Dataset(out_filename, mode="w")
         init_nc(ncfile, properties)
+        new=True
     else:
         ncfile = Dataset(out_filename, mode="a")
+
+        # If start time changed, the whole file should be processed again
+        if len(ncfile.variables[TIME_VAR]) > 0 :
+            start_time = int2date(ncfile, ncfile.variables[TIME_VAR][0])
+            expected_time = datetime.strptime(properties["StartDate"], DATE_FORMAT)
+            if start_time != expected_time :
+                raise(Exception("Start time of output file (%s) is different from start time in station info (%s). Please delete output file and process it completely" % (
+                    start_time,
+                    expected_time)))
+
 
     # Loop on input files
     for infile in in_files :
@@ -89,8 +101,10 @@ def main(network, station_id, out_filename, in_files, args) :
         # Icremental mode : check status files
         status_folder = args.status_folder or dirname(infile)
         status_file = os.path.join(status_folder, basename(infile) + DONE_SUFFIX)
+        err_file = os.path.join(status_folder, basename(infile) + ERR_SUFFIX)
 
-        if args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
+        # Incremental mode : if output was already there, don't proess input files having a more recent .done file
+        if not new and args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
             info("File %s is older than status file %s : Skipping", infile, status_file)
             continue
 
@@ -103,20 +117,22 @@ def main(network, station_id, out_filename, in_files, args) :
             if args.incremental:
                 touch(status_file)
 
+                # err file was present : delete it
+                if os.path.exists(err_file) :
+                    os.remove(err_file)
+
+        # Don't intercept Ctrl-C : cancel the whole process
+        except KeyboardInterrupt as e :
+            raise e
+
         except Exception as e :
 
             # Write .err file
             if args.incremental:
                 touch(os.path.join(status_folder, basename(infile) + ERR_SUFFIX))
 
-            # Don't intercept Ctrl-C : cancel the whole process
-            if isinstance(e, KeyboardInterrupt) :
-                raise e
-
             # Do not fail : just log and process the next file
             logger.exception(e)
-
-
 
 
 
@@ -131,7 +147,6 @@ def process_chunck(network, station_id, infile, ncfile):
 
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
-
 
     # Transform time to seconds since start date and time idx
     chunk_dates = data.index.to_pydatetime()

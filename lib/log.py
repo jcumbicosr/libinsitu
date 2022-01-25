@@ -66,7 +66,8 @@ class LogContext(object):
             delattr(log_context_data, key)
 
         if ev != None :
-            raise_from(Exception("Context : %s" % str(self.context)), ev)
+            raise_from(Exception(
+                "Exception: %s. Context : %s" % (str(ev), str(self.context))), ev)
             return True
 
 

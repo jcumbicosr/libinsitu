@@ -1,4 +1,5 @@
 ID,FullName,Location,Latitude,Longitude,Elevation,StartDate,LR,SurfaceType,TopographyType,RuralUrban,Comment,TimeResolution
+ABS,Abashiri,Japan,44.0178,144.2797,38.0,2021-03-01,,,,,,1
 ALE,Alert,"Canada, Lincoln Sea",82.49,-62.42,127.0,2004-08-16,LR0300,tundra,hilly,rural,Closed,1
 ASP,Alice Springs,"Australia, Northern Territory",-23.798000000000002,133.888,547.0,1995-01-01,,grass,flat,rural,,1
 BAR,Barrow,"USA , Alaska",71.32300000000001,-156.607,8.0,1992-01-01,LR0300,tundra,flat,rural,,1
@@ -9,21 +10,21 @@ BOS,Boulder,"USA, Colorado",40.125,-105.23700000000001,1689.0,1995-07-01,LR3010,
 BOU,Boulder,"USA, Colorado",40.05,-105.007,1577.0,1992-01-01,LR3300,grass,flat,rural,Closed in July 2016,1
 BRB,Brasilia,"Brazil, Brasilia City",-15.600999999999999,-47.713,1023.0,2006-02-01,,"concrete, since 2015: shrub",flat,rural,,1
 BUD,Budapest-Lorinc,"Hungary, Budapest",47.4291,19.1822,139.1,2019-06-01,LR0300,grass,flat,rural,pest-Lorinc,1
-CAB,Cabauw,Netherlands,51.9711,4.9267,0.0,2005-12-01,LR0300,grass,flat,rural,,1
+CAB,Cabauw,Netherlands,51.9711,4.9267,0.0,2005-02-01,LR0300,grass,flat,rural,,1
 CAM,Camborne,United Kingdom,50.2167,-5.3167,88.0,2001-01-01,,grass,flat,rural,,1
 CAP,Cape Baranova,Russia,79.27,101.75,,2016-01-01,LR0300,tundra,flat,rural,,1
 CAR,Carpentras,France,44.083,5.059,100.0,1996-08-01,,cultivated,hilly,rural,Closed in Dec 2018,1
-CLH,Chesapeake Light,"USA, North Atlantic Ocean",36.905,-75.71300000000001,37.0,2000-06-01,LR0300,"water, ocean",flat,rural,"Closed in Dec 2016, structural issues",1
+CLH,Chesapeake Light,"USA, North Atlantic Ocean",36.905,-75.71300000000001,37.0,2000-05-01,LR0300,"water, ocean",flat,rural,"Closed in Dec 2016, structural issues",1
 CNR,Cener,"Spain, Navarra",42.816,-1.601,471.0,2009-07-01,,asphalt,mountain valley,urban,,1
 COC,Cocos Island,"Australia, Cocos (Keeling) Islands",-12.193,96.835,6.0,2004-09-14,,grass,flat,rural,,1
 DAA,De Aar,South Africa,-30.6667,23.993000000000002,1287.0,2000-05-01,,sand,flat,rural,,1
-DAR,Darwin,Australia,-12.425,130.891,30.0,2002-06-01,LR3010,grass,flat,rural,Closed Jan 2015,1
+DAR,Darwin,Australia,-12.425,130.891,30.0,2002-03-01,LR3010,grass,flat,rural,Closed Jan 2015,1
 DOM,"Concordia Station, Dome C",Antarctica,-75.1,123.383,3233.0,2006-01-01,LR0300,"glacier, accumulation area",flat,rural,,1
 DON,Dongsha Atoll,Taiwan,20.7,116.73,2.0,,,,,,Candidate,1
 DRA,Desert Rock,"USA, Nevada",36.626,-116.01799999999999,1007.0,1998-02-01,LR3010,"desert, gravel",flat,rural,,1
 DWN,Darwin Met Office,Australia,-12.424000000000001,130.8925,32.0,2008-04-01,,grass,flat,rural,,1
 E13,Southern Great Plains,"USA, Oklahoma",36.605,-97.485,318.0,1997-08-01,LR3010,grass,flat,rural,,1
-ENA,Eastern North Atlantic,"Portugal, Azores",39.0911,-28.0292,15.2,,,grass,hilly,rural,Candidate,1
+ENA,Eastern North Atlantic,"Portugal, Azores",39.0911,-28.0292,15.2,2015-01-01,,grass,hilly,rural,Candidate,1
 EUR,Eureka,"Canada, Ellesmere Island",79.98899999999999,-85.9404,85.0,2007-09-01,,tundra,hilly,rural,Closed,1
 FLO,Florianopolis,"Brazil, South Atlantic Ocean",-27.6047,-48.5227,11.0,1994-06-01,,concrete,mountain valley,urban,,1
 FPE,Fort Peck,"USA, Montana",48.3167,-105.1,634.0,1995-01-01,LR3010,grass,flat,rural,,1
