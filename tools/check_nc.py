@@ -7,7 +7,7 @@ import os, sys
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import is_uniform, nc2df, date2int
+from lib.common import is_uniform, nc2df, date2int, TIME_VAR, int2date
 from lib.log import *
 import numpy as np
 import pandas as pd
@@ -36,11 +36,34 @@ def check_file(nc_file) :
 
     nc.close()
 
+MIN_STEP=0
+MAX_STEP=1000
+
+def check_time(nc_file) :
+    nc = Dataset(nc_file, mode='r')
+    time_int = nc.variables[TIME_VAR]
+
+    from_date = int2date(nc, np.min(time_int))
+    to_date = int2date(nc, np.max(time_int))
+
+    steps = time_int[1:] - time_int[0:len(time_int)-1]
+    unique, counts = np.unique(steps, return_counts=True)
+
+    filtered_unique = unique[(unique > MIN_STEP) & (unique < MAX_STEP)]
+    filtered_counts = counts[(unique > MIN_STEP) & (unique < MAX_STEP)]
+
+    indices = np.argsort(-filtered_counts)[:3]
+    dic = dict((filtered_unique[idx], filtered_counts[idx]) for idx in indices)
+
+    print("%s: min=%s max=%s periods=%s" % (nc.StationInfo_Abbreviation, from_date, to_date, dic))
+
+
 
 if __name__ == '__main__':
-    # for file in sys.argv[1:] :
-    #    check_file(nc_file=file)
+    for file in sys.argv[1:] :
+        check_time(nc_file=file)
 
+    sys.exit()
     f1, f2 = sys.argv[1:]
     df1 = file2df(f1)
     df2 = file2df(f2)
