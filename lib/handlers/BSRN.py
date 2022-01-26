@@ -9,11 +9,12 @@ class BSRNHandler(InSituHandler) :
 
         data, metadata = parse_bsrn(stream)
 
-
-
         # Convertions
         data.T2 = data.T2 + 273.15 # T2: °C -> K
         data.RH = data.RH / 100  # percent -> 1
         data.P = data.P * 100 # Pressure hPa->Pa
 
         return data
+
+    def pattern(self):
+        return "*.gz"

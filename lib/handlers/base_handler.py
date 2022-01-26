@@ -31,7 +31,10 @@ class InSituHandler :
             with open(filename, "rt", encoding=encoding) as f :
                 return self._read_chunk(f)
 
-
+    @abstractmethod
+    def pattern(self):
+        """Should return a file pattern like : *.txt """
+        pass
 
     @abstractmethod
     def _read_chunk(self, stream) -> DataFrame:

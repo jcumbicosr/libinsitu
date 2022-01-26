@@ -8,7 +8,7 @@ from lib.handlers.base_handler import InSituHandler
 from lib.log import info
 
 
-def read_mesor(stream):
+def read_mesor(stream, na_values=[-999.0, -99.9, -10.0]):
 
     metadata = {}  # Initilize dictionary containing metadata
     channels = OrderedDict()
@@ -46,7 +46,7 @@ def read_mesor(stream):
         comment='#',
         parse_dates=[0],
         index_col=0,
-        na_values=[-999.0, -99.9])
+        na_values=na_values)
 
     data.columns = list(channels.keys())[2:]
 
@@ -86,3 +86,6 @@ class EnerMENAHandler(InSituHandler) :
         data.P = data.P * 100  # Pressure hPa->Pa
 
         return data
+
+    def pattern(self):
+        return "*.txt"

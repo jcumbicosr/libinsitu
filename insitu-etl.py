@@ -75,6 +75,8 @@ def main(network, station_id, out_filename, in_files, args) :
     properties = getStationInfo(network, station_id)
     properties["CurrentTime"] = datetime.now().isoformat()
 
+    handler = HANDLERS[network]
+
     # Open or create netCDF file
     new = False
     if not os.path.exists(out_filename) :
@@ -112,7 +114,7 @@ def main(network, station_id, out_filename, in_files, args) :
 
             # Safe execution : do not stop on error
             try:
-                process_chunck(network, station_id, infile, ncfile)
+                process_chunck(handler, infile, ncfile)
 
                 # Incremental mode : touch status file
                 if args.incremental:
@@ -137,11 +139,10 @@ def main(network, station_id, out_filename, in_files, args) :
 
 
 
-def process_chunck(network, station_id, infile, ncfile):
+def process_chunck(handler, infile, ncfile):
     info("processing chunk : %s", infile)
 
-    # Get proper handler for this network
-    handler = HANDLERS[network]
+
 
     # Read data
     data = handler.read_chunk(infile)
@@ -235,10 +236,12 @@ if __name__ == '__main__':
     network = args.network
     station_id  = args.station_id.upper()
 
+    handler = HANDLERS[network]
+
     files = []
     for file_or_dir in args.infiles :
         if os.path.isdir(file_or_dir) :
-            files += list(glob.glob(file_or_dir + "/*.gz"))
+            files += list(glob.glob(file_or_dir + "/" + handler.pattern()))
         else:
             files.append(file_or_dir)
 
