@@ -22,7 +22,7 @@ DAR,Darwin,Australia,-12.425,130.891,30.0,2002-03-01,LR3010,grass,flat,rural,Clo
 DOM,"Concordia Station, Dome C",Antarctica,-75.1,123.383,3233.0,2006-01-01,LR0300,"glacier, accumulation area",flat,rural,,1
 DON,Dongsha Atoll,Taiwan,20.7,116.73,2.0,,,,,,Candidate,1
 DRA,Desert Rock,"USA, Nevada",36.626,-116.01799999999999,1007.0,1998-02-01,LR3010,"desert, gravel",flat,rural,,1
-DWN,Darwin Met Office,Australia,-12.424000000000001,130.8925,32.0,2008-04-01,,grass,flat,rural,,1
+DWN,Darwin Met Office,Australia,-12.424000000000001,130.8925,32.0,2008-01-01,,grass,flat,rural,,1
 E13,Southern Great Plains,"USA, Oklahoma",36.605,-97.485,318.0,1997-08-01,LR3010,grass,flat,rural,,1
 ENA,Eastern North Atlantic,"Portugal, Azores",39.0911,-28.0292,15.2,2015-01-01,,grass,hilly,rural,Candidate,1
 EUR,Eureka,"Canada, Ellesmere Island",79.98899999999999,-85.9404,85.0,2007-09-01,,tundra,hilly,rural,Closed,1
@@ -31,7 +31,7 @@ FPE,Fort Peck,"USA, Montana",48.3167,-105.1,634.0,1995-01-01,LR3010,grass,flat,r
 FUA,Fukuoka,Japan,33.5822,130.3764,3.0,2010-04-01,,asphalt,flat,urban,,1
 GAN,Gandhinagar,India,23.1101,72.6276,65.0,2014-05-19,,shrub,flat,urban,,1
 GCR,Goodwin Creek,"USA, Mississippi",34.2547,-89.8729,98.0,1995-01-01,LR3010,grass,hilly,rural,,1
-GIM,Granite Island,"USA, Michigan",46.721000000000004,87.411,208.0,2019-01-01,,grass,flat,urban,,1
+GIM,Granite Island,"USA, Michigan",46.721000000000004,87.411,208.0,2018-10-01,,grass,flat,urban,,1
 GOB,Gobabeb,"Namibia, Namib Desert",-23.5614,15.042,407.0,2012-05-15,LR0300,desert gravel,flat,rural,,1
 GUR,Gurgaon,India,28.4249,77.156,259.0,2014-04-21,,shrub,flat,urban,,1
 GVN,Georg von Neumayer,"Antarctica, Dronning Maud Land",-70.65,-8.25,42.0,1992-01-01,LR0300,iceshelf,flat,rural,,1
@@ -45,7 +45,7 @@ LER,Lerwick,"United Kingdom, Shetland Island",60.1389,-1.1847,80.0,2001-01-01,,g
 LIN,Lindenberg,Germany,52.21,14.122,125.0,1994-09-01,,cultivated,hilly,rural,,1
 LLN,Lulin,Taiwan,23.4686,120.8736,2862.0,2009-01-20,,Mixed forest,mountain top,rural,,1
 LRC,Langley Research Center,"USA, Virginia",37.1038,-76.3872,3.0,2014-12-01,,grass,flat,urban,,1
-LYU,Lanyu Station,Taiwan,22.037,121.5583,324.0,2018-07-01,,"forest, mixed",mountain top,rural,,1
+LYU,Lanyu Station,Taiwan,22.037,121.5583,324.0,2018-03-01,,"forest, mixed",mountain top,rural,,1
 MAN,Momote,Papua New Guinea,-2.0580000000000003,147.425,6.0,1996-09-01,,grass,flat,rural,Closed late 2013,1
 MNM,Minamitorishima,"Japan, Minami-Torishima",24.2883,153.9833,7.1,2010-04-01,,water (ocean),flat,rural,,1
 NAU,Nauru Island,Nauru,-0.521,166.9167,7.0,1998-11-01,,rock,flat,rural,Closed late 2013,1

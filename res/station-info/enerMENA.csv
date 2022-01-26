@@ -1,0 +1,11 @@
+ID,FullName,Location,Partner,StationType,Elevation,Latitude,Longitude,StartDate,TimeResolution
+TN,Tataouine,Tunisia,CRTEn,TS,210,32.974,10.485,2010-12-12,1
+JOR,Ma'an,Jordan,University of Jordan,TS,1012,30.172,35.818,2011-02-11,1
+OUJ,Oujda,Morocco,University of oujda,TS,617,34.650,-1.900,2011-08-18,1
+CAI,Cairo,Egypt,Cairo University,TS,104,30.036,31.009,2012-06-06,1
+ADR,Adrar,Algeria,CDER,TS,262,27.880,-0.274,2012-09-27,1
+GHA,Ghardaia,Algeria,CDER,TS,463,32.386,3.780,2012-09-30,1
+MIS,Missour,Morocco,IRESEN,TS,1107,32.860,-4.107,2013-05-27,1
+ERF,Erfoud,Morocco,IRESEN,RSI,859,31.491,-4.218,2013-05-30,1
+ZAG,Zagora,Morocco,IRESEN,RSI,783,30.272,-5.852,2013-05-31,1
+TAN,Tan-Tan,Morocco,IRESEN,TS,75,28.498,-11.322,2013-06-05,1

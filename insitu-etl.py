@@ -108,31 +108,32 @@ def main(network, station_id, out_filename, in_files, args) :
             info("File %s is older than status file %s : Skipping", infile, status_file)
             continue
 
-        # Safe execution : do not stop on error
-        try:
-            with LogContext(file=os.path.basename(infile)):
+        with LogContext(file=os.path.basename(infile)):
+
+            # Safe execution : do not stop on error
+            try:
                 process_chunck(network, station_id, infile, ncfile)
 
-            # Incremental mode : touch status file
-            if args.incremental:
-                touch(status_file)
+                # Incremental mode : touch status file
+                if args.incremental:
+                    touch(status_file)
 
-                # err file was present : delete it
-                if os.path.exists(err_file) :
-                    os.remove(err_file)
+                    # err file was present : delete it
+                    if os.path.exists(err_file) :
+                        os.remove(err_file)
 
-        # Don't intercept Ctrl-C : cancel the whole process
-        except KeyboardInterrupt as e :
-            raise e
+            # Don't intercept Ctrl-C : cancel the whole process
+            except KeyboardInterrupt as e :
+                raise e
 
-        except Exception as e :
+            except Exception as e :
 
-            # Write .err file
-            if args.incremental:
-                touch(os.path.join(status_folder, basename(infile) + ERR_SUFFIX))
+                # Write .err file
+                if args.incremental:
+                    touch(os.path.join(status_folder, basename(infile) + ERR_SUFFIX))
 
-            # Do not fail : just log and process the next file
-            logger.exception(e)
+                # Do not fail : just log and process the next file
+                logger.exception(e)
 
 
 
@@ -231,7 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path, help='Separate folder for .done/.err files')
     args = parser.parse_args()
 
-    network = args.network.upper()
+    network = args.network
     station_id  = args.station_id.upper()
 
     files = []

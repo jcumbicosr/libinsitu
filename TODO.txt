@@ -1,7 +1,3 @@
-* Check time resolution in csv file
-* Check significant digits for each var
-* Order files
-
 Question YM :
 - Quels checks de validité / outil ?
 - Ne mettre que les variables présentes ?
@@ -10,10 +6,17 @@ Changement de StartDate :
 * CAB : 2005-12-01 => 2005-02-01
 * CLH : 2000-06-01 => 2000-05-01
 * DAR : 2000-06-01 => 2002-03-01
+* DWN : 2008-04-01 => 2008-01-01
 * ENA : missing => 2015-01-01
+* GIM : 2019-01-01 => 2018-10-01
+* LYU : 2018-07-01 => 2018-03-01
+
+enerMENA:
+TAN
+
 
 Erreur de lecture:
-    car0405Version1.dat.gz
+    car0405Version*.dat.gz
 
 Autres :
     flo0799.dat.gz : idx = data < bound if sense == -1 else data >

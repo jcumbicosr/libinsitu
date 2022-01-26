@@ -27,6 +27,7 @@ def test_parse_value() :
     assert parse_value("12") == 12
     assert parse_value("12A") == "12A"
     assert parse_value('"12A"') == "12A"
+    assert parse_value('') is None
 
 if __name__ == '__main__':
     pytest.main(sys.argv)
