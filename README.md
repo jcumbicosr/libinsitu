@@ -58,4 +58,3 @@ Each new NetCDF file is created using the CDL template [res/cdl/base.cdl](res/cd
 It contains placeholders that are replaced by the values found in the corresponding station info file in `res/station-info/{network}.csv`
 
 
-
