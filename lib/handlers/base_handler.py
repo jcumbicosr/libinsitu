@@ -15,7 +15,7 @@ class InSituHandler :
     def read_chunk(self, filename:str, encoding='latin1'):
         """ Handle opening of gz / zip files """
 
-        if filename.endswith("gz") :
+        if filename.endswith(".gz") :
             with open(filename, "rb") as f:
                 stream =  TextIOWrapper(GzipFile(fileobj=f), encoding=encoding)
                 return self._read_chunk(stream)

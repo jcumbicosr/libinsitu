@@ -27,3 +27,7 @@ Autres :
 
     nya0811.dat.gz: "utf8 codec"
 
+Meeting :
+  - Skip bad timing (step)
+  - CSV des reseaux : variables dispos
+  - User insitu:insitu
