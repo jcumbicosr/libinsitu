@@ -2,11 +2,8 @@
 import logging
 import traceback
 import sys
-from datetime import datetime
-from inspect import Traceback
-from logging import LogRecord
-from pathlib import Path
-from typing import List, Optional
+
+from typing import List
 
 import jsonpickle
 import json
@@ -14,6 +11,7 @@ import os
 import threading
 
 # Get log level from env var LOGLEVEL
+from rich.console import Console
 from rich.logging import RichHandler
 from six import raise_from
 
@@ -71,47 +69,21 @@ class LogContext(object):
             return True
 
 
-class RichHandlerContext(RichHandler) :
-    """Rich Handler using 'context' atttribute of record as file path """
-    def render(
-        self,
-        *,
-        record: LogRecord,
-        traceback: Optional[Traceback],
-        message_renderable: "ConsoleRenderable",
-    ) -> "ConsoleRenderable":
-        """Render log for display.
-
-        Args:
-            record (LogRecord): logging Record.
-            traceback (Optional[Traceback]): Traceback instance or None for no Traceback.
-            message_renderable (ConsoleRenderable): Renderable (typically Text) containing log message contents.
-
-        Returns:
-            ConsoleRenderable: Renderable to display log.
-        """
-        level = self.get_level_text(record)
-        time_format = None if self.formatter is None else self.formatter.datefmt
-        log_time = datetime.fromtimestamp(record.created)
-
-        log_renderable = self._log_render(
-            self.console,
-            [message_renderable] if not traceback else [message_renderable, traceback],
-            log_time=log_time,
-            time_format=time_format,
-            level=level,
-            path=record.context,
-            line_no=None,
-            link_path=record.pathname if self.enable_link_path else None,
-        )
-        return log_renderable
 
 # Setup logger
-rich_handler = RichHandlerContext(omit_repeated_times=False)
+if not sys.stdout.isatty():
+    console = Console(
+        file=sys.stderr,
+        force_terminal=False,
+        width=140)
+else :
+    console = None
+
+rich_handler = RichHandler(omit_repeated_times=False, console=console)
 rich_handler.addFilter(ThreadingLocalContextFilter(["network", "station_id", "file"]))
 logging.basicConfig(
     level=LOGLEVEL,
-    format="{message}",
+    format="{context}\t{message}",
     style="{",
     datefmt="[%X]",
     handlers=[rich_handler])

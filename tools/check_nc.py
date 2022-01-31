@@ -74,4 +74,3 @@ if __name__ == '__main__':
     diff = df1.compare(df2)
 
     print(diff)
-

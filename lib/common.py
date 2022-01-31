@@ -2,6 +2,7 @@ import logging
 from csv import DictReader
 import numpy as np
 from cftime import num2date, date2num
+from numpy import timedelta64
 from pandas import DataFrame
 
 TIME_DIM = 'time'
@@ -21,20 +22,25 @@ STATION_NAME_VAR= "station_name"
 DATA_VARS = [GHI_VAR, DIF_VAR, DIR_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 
 STATION_INFO_PATTERN = "res/station-info/%s.csv"
-TIME_ORIGIN = "2000-01-01 00:00:00"
 
+DATE_FORMAT = '%Y-%m-%d'
+
+def getStationsInfo(network) :
+    """REad station info from CSV"""
+    csv_file = STATION_INFO_PATTERN % network
+    res = dict()
+    with open(csv_file) as f:
+        rows = DictReader(f)
+        for row in rows:
+            res[row["ID"]] = row
+    return res
 
 
 def getStationInfo(network, station_id) :
-
-    """REad station info from CSV"""
-    csv_file = STATION_INFO_PATTERN % network
-    with open(csv_file) as f :
-        rows = DictReader(f)
-        for row in rows :
-            if row["ID"] == station_id :
-                return dict((key, parse_value(val)) for key, val in row.items())
-    raise Exception("Station not found in %s" % csv_file)
+    stations = getStationsInfo(network)
+    if not station_id in stations :
+        raise Exception("Station %s not found in Station Info of %s" % (station_id, network))
+    return stations[station_id]
 
 def is_uniform(vector) :
 
@@ -70,10 +76,13 @@ def parse_value(val) :
 
 def nc2df(ncfile) :
     """Read netCDF file into Dataframe, indexed by time"""
-    time = int2date(ncfile, ncfile.variables[TIME_VAR])
+    time0 = int2date(ncfile, 0)
+    time0_64 = np.datetime64(time0)
+    second = timedelta64(1, 's')
+    times = time0_64 + second * ncfile.variables[TIME_VAR]
     df = DataFrame(
         dict((var, ncfile.variables[var][:]) for var in DATA_VARS if var in ncfile.variables),
-        index=time)
+        index=times)
 
     return df
 

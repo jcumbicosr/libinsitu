@@ -12,7 +12,7 @@ from lib.handlers import HANDLERS
 from lib.log import debug, info, warning, logger, LogContext
 import argparse
 
-DATE_FORMAT = '%Y-%m-%d'
+
 CDL_PATH = "res/cdl/base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
@@ -114,7 +114,7 @@ def main(network, station_id, out_filename, in_files, args) :
 
             # Safe execution : do not stop on error
             try:
-                process_chunck(handler, infile, ncfile)
+                process_chunck(handler, infile, ncfile, args.strict_resolution)
 
                 # Incremental mode : touch status file
                 if args.incremental:
@@ -139,10 +139,9 @@ def main(network, station_id, out_filename, in_files, args) :
 
 
 
-def process_chunck(handler, infile, ncfile):
+def process_chunck(handler, infile, ncfile, strictResolution):
+
     info("processing chunk : %s", infile)
-
-
 
     # Read data
     data = handler.read_chunk(infile)
@@ -185,12 +184,15 @@ def process_chunck(handler, infile, ncfile):
             next_time)
 
     # Warning if resolution seems different
+    # Error if scrictREsolution is set
     if len(times_int) >= 2:
         actual_resolution = times_int[1] - times_int[0]
         if actual_resolution != resolution_s:
-            warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)",
-                    actual_resolution,
-                    resolution_s)
+            message = "Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s)
+            if strictResolution :
+                raise Exception(message)
+            else:
+                warning(message)
 
     # Fill time variable with proper values
     new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
@@ -230,6 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--network', '-n', metavar='<NETWORK>', help='Network name', required=True)
     parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
+    parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")
     parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path, help='Separate folder for .done/.err files')
     args = parser.parse_args()
 
@@ -238,12 +241,17 @@ if __name__ == '__main__':
 
     handler = HANDLERS[network]
 
-    files = []
-    for file_or_dir in args.infiles :
-        if os.path.isdir(file_or_dir) :
-            files += list(glob.glob(file_or_dir + "/" + handler.pattern()))
-        else:
-            files.append(file_or_dir)
+    with LogContext(network=network, station_id=station_id):
 
-    with LogContext(network=network, station_id=station_id) :
+        files = []
+        for file_or_dir in args.infiles :
+            if os.path.isdir(file_or_dir) :
+                files += list(glob.glob(file_or_dir + "/" + handler.pattern()))
+            else:
+                files.append(file_or_dir)
+
+        if len(files) == 0:
+            warning("No input file found")
+            sys.exit(0)
+
         main(network, station_id, args.out, files, args)
