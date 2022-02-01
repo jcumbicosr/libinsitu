@@ -84,6 +84,10 @@ def nc2df(ncfile) :
         dict((var, ncfile.variables[var][:]) for var in DATA_VARS if var in ncfile.variables),
         index=times)
 
+    # Set global attributes in DataFrame
+    attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
+    df.attrs.update(attrs)
+
     return df
 
 

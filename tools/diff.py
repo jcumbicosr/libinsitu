@@ -17,11 +17,6 @@ NAN_VALUES = [-999.0, -9.99, -99.9, -0.999, 173.25]
 def file2df(filename) :
     nc = Dataset(filename, mode='r')
     df = nc2df(nc)
-
-    # Set global attributes in DataFrame
-    attrs = dict((key, getattr(nc, key)) for key in nc.ncattrs())
-    df.attrs.update(attrs)
-
     nc.close()
     return df
 
