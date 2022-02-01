@@ -16,6 +16,7 @@ import argparse
 CDL_PATH = "res/cdl/base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
+EPSILON = 0.001
 
 def init_nc(netcdf, properties) :
 
@@ -48,12 +49,14 @@ def check_boundaries(var, data) :
         if bound_name in var.ncattrs():
             bound = parse_value(var.__dict__[bound_name])
             idx = data < bound if sense == -1 else data > bound
-            if idx.any() :
-                warning("%d items of %s are %s than boundary : %f",
-                        idx.sum(),
-                        var.name,
-                        "<" if sense == -1 else ">",
-                        bound)
+            if np.any(idx) :
+                warning("Boundary check : %d items of %s are %s %f: [%f:%f]",
+                    np.sum(idx),
+                    var.name,
+                    "<" if sense == -1 else ">",
+                    bound,
+                    np.min(data[idx]),
+                    np.max(data[idx]))
 
 def older_than(file1, file2) :
     """Return True if file1 is older than file2"""
@@ -137,7 +140,26 @@ def main(network, station_id, out_filename, in_files, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
+def check_and_assign(varname, out, indices, new_values) :
 
+    n = len(out)
+    overlapping_mask = indices < n
+    overlapping_idx = indices[overlapping_mask]
+    overlapping_values = new_values[overlapping_mask].flatten()
+    overlapped_values = out[overlapping_idx].flatten()
+
+    conflicting = ~np.isnan(overlapped_values) & (np.abs(overlapping_values - overlapped_values) > EPSILON)
+
+    nb_conflicting = np.sum(conflicting)
+    if nb_conflicting > 0 :
+        min_overlapped = np.min(overlapped_values)
+        warning("%d conflicting values for %s. Overriding [%f:%f] -> [%f:%f]",
+                nb_conflicting,
+                varname,
+                np.min(overlapped_values), np.max(overlapped_values),
+                np.min(overlapping_values), np.max(overlapping_values))
+
+    out[indices] = new_values
 
 def process_chunck(handler, infile, ncfile, strictResolution):
 
@@ -164,24 +186,12 @@ def process_chunck(handler, infile, ncfile, strictResolution):
 
     # Warning if data not adjacent to previous one
     next_time_int = 0 if len(ncfile.variables[TIME_VAR]) == 0 else ncfile.variables[TIME_VAR][-1] + resolution_s
-    next_time = int2date(ncfile, next_time_int)
     chunk_start = min(chunk_dates)
     chunk_end = max(chunk_dates)
     chunk_end_int = date2int(ncfile, chunk_end)
 
-    info("Chunck range %s to %s", chunk_start, chunk_end)
+    info("chunck range: %s to %s. samples:%d", chunk_start, chunk_end, len(data.index))
 
-    if chunk_start > next_time:
-        warning(
-            "New chunk not adjacent to previous data. Missing data between '%s' and '%s'. Values will be filled with NaN.",
-            next_time,
-            chunk_start)
-
-    elif chunk_start < next_time:
-        warning(
-            "Data was already present between %s and %s. Overriding data.",
-            chunk_start,
-            next_time)
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
@@ -204,8 +214,7 @@ def process_chunck(handler, infile, ncfile, strictResolution):
         samples = data[[varname]].values
 
         check_boundaries(var, samples)
-
-        var[time_idx] = samples
+        check_and_assign(varname, var, time_idx, samples)
 
 
 def sort_files(files) :
