@@ -12,7 +12,7 @@ from lib.common import is_uniform, nc2df, date2int, TIME_VAR, int2date
 from lib.log import *
 import numpy as np
 
-NAN_VALUES = [-999.0, -9.99, -99.9, -0.999, 173.25]
+NAN_VALUES = [-999.0, -9.99, -99.9, -0.99, -99900.0, 173.25]
 
 def file2df(filename) :
     nc = Dataset(filename, mode='r')
