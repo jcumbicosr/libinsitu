@@ -7,7 +7,7 @@ import os, sys
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import is_uniform, nc2df, date2int, TIME_VAR, int2date
+from lib.common import nc2df
 from lib.log import *
 import numpy as np
 
@@ -34,8 +34,6 @@ def check_time(filename) :
         from_date = min(df.index)
         to_date = max(df.index)
         nb_samples = len(df.index)
-
-
 
         time_s = df.index.values.astype(np.int64) / 1000000000
         steps = time_s[1:] - time_s[0:len(time_s)-1]

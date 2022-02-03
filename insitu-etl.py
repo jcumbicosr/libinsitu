@@ -69,6 +69,9 @@ def touch(filename):
         with open(filename,'a') as f:
             pass
 
+
+
+
 def main(network, station_id, out_filename, in_files, args) :
 
     # Sort input files
@@ -89,10 +92,9 @@ def main(network, station_id, out_filename, in_files, args) :
         new=True
     else:
         ncfile = Dataset(out_filename, mode="a")
-
+        start_time = get_start_time(ncfile)
         # If start time changed, the whole file should be processed again
         if len(ncfile.variables[TIME_VAR]) > 0 :
-            start_time = int2date(ncfile, ncfile.variables[TIME_VAR][0])
             expected_time = datetime.strptime(properties["StartDate"], DATE_FORMAT)
             if start_time != expected_time :
                 raise(Exception("Start time of output file (%s) is different from start time in station info (%s). Please delete output file and process it completely" % (
@@ -142,24 +144,45 @@ def main(network, station_id, out_filename, in_files, args) :
 
 def check_and_assign(varname, out, indices, new_values) :
 
+    new_values = new_values.flatten()
+
     n = len(out)
+
     overlapping_mask = indices < n
-    overlapping_idx = indices[overlapping_mask]
-    overlapping_values = new_values[overlapping_mask].flatten()
-    overlapped_values = out[overlapping_idx].flatten()
 
-    conflicting = ~np.isnan(overlapped_values) & (np.abs(overlapping_values - overlapped_values) > EPSILON)
+    if np.all(overlapping_mask) :
+        # No need for check
+        write_mask = np.ones(new_values.shape, dtype=bool)
 
-    nb_conflicting = np.sum(conflicting)
-    if nb_conflicting > 0 :
-        min_overlapped = np.min(overlapped_values)
-        warning("%d conflicting values for %s. Overriding [%f:%f] -> [%f:%f]",
-                nb_conflicting,
-                varname,
-                np.min(overlapped_values), np.max(overlapped_values),
-                np.min(overlapping_values), np.max(overlapping_values))
+    else :
+        debug("Possible overlap, checking ...")
 
-    out[indices] = new_values
+        # We won't override nan values
+        nan_mask = np.isnan(new_values)
+
+        nna_overlapping_mask = overlapping_mask & ~nan_mask
+        overlapping_idx = indices[nna_overlapping_mask]
+        overlapping_values = new_values[nna_overlapping_mask]
+        overlapped_values = out[overlapping_idx]
+
+        conflicting_indices = ~np.isnan(overlapped_values) & (np.abs(overlapping_values - overlapped_values) > EPSILON)
+
+        nb_conflicting = np.sum(conflicting_indices)
+        if nb_conflicting > 0 :
+
+            conflicting_overlapped =  overlapped_values[conflicting_indices]
+            conflicting_overlapping = overlapping_values[conflicting_indices]
+
+            warning("%d conflicting values for %s. Overriding [%f:%f] -> [%f:%f]",
+                    nb_conflicting,
+                    varname,
+                    np.nanmin(conflicting_overlapped), np.nanmin(conflicting_overlapped),
+                    np.nanmin(conflicting_overlapping), np.nanmin(conflicting_overlapping))
+
+        # Write NaN if they do not overlap with existing data (this extends the dimension)
+        write_mask = nan_mask | ~overlapping_mask
+
+    out[indices[write_mask]] = new_values[write_mask]
 
 def process_chunck(handler, infile, ncfile, strictResolution):
 
@@ -168,30 +191,34 @@ def process_chunck(handler, infile, ncfile, strictResolution):
     # Read data
     data = handler.read_chunk(infile)
 
+    start_time = get_start_time(ncfile)
+
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
     # Transform time to seconds since start date and time idx
-    chunk_dates = data.index.to_pydatetime()
-    debug(chunk_dates=chunk_dates)
-    times_int = date2int(ncfile, chunk_dates)
+    chunk_dates = data.index.values
+
+    times_int = datetime64_to_int(ncfile, chunk_dates)
     time_idx = times_int // resolution_s
 
     # Ensure all timestamps fall into resolution
     exact = ((times_int % resolution_s) == 0).all()
     if not exact:
         wrong_times_int = times_int[times_int % resolution_s != 0]
-        wrong_times_str = ",".join(str(date) for date in int2date(ncfile, wrong_times_int))
+        wrong_times_str = ",".join(str(date) for date in int_to_datetime64(ncfile, wrong_times_int))
         raise Exception("Timestamps do not fit timeresolution of %d seconds : %s" % (resolution_s, wrong_times_str))
 
-    # Warning if data not adjacent to previous one
     next_time_int = 0 if len(ncfile.variables[TIME_VAR]) == 0 else ncfile.variables[TIME_VAR][-1] + resolution_s
     chunk_start = min(chunk_dates)
     chunk_end = max(chunk_dates)
-    chunk_end_int = date2int(ncfile, chunk_end)
+    chunk_end_int = datetime64_to_int(ncfile, chunk_end)
 
     info("chunck range: %s to %s. samples:%d", chunk_start, chunk_end, len(data.index))
 
+    # Error if chunk starts before start time
+    if chunk_start < start_time:
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping", chunk_start, start_time)
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set

@@ -16,7 +16,6 @@ variables:
 		latitude:units = "degrees_north" ; 
 		latitude:_CoordinateAxisType = "Lat" ;
 		latitude:axis = "Y" ;
-
 	float longitude ;
 		longitude:long_name = "station longitude" ; 
 		longitude:standard_name = "longitude" ; 
@@ -88,8 +87,8 @@ variables:
 		RH:standard_name = "relative_humidity" ; 
 		RH:abbreviation = "RH" ;
 		RH:units = "1" ; 
-		RH:Range_LowerBoundary=0.0 ;
-		RH:Range_UpperBoundary=1.0 ;
+		RH:Range_LowerBoundary=-0.1 ;
+		RH:Range_UpperBoundary=1.1 ;
 		RH:Description="BODC CHUMZZ01, BSRN: 22 relative humidity" ;
 		
 	float P(time) ; 

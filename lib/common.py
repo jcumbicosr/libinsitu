@@ -1,9 +1,14 @@
 import logging
 from csv import DictReader
+from typing import List
+
 import numpy as np
 from cftime import num2date, date2num
-from numpy import timedelta64
+from numpy import timedelta64, datetime64
+from numpy.typing import NDArray
 from pandas import DataFrame
+
+from lib.log import debug
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -24,6 +29,7 @@ DATA_VARS = [GHI_VAR, DIF_VAR, DIR_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 STATION_INFO_PATTERN = "res/station-info/%s.csv"
 
 DATE_FORMAT = '%Y-%m-%d'
+SECOND = timedelta64(1, 's')
 
 def getStationsInfo(network) :
     """REad station info from CSV"""
@@ -32,7 +38,7 @@ def getStationsInfo(network) :
     with open(csv_file) as f:
         rows = DictReader(f)
         for row in rows:
-            res[row["ID"]] = row
+            res[row["ID"]] = {key: parse_value(val) for key, val in row.items()}
     return res
 
 
@@ -53,16 +59,24 @@ def is_uniform(vector) :
     ref = np.arange(vector[0], vector[-1] + step, step)
     return np.array_equal(ref, vector)
 
-def date2int(ncfile, dates) :
-    return date2num(dates, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+def get_start_time(ncfile) -> datetime64 :
+    start_time = num2date(0, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+    return np.datetime64(start_time)
 
-def int2date(ncfile, ints) :
-    return num2date(ints, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+def datetime64_to_int(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
+    start_time64 = get_start_time(ncfile)
+    return ((dates - start_time64) / SECOND).astype(int)
+
+def int_to_datetime64(ncfile, times_int: NDArray[int]) ->  NDArray[datetime64]:
+    start_time64 = get_start_time(ncfile)
+    return start_time64 + SECOND * times_int
 
 
 def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
-    if val is None or val == "":
+    if not isinstance(val, str) :
+        return val
+    elif val is None or val == "":
         return None
     try :
         return int(val)
@@ -76,10 +90,8 @@ def parse_value(val) :
 
 def nc2df(ncfile) :
     """Read netCDF file into Dataframe, indexed by time"""
-    time0 = int2date(ncfile, 0)
-    time0_64 = np.datetime64(time0)
-    second = timedelta64(1, 's')
-    times = time0_64 + second * ncfile.variables[TIME_VAR]
+    times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR])
+
     df = DataFrame(
         dict((var, ncfile.variables[var][:]) for var in DATA_VARS if var in ncfile.variables),
         index=times)
