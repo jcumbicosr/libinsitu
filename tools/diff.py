@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import argparse
 import os
 import sys
 
@@ -23,6 +23,8 @@ NAN_VALUES = {
     PRESSURE_VAR: -99900.0
 }
 
+CHUNK_SIZE = 100
+
 def file2df(filename) :
     nc = Dataset(filename, mode='r')
     df = nc2df(nc)
@@ -30,7 +32,7 @@ def file2df(filename) :
     return df
 
 
-def diff(df1, df2) :
+def diff(df1, df2, args) :
 
     identical = True
 
@@ -95,12 +97,35 @@ def diff(df1, df2) :
     if identical :
         info("The two datasets are identical")
 
+def dump(df1, df2) :
+
+    debug("Join")
+    outer = df1.join(df2, lsuffix="1", rsuffix="2", how="outer")
+    mask = np.zeros(outer.index.values.shape)
+
+    for col in df1. columns :
+        mask = mask | (outer[col+"1"] != outer[col+"2"])
+
+    debug("Diff")
+    diff = outer[mask]
+
+    debug("Print")
+    for i in range(0, diff.shape[0], CHUNK_SIZE) :
+        chunk = diff[i:i+CHUNK_SIZE]
+        chunk.to_string(sys.stdout, header=True, justify="left")
+        print("\n")
 
 if __name__ == '__main__':
 
-    f1, f2 = sys.argv[1:]
-    df1 = file2df(f1)
-    df2 = file2df(f2)
+    parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
+    parser.add_argument('file1', metavar='<file1.nc>', type=str, help='First NetCDF file')
+    parser.add_argument('file2', metavar='<file2.nc>', type=str, help='Second NetCDF file')
+    parser.add_argument('--dump', '-d', default=False, action='store_true',
+                        help="Dump all diff in text format")
+    args = parser.parse_args()
+
+    df1 = file2df(args.file1)
+    df2 = file2df(args.file2)
 
     # Replace nan values for df2
     for col, na_val in NAN_VALUES.items():
@@ -111,6 +136,12 @@ if __name__ == '__main__':
     station_id = df1.attrs["StationInfo_Abbreviation"]
     network = df1.attrs["source"]
 
-    with LogContext(network=network, station_id=station_id, file="%s:%s" % (f1, f2)):
-        diff(df1, df2)
+    with LogContext(network=network, station_id=station_id, file="%s:%s" % (args.file1, args.file2)):
+
+        if args.dump :
+            dump(df1, df2)
+        else:
+            diff(df1, df2, args)
+
+
 

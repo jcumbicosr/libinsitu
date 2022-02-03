@@ -23,7 +23,7 @@ DOM,"Concordia Station, Dome C",Antarctica,-75.1,123.383,3233.0,2006-01-01,LR030
 DON,Dongsha Atoll,Taiwan,20.7,116.73,2.0,,,,,,Candidate,1
 DRA,Desert Rock,"USA, Nevada",36.626,-116.01799999999999,1007.0,1998-02-01,LR3010,"desert, gravel",flat,rural,,1
 DWN,Darwin Met Office,Australia,-12.424000000000001,130.8925,32.0,2008-01-01,,grass,flat,rural,,1
-E13,Southern Great Plains,"USA, Oklahoma",36.605,-97.485,318.0,1997-08-01,LR3010,grass,flat,rural,,1
+E13,Southern Great Plains,"USA, Oklahoma",36.605,-97.485,318.0,1994-01-01,LR3010,grass,flat,rural,,1
 ENA,Eastern North Atlantic,"Portugal, Azores",39.0911,-28.0292,15.2,2015-01-01,,grass,hilly,rural,Candidate,1
 EUR,Eureka,"Canada, Ellesmere Island",79.98899999999999,-85.9404,85.0,2007-09-01,,tundra,hilly,rural,Closed,1
 FLO,Florianopolis,"Brazil, South Atlantic Ocean",-27.6047,-48.5227,11.0,1994-06-01,,concrete,mountain valley,urban,,1
@@ -43,7 +43,6 @@ KWA,Kwajalein,Marshall Islands,8.72,167.731,10.0,1992-03-01,,"water, ocean",flat
 LAU,Lauder,New Zealand,-45.045,169.68900000000002,350.0,1998-07-01,,grass,flat,rural,,1
 LER,Lerwick,"United Kingdom, Shetland Island",60.1389,-1.1847,80.0,2001-01-01,,grass,hilly,rural,,1
 LIN,Lindenberg,Germany,52.21,14.122,125.0,1994-09-01,,cultivated,hilly,rural,,1
-LLN,Lulin,Taiwan,23.4686,120.8736,2862.0,2009-01-20,,Mixed forest,mountain top,rural,,1
 LRC,Langley Research Center,"USA, Virginia",37.1038,-76.3872,3.0,2014-12-01,,grass,flat,urban,,1
 LYU,Lanyu Station,Taiwan,22.037,121.5583,324.0,2018-03-01,,"forest, mixed",mountain top,rural,,1
 MAN,Momote,Papua New Guinea,-2.0580000000000003,147.425,6.0,1996-09-01,,grass,flat,rural,Closed late 2013,1

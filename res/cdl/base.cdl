@@ -98,7 +98,7 @@ variables:
 		P:abbreviation = "PoPoPoPo" ;
 		P:units = "Pa" ; 
 		P:Range_LowerBoundary=0.0 ;
-		P:Range_UpperBoundary=110000.0 ;
+		P:Range_UpperBoundary=120000.0 ;
 		P:Description="BSRN:pressure at station height" ;
 		
         // Global attributes

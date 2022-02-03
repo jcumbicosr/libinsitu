@@ -31,3 +31,13 @@ Meeting :
   - Skip bad timing (step)
   - CSV des reseaux : variables dispos
   - User insitu:insitu
+
+
+QC :
+FLO -> Corrupted file : flo0799.dat.gz
+LLN -> No data, removed
+E13 -> Fixed start time
+CAM -> Repeated timings in Matlab version. Differences for 1 month only (2014-01)
+FPE -> Different values for 1 month (1997-05)
+LAU -> lau0812.dat.gz : corrupted
+

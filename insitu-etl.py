@@ -45,6 +45,7 @@ def getTimeResolution(ncfile) :
         raise Exception("Unknown unit for time resolution : '%s'" % unit)
 
 def check_boundaries(var, data) :
+    """Check boundaries of a variable"""
     for bound_name, sense in dict(Range_LowerBoundary=-1, Range_UpperBoundary=1).items() :
         if bound_name in var.ncattrs():
             bound = parse_value(var.__dict__[bound_name])
@@ -57,20 +58,6 @@ def check_boundaries(var, data) :
                     bound,
                     np.min(data[idx]),
                     np.max(data[idx]))
-
-def older_than(file1, file2) :
-    """Return True if file1 is older than file2"""
-    return os.stat(file1).st_mtime < os.stat(file2).st_mtime
-
-def touch(filename):
-    if os.path.exists(filename):
-        os.utime(filename)
-    else:
-        with open(filename,'a') as f:
-            pass
-
-
-
 
 def main(network, station_id, out_filename, in_files, args) :
 
@@ -119,7 +106,7 @@ def main(network, station_id, out_filename, in_files, args) :
 
             # Safe execution : do not stop on error
             try:
-                process_chunck(handler, infile, ncfile, args.strict_resolution)
+                process_chunck(handler, infile, ncfile, args)
 
                 # Incremental mode : touch status file
                 if args.incremental:
@@ -149,6 +136,8 @@ def check_and_assign(varname, out, indices, new_values) :
     n = len(out)
 
     overlapping_mask = indices < n
+
+    debug(n=n, min_indice=np.nanmin(indices))
 
     if np.all(overlapping_mask) :
         # No need for check
@@ -184,7 +173,7 @@ def check_and_assign(varname, out, indices, new_values) :
 
     out[indices[write_mask]] = new_values[write_mask]
 
-def process_chunck(handler, infile, ncfile, strictResolution):
+def process_chunck(handler, infile, ncfile, args):
 
     info("processing chunk : %s", infile)
 
@@ -218,7 +207,7 @@ def process_chunck(handler, infile, ncfile, strictResolution):
 
     # Error if chunk starts before start time
     if chunk_start < start_time:
-        raise Exception("Chunk start (%s) is before output start time (%s). Skipping", chunk_start, start_time)
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (chunk_start, start_time))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
@@ -226,7 +215,7 @@ def process_chunck(handler, infile, ncfile, strictResolution):
         actual_resolution = times_int[1] - times_int[0]
         if actual_resolution != resolution_s:
             message = "Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s)
-            if strictResolution :
+            if args.strictResolution :
                 raise Exception(message)
             else:
                 warning(message)

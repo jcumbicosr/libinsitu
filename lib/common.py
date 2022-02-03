@@ -3,12 +3,11 @@ from csv import DictReader
 from typing import List
 
 import numpy as np
-from cftime import num2date, date2num
+from cftime import num2date
 from numpy import timedelta64, datetime64
 from numpy.typing import NDArray
 from pandas import DataFrame
-
-from lib.log import debug
+import os
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -41,6 +40,17 @@ def getStationsInfo(network) :
             res[row["ID"]] = {key: parse_value(val) for key, val in row.items()}
     return res
 
+def older_than(file1, file2) :
+    """Return True if file1 is older than file2"""
+    return os.stat(file1).st_mtime < os.stat(file2).st_mtime
+
+def touch(filename):
+    """ creates or update the time of a file """
+    if os.path.exists(filename):
+        os.utime(filename)
+    else:
+        with open(filename,'a') as f:
+            pass
 
 def getStationInfo(network, station_id) :
     stations = getStationsInfo(network)
