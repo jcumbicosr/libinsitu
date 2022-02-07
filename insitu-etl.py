@@ -223,7 +223,7 @@ def process_chunck(handler, infile, ncfile, args):
         actual_resolution = times_int[1] - times_int[0]
         if actual_resolution != resolution_s:
             message = "Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s)
-            if args.strictResolution :
+            if args.strict_resolution :
                 raise Exception(message)
             else:
                 warning(message)
