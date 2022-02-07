@@ -8,7 +8,7 @@ from lib.handlers.base_handler import InSituHandler
 from lib.log import info
 
 
-def read_mesor(stream, na_values=[-999.0, -99.9, -10.0]):
+def read_mesor(stream, na_values=[-999.0, -99.9, -10.0, -9999.0]):
 
     metadata = {}  # Initilize dictionary containing metadata
     channels = OrderedDict()
