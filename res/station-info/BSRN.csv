@@ -1,6 +1,6 @@
 ID,FullName,Location,Latitude,Longitude,Elevation,StartDate,LR,SurfaceType,TopographyType,RuralUrban,Comment,TimeResolution
 ABS,Abashiri,Japan,44.0178,144.2797,38.0,2021-03-01,,,,,,1
-ALE,Alert,"Canada, Lincoln Sea",82.49,-62.42,127.0,2004-08-16,LR0300,tundra,hilly,rural,Closed,1
+ALE,Alert,"Canada, Lincoln Sea",82.49,-62.42,127.0,2004-08-01,LR0300,tundra,hilly,rural,Closed,1
 ASP,Alice Springs,"Australia, Northern Territory",-23.798000000000002,133.888,547.0,1995-01-01,,grass,flat,rural,,1
 BAR,Barrow,"USA , Alaska",71.32300000000001,-156.607,8.0,1992-01-01,LR0300,tundra,flat,rural,,1
 BER,Bermuda,"USA, Bermuda",32.266999999999996,-64.667,8.0,1992-01-01,,"water, ocean",flat,rural,,1
@@ -70,8 +70,9 @@ SXF,Sioux Falls,"USA, South Dakota",43.73,-96.62,473.0,2003-06-01,LR3010,grass,h
 SYO,Syowa,Antarctica,-69.005,39.589,18.0,1994-01-01,LR0300,sea ice,hilly,rural,,1
 TAM,Tamanrasset,Algeria,22.7903,5.5292,1385.0,2000-03-01,,"desert, rock",flat,rural,,1
 TAT,Tateno,Japan,36.0581,140.1258,25.0,1996-02-01,LR0300,grass,flat,urban,,1
-TIK,Tiksi,"Russia, Siberia",71.5862,128.9188,48.0,2010-06-08,LR0300,tundra,flat,rural,,1
+TIK,Tiksi,"Russia, Siberia",71.5862,128.9188,48.0,2010-06-01,LR0300,tundra,flat,rural,,1
 TIR,Tiruvallur,India,13.0923,79.9738,36.0,2014-04-16,,rock,,urban,,1
 TOR,Toravere,Estonia,58.254,26.462,70.0,1999-01-01,LR0300,grass,flat,rural,,1
 XIA,Xianghe,China,39.754,116.962,32.0,2005-01-01,,"desert, rock",flat,rural,"Station obstructed, no longer in BSRN since 2016",1
 YUS,Yushan Station,Taiwan,23.4876,120.9595,3858.0,2018-04-01,,"forest, mixed",mountain top,rural,,1
+INO,Marguele,Romania,44.3439,26.0123,110,2021-05-01,,grass,flat,rural,,1

@@ -69,7 +69,8 @@ class LogContext(object):
             if self.context[key] and hasattr(log_context_data, key) :
                 delattr(log_context_data, key)
 
-        if ev != None :
+        # In case of error, adds context to it
+        if ev != None and not isinstance(ev, SystemExit):
             raise_from(Exception(
                 "Exception: %s. Context : %s" % (str(ev), str(self.context))), ev)
             return True
