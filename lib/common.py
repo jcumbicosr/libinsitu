@@ -98,7 +98,7 @@ def parse_value(val) :
                 val = val.strip('"')
             return val
 
-def nc2df(ncfile) :
+def nc2df(ncfile, drop_duplicates=True) :
     """Read netCDF file into Dataframe, indexed by time"""
     times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR])
 
@@ -109,6 +109,10 @@ def nc2df(ncfile) :
     # Set global attributes in DataFrame
     attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
     df.attrs.update(attrs)
+
+    # Drop duplicated : only keep last
+    if drop_duplicates :
+        df = df[~df.index.duplicated(keep="last")]
 
     return df
 

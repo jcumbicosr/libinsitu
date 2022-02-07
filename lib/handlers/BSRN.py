@@ -23,10 +23,11 @@ class BSRNHandler(InSituHandler) :
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
 
-        # Check typeof column
+        # Check type of column
         for col in DATA_VARS :
             if data[col].dtype == object :
-                # String ? Try to convert to float, ignoring errors
+                # String ? A couple of values might be incorrent.
+                # Try to convert to float, ignoring errors
                 error("Column %s parsed as String : converting to float. errors will be NaN", col)
                 data[col] = pd.to_numeric(data[col], errors="coerce")
 

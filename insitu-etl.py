@@ -129,49 +129,57 @@ def main(network, station_id, out_filename, in_files, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
-def check_and_assign(varname, out, indices, new_values) :
+def check_and_assign(ncfile, data, time_idx, size_before, args) :
 
-    new_values = new_values.flatten()
+    # Check once for all if new chunk overlaps
+    overlapping_mask = time_idx < size_before
+    is_overlapping = np.any(overlapping_mask)
+    overlapping_indices = time_idx[overlapping_mask]
 
-    n = len(out)
+    for varname in DATA_VARS:
+        var = ncfile.variables[varname]
+        new_values = data[[varname]].values.flatten()
 
-    overlapping_mask = indices < n
+        check_boundaries(var, new_values)
 
-    debug(n=n, min_indice=np.nanmin(indices))
+        if not is_overlapping or not args.check:
+            # No need for check
+            write_mask = np.ones(new_values.shape, dtype=bool)
 
-    if np.all(overlapping_mask) :
-        # No need for check
-        write_mask = np.ones(new_values.shape, dtype=bool)
+        else :
+            debug("Possible overlap, checking ...")
 
-    else :
-        debug("Possible overlap, checking ...")
+            if np.all(np.isnan(var[overlapping_indices])) :
 
-        # We won't override nan values
-        nan_mask = np.isnan(new_values)
+                debug("All nans : don't check further")
+                write_mask = np.ones(new_values.shape, dtype=bool)
 
-        nna_overlapping_mask = overlapping_mask & ~nan_mask
-        overlapping_idx = indices[nna_overlapping_mask]
-        overlapping_values = new_values[nna_overlapping_mask]
-        overlapped_values = out[overlapping_idx]
+            else:
+                # We won't override existing values with nans
+                nan_mask = np.isnan(new_values)
 
-        conflicting_indices = ~np.isnan(overlapped_values) & (np.abs(overlapping_values - overlapped_values) > EPSILON)
+                nna_overlapping_mask = overlapping_mask & ~nan_mask
+                overlapping_idx = time_idx[nna_overlapping_mask]
+                overlapping_values = new_values[nna_overlapping_mask]
+                overlapped_values = var[overlapping_idx]
 
-        nb_conflicting = np.sum(conflicting_indices)
-        if nb_conflicting > 0 :
+                conflicting_indices = ~np.isnan(overlapped_values) & ~np.isclose(overlapping_values, overlapped_values)
 
-            conflicting_overlapped =  overlapped_values[conflicting_indices]
-            conflicting_overlapping = overlapping_values[conflicting_indices]
+                if np.any(conflicting_indices) :
 
-            warning("%d conflicting values for %s. Overriding [%f:%f] -> [%f:%f]",
-                    nb_conflicting,
-                    varname,
-                    np.nanmin(conflicting_overlapped), np.nanmin(conflicting_overlapped),
-                    np.nanmin(conflicting_overlapping), np.nanmin(conflicting_overlapping))
+                    conflicting_overlapped =  overlapped_values[conflicting_indices]
+                    conflicting_overlapping = overlapping_values[conflicting_indices]
 
-        # Write NaN if they do not overlap with existing data (this extends the dimension)
-        write_mask = nan_mask | ~overlapping_mask
+                    warning("%d conflicting values for %s. Overriding [%f:%f] -> [%f:%f]",
+                            np.sum(conflicting_indices),
+                            varname,
+                            np.nanmin(conflicting_overlapped), np.nanmin(conflicting_overlapped),
+                            np.nanmin(conflicting_overlapping), np.nanmin(conflicting_overlapping))
 
-    out[indices[write_mask]] = new_values[write_mask]
+                # Write NaN if they do not overlap with existing data (this extends the dimension)
+                write_mask = nan_mask | ~overlapping_mask
+
+        var[time_idx[write_mask]] = new_values[write_mask]
 
 def process_chunck(handler, infile, ncfile, args):
 
@@ -221,23 +229,25 @@ def process_chunck(handler, infile, ncfile, args):
                 warning(message)
 
     # Fill time variable with proper values
+    size_before = len(ncfile.variables[TIME_VAR])
     new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
     ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
 
     # Store data values
-    for varname in DATA_VARS:
-        var = ncfile.variables[varname]
-        samples = data[[varname]].values
-
-        check_boundaries(var, samples)
-        check_and_assign(varname, var, time_idx, samples)
+    check_and_assign(ncfile, data, time_idx, size_before, args)
 
 
 def sort_files(files) :
     """ Sort filenames named like xxxMMYY*"""
     def yearmonth(path):
         file = basename(path)
-        res =  file[5:7] + '' + file[3:5]
+        year = file[5:7]
+        month = file[3:5]
+        if year.isnumeric() :
+            year_num = int(year)
+            year_num += 1900 if year_num > 70 else 2000
+            year = str(year_num)
+        res =  year + '-' + month + '-' + file[7:]
         return res
 
     return sorted(files, key=yearmonth)
@@ -258,6 +268,7 @@ if __name__ == '__main__':
     parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
     parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")
+    parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")
     parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path, help='Separate folder for .done/.err files')
     args = parser.parse_args()
 
