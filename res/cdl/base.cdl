@@ -49,7 +49,7 @@ variables:
 		GHI:units = "W m-2" ; 
 		GHI:Range_LowerBoundary=-10.0 ;
 		GHI:Range_UpperBoundary=3000 ;
-		GHI:Description="BSRN: 2 global 2, mean" ; # XXX Check
+		GHI:Description="Global Horizontal Irradiance";
 		
 	float DIF(time) ; 
 		DIF:parameter = "Diffuse radiation" ; 
@@ -59,7 +59,7 @@ variables:
 		DIF:units = "W m-2" ; 
 		DIF:Range_LowerBoundary=-10.0 ;
 		DIF:Range_UpperBoundary=3000 ;
-		DIF:Description="BSRN: 4" ;
+		DIF:Description="Diffuse radiation" ;
 	
 	float DIR(time) ; 
 		DIR:parameter = "Direct radiation" ; 
@@ -69,7 +69,7 @@ variables:
 		DIR:units = "W m-2" ; 
 		DIR:Range_LowerBoundary=-10.0 ;
 		DIR:Range_UpperBoundary=3000 ;
-		DIR:Description="BSRN: 3" ;
+		DIR:Description="Direct radiation" ;
 		
 	float T2(time) ; 
 		T2:parameter = "Air temperature at 2 m height" ; 
@@ -79,7 +79,7 @@ variables:
 		T2:units = "K" ; 
 		T2:Range_LowerBoundary=123.0 ;
 		T2:Range_UpperBoundary=372.9 ;
-		T2:Description="BSRN: 21 air temperature at 2 m height" ;
+		T2:Description="Air temperature at 2 m height" ;
 		
 	float RH(time) ; 
 		RH:parameter = "Humidity, relative" ; 
@@ -89,7 +89,7 @@ variables:
 		RH:units = "1" ; 
 		RH:Range_LowerBoundary=-0.1 ;
 		RH:Range_UpperBoundary=1.1 ;
-		RH:Description="BODC CHUMZZ01, BSRN: 22 relative humidity" ;
+		RH:Description="relative humidity" ;
 		
 	float P(time) ; 
 		P:parameter = "Station pressure" ; 
@@ -99,7 +99,7 @@ variables:
 		P:units = "Pa" ; 
 		P:Range_LowerBoundary=0.0 ;
 		P:Range_UpperBoundary=120000.0 ;
-		P:Description="BSRN:pressure at station height" ;
+		P:Description="air pressure at station height" ;
 		
         // Global attributes
 

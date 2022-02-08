@@ -30,7 +30,6 @@ def check_time(filename) :
 
     with LogContext(station_id=station_id, network=network, file=filename) :
 
-
         from_date = min(df.index)
         to_date = max(df.index)
         nb_samples = len(df.index)
@@ -58,4 +57,5 @@ def check_time(filename) :
 
 if __name__ == '__main__':
     for file in sys.argv[1:] :
-        check_time(filename=file)
+        with IgnoreAndLogExceptions() :
+            check_time(filename=file)

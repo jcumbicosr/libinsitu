@@ -29,7 +29,7 @@ def init_nc(netcdf, properties) :
     netcdf.variables[LONGITUDE_VAR][0] = properties["Longitude"]
     netcdf.variables[LATITUDE_VAR][0] = properties["Latitude"]
     netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
-    netcdf.variables[STATION_NAME_VAR][:] = properties["ID"].ljust(" ")
+    netcdf.variables[STATION_NAME_VAR][:] = properties["ID"].rjust(3)
 
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
@@ -84,7 +84,7 @@ def main(network, station_id, out_filename, args) :
     properties = getStationInfo(network, station_id)
     properties["CurrentTime"] = datetime.now().isoformat()
 
-    handler = HANDLERS[network]
+    handler = HANDLERS[network](properties)
 
     in_files = get_files(args.in_files, handler, properties)
 
@@ -155,6 +155,10 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
     overlapping_indices = time_idx[overlapping_mask]
 
     for varname in DATA_VARS:
+
+        if not varname in data :
+            continue
+
         var = ncfile.variables[varname]
         new_values = data[[varname]].values.flatten()
 
