@@ -29,7 +29,7 @@ def init_nc(netcdf, properties) :
     netcdf.variables[LONGITUDE_VAR][0] = properties["Longitude"]
     netcdf.variables[LATITUDE_VAR][0] = properties["Latitude"]
     netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
-    netcdf.variables[STATION_NAME_VAR][:] = properties["ID"]
+    netcdf.variables[STATION_NAME_VAR][:] = properties["ID"].ljust(" ")
 
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
