@@ -45,7 +45,6 @@ class InSituHandler :
         ?: any single caracter
         {MM} : Month of chunk file
         {YYYY} / {YY} : Year of chunk file
-        {Id} / {id} / {ID} : Station ID
         {PropertyName} : Any property defined in station-info csv file
 
         The pattern is used to sort file by year and month.
@@ -53,7 +52,7 @@ class InSituHandler :
 
         Example patterns :
         - "{ID}-{YY}-{MM}*.zip"
-        - "???{Id}*.txt"
+        - "???{ID}*.txt"
         """
         pass
 
@@ -73,8 +72,6 @@ class InSituHandler :
     def sort_files(self, filenames, properties):
 
         properties = properties.copy()
-        properties["Id"] = properties["ID"].title()
-        properties["id"] = properties["ID"].lower()
 
         # Transform pattern to regexp
         def subf(match):
@@ -97,7 +94,7 @@ class InSituHandler :
 
         def sort_key(filename) :
             basename = os.path.basename(filename)
-            match = re.match(re_pattern, basename)
+            match = re.match(re_pattern, basename, flags=re.IGNORECASE)
             if not match :
                 warning("File %s does not match pattern %s. Skipping" % (basename, self.pattern()))
                 return None
