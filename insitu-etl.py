@@ -59,16 +59,34 @@ def check_boundaries(var, data) :
                     np.min(data[idx]),
                     np.max(data[idx]))
 
-def main(network, station_id, out_filename, in_files, args) :
+def get_files(in_files, handler, properties) :
+
+    # Gather and sort files with pattern
+    files = []
+    for file_or_dir in in_files:
+        if os.path.isdir(file_or_dir):
+            files += list(glob.glob(file_or_dir + "/" + handler.glob_pattern()))
+        else:
+            files.append(file_or_dir)
 
     # Sort input files
-    in_files = sort_files(in_files)
+    in_files = handler.sort_files(files, properties)
+
+    if len(in_files) == 0:
+        warning("No input file found")
+        sys.exit(0)
+
+    return in_files
+
+def main(network, station_id, out_filename, args) :
 
     # Get properties for this station
     properties = getStationInfo(network, station_id)
     properties["CurrentTime"] = datetime.now().isoformat()
 
     handler = HANDLERS[network]
+
+    in_files = get_files(args.in_files, handler, properties)
 
     # Open or create netCDF file
     new = False
@@ -263,7 +281,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
-    parser.add_argument('infiles', metavar='<file|dir>', nargs='+', help='Input files or folders')
+    parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', metavar='<NETWORK>', help='Network name', required=True)
     parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
@@ -275,19 +293,6 @@ if __name__ == '__main__':
     network = args.network
     station_id  = args.station_id.upper()
 
-    handler = HANDLERS[network]
-
     with LogContext(network=network, station_id=station_id):
 
-        files = []
-        for file_or_dir in args.infiles :
-            if os.path.isdir(file_or_dir) :
-                files += list(glob.glob(file_or_dir + "/" + handler.pattern()))
-            else:
-                files.append(file_or_dir)
-
-        if len(files) == 0:
-            warning("No input file found")
-            sys.exit(0)
-
-        main(network, station_id, args.out, files, args)
+        main(network, station_id, args.out, args)
