@@ -7,18 +7,13 @@ import os, sys
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import nc2df
+from lib.common import nc2df, file2df
 from lib.log import *
 import numpy as np
 
 MIN_STEP=0
 MAX_STEP=1000
 
-def file2df(filename):
-    nc = Dataset(filename, mode='r')
-    df = nc2df(nc)
-    nc.close()
-    return df
 
 def check_time(filename) :
 
