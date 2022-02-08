@@ -88,4 +88,4 @@ class EnerMENAHandler(InSituHandler) :
         return data
 
     def pattern(self):
-        return "*{Id}*.txt"
+        return "*{ID}*.txt"

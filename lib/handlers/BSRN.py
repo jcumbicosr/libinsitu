@@ -39,4 +39,4 @@ class BSRNHandler(InSituHandler) :
         return data
 
     def pattern(self):
-        return "{id}{MM}{YY}*.dat.gz"
+        return "{ID}{MM}{YY}*.dat.gz"
