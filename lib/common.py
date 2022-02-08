@@ -4,6 +4,7 @@ from typing import List
 
 import numpy as np
 from cftime import num2date
+from netCDF4 import Dataset
 from numpy import timedelta64, datetime64
 from numpy.typing import NDArray
 from pandas import DataFrame
@@ -114,6 +115,12 @@ def nc2df(ncfile, drop_duplicates=True) :
     if drop_duplicates :
         df = df[~df.index.duplicated(keep="last")]
 
+    return df
+
+def file2df(filename):
+    nc = Dataset(filename, mode='r')
+    df = nc2df(nc)
+    nc.close()
     return df
 
 

@@ -1,20 +1,23 @@
 import os.path
-import zipfile
 from abc import abstractmethod
 from gzip import GzipFile
 from io import TextIOWrapper
 from typing import final
 from zipfile import ZipFile
 from pandas import DataFrame
-import time
 from datetime import datetime
 import re
+
 
 from lib.log import warning, debug
 
 
 class InSituHandler :
     """ Virtual class to be implemented for each new network """
+    
+    
+    def __init__(self, properties):
+        self.properties = properties
 
     @final
     def read_chunk(self, filename:str, encoding='latin1'):
@@ -76,12 +79,12 @@ class InSituHandler :
         # Transform pattern to regexp
         def subf(match):
             key = match.group(1)
-            if key in ["MM", "YY", "YYYY"] :
-                pattern = r'\d' * len(key)
+            if key in ["M", "MM", "YY", "YYYY"] :
+                pattern = r'\d+' if key == "M" else r'\d' * len(key)
                 return r'(?P<%s>%s)' % (key,pattern)
             else :
                 if key in properties :
-                    return properties[key]
+                    return str(properties[key])
                 else:
                     raise Exception("Key '%s' in file pattern '%s' not found in station info" % (key, self.pattern()))
 
@@ -106,7 +109,9 @@ class InSituHandler :
 
             groups = match.groupdict()
 
-            if "MM" in groups :
+            if "M" in groups :
+                month = int(groups["M"])
+            if "MM" in groups:
                 month = int(groups["MM"])
             if "YYYY" in groups :
                 year = int(groups["YYYY"])
