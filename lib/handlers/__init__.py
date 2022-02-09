@@ -1,7 +1,10 @@
+from typing import Dict
+
 from lib.handlers.ABOM import ABOMHandler
 from lib.handlers.BSRN import BSRNHandler
 
 # Static map of handlers
+from lib.handlers.base_handler import InSituHandler
 from lib.handlers.enerMENA import EnerMENAHandler
 
 HANDLERS = {

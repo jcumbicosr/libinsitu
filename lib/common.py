@@ -99,12 +99,12 @@ def parse_value(val) :
                 val = val.strip('"')
             return val
 
-def nc2df(ncfile, drop_duplicates=True) :
+def nc2df(ncfile, drop_duplicates=True, start_idx=None, end_idx=None) :
     """Read netCDF file into Dataframe, indexed by time"""
-    times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR])
+    times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx])
 
     df = DataFrame(
-        dict((var, ncfile.variables[var][:]) for var in DATA_VARS if var in ncfile.variables),
+        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in DATA_VARS if var in ncfile.variables),
         index=times)
 
     # Set global attributes in DataFrame

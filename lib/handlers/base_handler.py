@@ -8,7 +8,7 @@ from pandas import DataFrame
 from datetime import datetime
 import re
 
-
+from lib.common import DATA_VARS
 from lib.log import warning, debug
 
 
@@ -134,7 +134,9 @@ class InSituHandler :
 
 
 
-
+    def data_vars(self):
+        """Should return the list of data variables supported by the network. All by default"""
+        return DATA_VARS
 
     @abstractmethod
     def _read_chunk(self, stream) -> DataFrame:

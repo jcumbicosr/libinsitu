@@ -5,10 +5,9 @@ import os.path
 import sys
 from datetime import datetime
 from os.path import basename, dirname
-from netCDF4 import Dataset
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
-from lib.handlers import HANDLERS
+from lib.handlers import HANDLERS, InSituHandler
 from lib.log import debug, info, warning, logger, LogContext
 import argparse
 
@@ -18,10 +17,13 @@ DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
 EPSILON = 0.001
 
-def init_nc(netcdf, properties) :
+def init_nc(netcdf, properties, data_vars=DATA_VARS) :
 
     with open(CDL_PATH, "r") as f:
         cdl =  parse_cdl(f, properties)
+
+    # Filter data vars (variables with "time" dimension)
+    cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
 
     cdl2netcdf(netcdf, cdl)
 
@@ -84,16 +86,16 @@ def main(network, station_id, out_filename, args) :
     properties = getStationInfo(network, station_id)
     properties["CurrentTime"] = datetime.now().isoformat()
 
-    handler = HANDLERS[network](properties)
+    handler : InSituHandler = HANDLERS[network](properties)
 
     in_files = get_files(args.in_files, handler, properties)
 
     # Open or create netCDF file
     new = False
     if not os.path.exists(out_filename) :
-        info("File '%s' was not there. Initalizing it.", out_filename)
+        info("File '%s' was not there. Initializing it.", out_filename)
         ncfile = Dataset(out_filename, mode="w")
-        init_nc(ncfile, properties)
+        init_nc(ncfile, properties, handler.data_vars())
         new=True
     else:
         ncfile = Dataset(out_filename, mode="a")
@@ -286,7 +288,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
-    parser.add_argument('--network', '-n', metavar='<NETWORK>', help='Network name', required=True)
+    parser.add_argument('--network', '-n', help='Network name', required=True, choices=list(HANDLERS.keys()))
     parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
     parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")
