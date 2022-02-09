@@ -44,7 +44,15 @@ def diff(df1, df2, args) :
 
     join = df1.join(df2, lsuffix="1", rsuffix="2", how="inner")
 
-    for col in df1.columns :
+    cols1 = set(df1.columns)
+    cols2 = set(df2.columns)
+
+    if cols1 != cols2 :
+        warning("datasets have different set of colums : %s <-> %s" % (",".join(cols1), ",".join(cols2)))
+
+    common_cols = cols1 & cols2
+
+    for col in common_cols :
         with LogContext(file=col) :
 
             data1 = join[col + "1"]
@@ -129,6 +137,8 @@ if __name__ == '__main__':
 
     # Replace nan values for df2
     for col, na_val in NAN_VALUES.items():
+        if col not in df2 :
+            continue
         vals = df2[col]
         idx = np.isclose(vals, na_val)
         df2[col][idx] = np.nan

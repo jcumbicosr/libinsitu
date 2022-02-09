@@ -133,9 +133,3 @@ def cdl2netcdf(ncfile, cdl: CDL) :
 
 
 
-if __name__ == '__main__':
-
-    file = sys.argv[1]
-    with open(file, 'r') as f :
-        cdl = parse_cdl(f)
-        info(obj2json(cdl))

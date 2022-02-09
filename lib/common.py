@@ -8,6 +8,7 @@ from netCDF4 import Dataset
 from numpy import timedelta64, datetime64
 from numpy.typing import NDArray
 from pandas import DataFrame
+from pkgutil import get_data
 import os
 
 TIME_DIM = 'time'
@@ -26,19 +27,19 @@ STATION_NAME_VAR= "station_name"
 
 DATA_VARS = [GHI_VAR, DIF_VAR, DIR_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 
-STATION_INFO_PATTERN = "res/station-info/%s.csv"
+STATION_INFO_PATTERN = "station-info/%s.csv"
 
 DATE_FORMAT = '%Y-%m-%d'
 SECOND = timedelta64(1, 's')
 
 def getStationsInfo(network) :
     """REad station info from CSV"""
-    csv_file = STATION_INFO_PATTERN % network
+
     res = dict()
-    with open(csv_file) as f:
-        rows = DictReader(f)
-        for row in rows:
-            res[row["ID"]] = {key: parse_value(val) for key, val in row.items()}
+
+    rows = DictReader(read_res(STATION_INFO_PATTERN % network))
+    for row in rows:
+        res[row["ID"]] = {key: parse_value(val) for key, val in row.items()}
     return res
 
 def older_than(file1, file2) :
@@ -82,6 +83,11 @@ def int_to_datetime64(ncfile, times_int: NDArray[int]) ->  NDArray[datetime64]:
     start_time64 = get_start_time(ncfile)
     return start_time64 + SECOND * times_int
 
+def read_res(path) :
+    """Read package resources and reaturn a fie like object (splitted lines)
+    path should be relative to ./res/
+    """
+    return get_data(__name__, os.path.join("..", "res", path)).decode().splitlines()
 
 def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""

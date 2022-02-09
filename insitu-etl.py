@@ -12,15 +12,14 @@ from lib.log import debug, info, warning, logger, LogContext
 import argparse
 
 
-CDL_PATH = "res/cdl/base.cdl"
+CDL_PATH = "cdl/base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
 EPSILON = 0.001
 
 def init_nc(netcdf, properties, data_vars=DATA_VARS) :
 
-    with open(CDL_PATH, "r") as f:
-        cdl =  parse_cdl(f, properties)
+    cdl =  parse_cdl(read_res(CDL_PATH), properties)
 
     # Filter data vars (variables with "time" dimension)
     cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
