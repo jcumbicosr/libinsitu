@@ -48,8 +48,6 @@ def check_time(filename) :
             periods = list(periods.keys())[0]
         info("from:%s, to:%s, %d samples, period:%s", from_date, to_date, nb_samples, periods)
 
-
-
 if __name__ == '__main__':
     for file in sys.argv[1:] :
         with IgnoreAndLogExceptions() :

@@ -32,18 +32,6 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS) :
     netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
     netcdf.variables[STATION_NAME_VAR][:] = properties["ID"].rjust(3)
 
-def getTimeResolution(ncfile) :
-    """Returns time resolution, in seconds, as saved in meta data"""
-
-    val = ncfile.variables[TIME_VAR].resolution
-    val, unit = val.split()
-    val = int(val)
-    if "min" in unit :
-        return val * 60
-    elif "sec" in unit:
-        return val
-    else:
-        raise Exception("Unknown unit for time resolution : '%s'" % unit)
 
 def check_boundaries(var, data) :
     """Check boundaries of a variable"""

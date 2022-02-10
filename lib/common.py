@@ -84,7 +84,7 @@ def int_to_datetime64(ncfile, times_int: NDArray[int]) ->  NDArray[datetime64]:
     return start_time64 + SECOND * times_int
 
 def read_res(path) :
-    """Read package resources and reaturn a fie like object (splitted lines)
+    """Read package resources and returns a fie like object (splitted lines)
     path should be relative to ./res/
     """
     return get_data(__name__, os.path.join("..", "res", path)).decode().splitlines()
@@ -104,6 +104,20 @@ def parse_value(val) :
             if val.startswith('"') :
                 val = val.strip('"')
             return val
+
+def getTimeResolution(ncfile) :
+    """Returns time resolution, in seconds, as saved in meta data"""
+
+    val = ncfile.variables[TIME_VAR].resolution
+    val, unit = val.split()
+    val = int(val)
+    if "min" in unit :
+        return val * 60
+    elif "sec" in unit:
+        return val
+    else:
+        raise Exception("Unknown unit for time resolution : '%s'" % unit)
+
 
 def nc2df(ncfile, drop_duplicates=True, start_idx=None, end_idx=None) :
     """Read netCDF file into Dataframe, indexed by time"""
