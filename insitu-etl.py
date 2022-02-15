@@ -5,6 +5,9 @@ import os.path
 import sys
 from datetime import datetime
 from os.path import basename, dirname
+
+import netCDF4
+
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
 from lib.handlers import HANDLERS, InSituHandler
@@ -16,6 +19,14 @@ CDL_PATH = "cdl/base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
 EPSILON = 0.001
+
+
+def fillShortName(nc, shortname) :
+    size = nc.dimensions[STATION_NAME_DIM].size
+
+    # Transform to null terminated fixed length array of chars
+    shortname_ = netCDF4.stringtochar(np.array(shortname, 'S%d' % size))
+    nc.variables[STATION_NAME_VAR][:] = shortname_
 
 def init_nc(netcdf, properties, data_vars=DATA_VARS) :
 
@@ -30,7 +41,8 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS) :
     netcdf.variables[LONGITUDE_VAR][0] = properties["Longitude"]
     netcdf.variables[LATITUDE_VAR][0] = properties["Latitude"]
     netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
-    netcdf.variables[STATION_NAME_VAR][:] = properties["ID"].rjust(3)
+
+    fillShortName(netcdf, properties["ID"])
 
 
 def check_boundaries(var, data) :

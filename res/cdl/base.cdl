@@ -2,7 +2,7 @@ netcdf base {
 
 dimensions: 
 	time = UNLIMITED ;
-	ncshort = 3 ;
+	ncshort = 10 ;
 
 variables:
 

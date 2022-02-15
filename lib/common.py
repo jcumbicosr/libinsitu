@@ -25,6 +25,8 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+STATION_NAME_DIM = "ncshort"
+
 DATA_VARS = [GHI_VAR, DIF_VAR, DIR_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 
 STATION_INFO_PATTERN = "station-info/%s.csv"
