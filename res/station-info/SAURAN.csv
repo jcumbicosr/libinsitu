@@ -1,22 +1,22 @@
 ID,Name,Location,Latitude,Longitude,Elevation,DNI_Col,DHI_Col,GHI_Col,StartDate,EndDate,TimeResolution
-KZH,University of KwaZulu-Natal Howard College,"Durban, South Africa",-29.87097931,30.97694969,150,CHP1SlrW_Avg,CMP11_1SlrW_Avg,CMP11_2SlrW_Avg,2015-12-07,2102-04-23,1
-KZW,University of KwaZulu-Natal Westville,"Durban, South Africa",-29.81694031,30.94491959,200,TrackerWM_Avg,ShadowWM_Avg,SunWM_Avg,2015-12-08,2020-03-07,1
-SUN,Stellenbosch University,"Stellenbosch, South Africa",-33.92810059,18.86540031,119,TrackerWM_Avg,ShadowWM_Avg,SunWM_Avg,2010-05-25,2021-05-25,1
-UPR,GIZ University of Pretoria,"Pretoria, South Africa",-25.75308037,28.22859001,1410,DNI_Avg,DIF_Avg,GHI_Avg,2013-09-20,2021-05-25,1
-VAN,GIZ Vanrhynsdorp,"Vanrhynsdorp, South Africa",-31.61747932,18.73834038,130,DNI_Avg,DIF_Avg,GHI_Avg,2016-01-01,2019-07-10,1
-UFS,GIZ University of Free State,"Bloemfontein, South Africa",-29.11074066,26.18502998,1491,DNI_Avg,DIF_Avg,GHI_Avg,2014-01-17,2017-08-28,1
-GRT,GIZ Graaff-Reinet,"Graaff-Reinet, South Africa",-32.48546982,24.58581924,660,DNI_Avg,DIF_Avg,GHI_Avg,2013-11-28,2016-01-24,1
-NMU,Nelson Mandela University,"Port Elizabeth, South Africa",-34.0085907,25.66526031,35,CHP1SlrW_Avg,CMP11_1SlrW_Avg,CMP11_2SlrW_Avg,2015-12-09,2021-05-25,1
-RVD,GIZ Richtersveld,"Alexander Bay, South Africa",-28.56084061,16.76145935,141,DNI_Avg,DIF_Avg,GHI_Avg,2014-03-28,2021-05-25,1
-STA,Mangosuthu University of Technology,"Umlazi, South Africa",-29.97020912,30.91490936,95,MUT_DNI_NIP_31955E6_W_Avg,MUT_DHI_PSP_34332F3_W_Avg,MUT_GHI_PSP_34331F3_W_Avg,2015-12-08,2021-04-19,1
-UBG,USAid Gaborone,"Gaborone, Botswana",-24.6609993,25.93400002,1014,DNI_Avg,DIF_Avg,GHI_Avg,2014-11-27,2020-07-04,1
-UNV,USAid Venda,"Vuwani, South Africa",-23.13100052,30.42399979,628,DNI_Avg,DIF_Avg,GHI_Avg,2015-04-24,2021-05-25,1
-UNZ,University of Zululand,"KwaDlangezwa, South Africa",-28.85289955,31.85161018,90,DNI_Avg,DIF_Avg,GHI_Avg,2013-10-25,2020-03-09,1
-NUST,USAid Namibian University of Science and Technology,"Windhoek, Namibia",-22.56500053,17.07500076,1683,DNI_Avg,DIF_Avg,GHI_Avg,2016-08-12,2021-05-26,1
-FRH,USAid University of Fort Hare,"Alice, South Africa",-32.78461075,26.84519958,540,DNI_Avg,DIF_Avg,GHI_Avg,2017-02-09,2021-05-25,1
-MRB,GIZ Murraysburg,"Murraysburg, South Africa",-31.89009094,24.05623055,1548,DNI_Avg,DIF_Avg,GHI_Avg,2017-03-18,2019-10-22,1
-HLO,Mariendal,"Mariendal, South Africa",-33.85412979,18.82444954,178,DNI_Avg,DIF_Avg,GHI1_Avg,2015-10-09,2020-10-27,1
-SALT,Eskom Sutherland SALT,"Sutherland, South Africa",-32.37778091,20.8116703,1761,Sol_Direct_Avg,Sol_Global2_Avg,Sol_Global1_Avg,2017-07-20,2020-12-22,1
-CSIR,CSIR Energy Centre,"Pretoria, South Africa",-25.746519,28.278739,1400,DNI_Avg,DIF_Avg,GHI_Avg,2017-03-12,2021-05-20,1
-ELA,Mintek Elandsfontein,"Witbank, South Africa",-25.88708,29.118444,1629,DNI_Avg,DIF_Avg,GHI_Avg,2019-08-22,2021-05-25,1
-CUT,Central University of Technology,"Bloemfontein, South Africa",-29.121337,26.215909,1397,DNI_Avg,DIF_Avg,GHI_Avg,2017-10-25,2021-04-13,1
+KZH,University of KwaZulu-Natal Howard College,"Durban, South Africa",-29.87097931,30.97694969,150,CHP1SlrW_Avg,CMP11_1SlrW_Avg,CMP11_2SlrW_Avg,2015-12-01,,1
+KZW,University of KwaZulu-Natal Westville,"Durban, South Africa",-29.81694031,30.94491959,200,TrackerWM_Avg,ShadowWM_Avg,SunWM_Avg,2015-12-01,2018-12-01,1
+SUN,Stellenbosch University,"Stellenbosch, South Africa",-33.92810059,18.86540031,119,TrackerWM_Avg,ShadowWM_Avg,SunWM_Avg,2010-06-01,,1
+UPR,GIZ University of Pretoria,"Pretoria, South Africa",-25.75308037,28.22859001,1410,DNI_Avg,DIF_Avg,GHI_Avg,2013-09-01,,1
+VAN,GIZ Vanrhynsdorp,"Vanrhynsdorp, South Africa",-31.61747932,18.73834038,130,DNI_Avg,DIF_Avg,GHI_Avg,2016-08-01,2019-07-01,1
+UFS,GIZ University of Free State,"Bloemfontein, South Africa",-29.11074066,26.18502998,1491,DNI_Avg,DIF_Avg,GHI_Avg,2017-02-01,2017-08-01,1
+GRT,GIZ Graaff-Reinet,"Graaff-Reinet, South Africa",-32.48546982,24.58581924,660,DNI_Avg,DIF_Avg,GHI_Avg,2013-11-01,2016-01-01,1
+NMU,Nelson Mandela University,"Port Elizabeth, South Africa",-34.0085907,25.66526031,35,CHP1SlrW_Avg,CMP11_1SlrW_Avg,CMP11_2SlrW_Avg,2015-12-01,,1
+RVD,GIZ Richtersveld,"Alexander Bay, South Africa",-28.56084061,16.76145935,141,DNI_Avg,DIF_Avg,GHI_Avg,2014-04-01,2020-05-01,1
+STA,Mangosuthu University of Technology,"Umlazi, South Africa",-29.97020912,30.91490936,95,MUT_DNI_NIP_31955E6_W_Avg,MUT_DHI_PSP_34332F3_W_Avg,MUT_GHI_PSP_34331F3_W_Avg,2015-12-01,2020-07-01,1
+UBG,USAid Gaborone,"Gaborone, Botswana",-24.6609993,25.93400002,1014,DNI_Avg,DIF_Avg,GHI_Avg,2014-11-01,2020-06-01,1
+UNV,USAid Venda,"Vuwani, South Africa",-23.13100052,30.42399979,628,DNI_Avg,DIF_Avg,GHI_Avg,2015-04-01,,1
+UNZ,University of Zululand,"KwaDlangezwa, South Africa",-28.85289955,31.85161018,90,DNI_Avg,DIF_Avg,GHI_Avg,2016-02-01,,1
+NUST,USAid Namibian University of Science and Technology,"Windhoek, Namibia",-22.56500053,17.07500076,1683,DNI_Avg,DIF_Avg,GHI_Avg,2016-08-01,,1
+FRH,USAid University of Fort Hare,"Alice, South Africa",-32.78461075,26.84519958,540,DNI_Avg,DIF_Avg,GHI_Avg,2017-02-01,,1
+MRB,GIZ Murraysburg,"Murraysburg, South Africa",-31.89009094,24.05623055,1548,DNI_Avg,DIF_Avg,GHI_Avg,2017-03-01,2019-10-01,1
+HLO,Mariendal,"Mariendal, South Africa",-33.85412979,18.82444954,178,DNI_Avg,DIF_Avg,GHI1_Avg,2015-10-01,2020-10-01,1
+SALT,Eskom Sutherland SALT,"Sutherland, South Africa",-32.37778091,20.8116703,1761,Sol_Direct_Avg,Sol_Global2_Avg,Sol_Global1_Avg,2017-07-01,2020-12-01,1
+CSIR,CSIR Energy Centre,"Pretoria, South Africa",-25.746519,28.278739,1400,DNI_Avg,DIF_Avg,GHI_Avg,2017-03-01,,1
+ELA,Mintek Elandsfontein,"Witbank, South Africa",-25.88708,29.118444,1629,DNI_Avg,DIF_Avg,GHI_Avg,2019-08-01,,1
+CUT,Central University of Technology,"Bloemfontein, South Africa",-29.121337,26.215909,1397,DNI_Avg,DIF_Avg,GHI_Avg,2017-10-01,,1
