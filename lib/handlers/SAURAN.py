@@ -18,8 +18,11 @@ class SAURANHandler(InSituHandler) :
            DNI_Col : DIR_VAR,
         GHI_Col: GHI_VAR}
 
-        data = pd.read_csv(stream, skiprows=[0, 2, 3], parse_dates=["TmStamp"],
-                    index_col="TmStamp", usecols=["TmStamp"] + [GHI_Col, DHI_Col, DNI_Col])
+        data = pd.read_csv(
+            stream,
+            skiprows=[0, 2, 3],
+            parse_dates=["TmStamp"], index_col="TmStamp", dayfirst=True,
+            usecols=["TmStamp"] + [GHI_Col, DHI_Col, DNI_Col])
 
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
