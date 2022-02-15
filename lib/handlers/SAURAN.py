@@ -4,6 +4,10 @@ from lib.common import GHI_VAR, DIR_VAR, DIF_VAR
 from lib.handlers.base_handler import InSituHandler
 import pandas as pd
 
+# The time base for all readings is South African Standard Time (SAST" \
+# See : http://www.scielo.org.za/scielo.php?script=sci_arttext&pid=S1021-447X2015000100001
+TIMEZONE=2
+
 class SAURANHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
@@ -26,6 +30,9 @@ class SAURANHandler(InSituHandler) :
 
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
+
+        #
+        data.index -= pd.to_timedelta(TIMEZONE, "H")
 
         return data
 
