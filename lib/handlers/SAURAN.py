@@ -1,12 +1,10 @@
 
 
-from pvlib.iotools import parse_bsrn
-from lib.common import GHI_VAR, DIR_VAR, DIF_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+from lib.common import GHI_VAR, DIR_VAR, DIF_VAR
 from lib.handlers.base_handler import InSituHandler
-from lib.log import error
 import pandas as pd
 
-class ABOMHandler(InSituHandler) :
+class SAURANHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
 
