@@ -7,12 +7,11 @@ import os, sys
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import nc2df, file2df
+from lib.common import nc2df, file2df, get_periods
 from lib.log import *
 import numpy as np
 
-MIN_STEP=0
-MAX_STEP=1000
+
 
 
 def check_time(filename) :
@@ -29,21 +28,12 @@ def check_time(filename) :
         to_date = max(df.index)
         nb_samples = len(df.index)
 
-        time_s = df.index.values.astype(np.int64) / 1000000000
-        steps = time_s[1:] - time_s[0:len(time_s)-1]
-        unique, counts = np.unique(steps, return_counts=True)
+        time_s = df.index.values.astype(np.int64) // 1000000000
 
-        filtered_unique = unique[(unique > MIN_STEP) & (unique < MAX_STEP)]
-        filtered_counts = counts[(unique > MIN_STEP) & (unique < MAX_STEP)]
-
-        indices = np.argsort(-filtered_counts)[:3]
-        periods_dic = dict((filtered_unique[idx], filtered_counts[idx]) for idx in indices)
-
-        # Filter periods present more than 10 times
-        periods = {int(k): v for k,  v in periods_dic.items() if v > 10}
+        periods = get_periods(time_s)
 
         if len(periods) > 1 :
-            warning("Found several periods periods=%s", periods_dic)
+            warning("Found several periods periods=%s", periods)
         else:
             periods = list(periods.keys())[0]
         info("from:%s, to:%s, %d samples, period:%s", from_date, to_date, nb_samples, periods)

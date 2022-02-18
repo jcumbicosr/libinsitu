@@ -157,5 +157,21 @@ def date_str(val) :
 
     raise Exception("Unknown date type : " + type(val))
 
+MIN_STEP=0
+MAX_STEP=1000
+
+def get_periods(time_s) :
+    """Compute list of periods, by occurrence. Return list of (period, count)"""
+
+    steps = time_s[1:] - time_s[0:len(time_s) - 1]
+    unique, counts = np.unique(steps, return_counts=True)
+
+    filtered_unique = unique[(unique > MIN_STEP) & (unique < MAX_STEP)]
+    filtered_counts = counts[(unique > MIN_STEP) & (unique < MAX_STEP)]
+
+    indices = np.argsort(-filtered_counts)[:3]
+    periods_dic =  dict((filtered_unique[idx], filtered_counts[idx]) for idx in indices)
+    return list((int(period), count) for period, count in periods_dic.items())
+
 
 
