@@ -238,11 +238,11 @@ def process_chunck(handler, infile, ncfile, args):
     chunk_end = max(chunk_dates)
     chunk_end_int = datetime64_to_int(ncfile, chunk_end)
 
-    info("chunck range: %s to %s. samples:%d", chunk_start, chunk_end, len(data.index))
+    info("chunck range: %s to %s. samples:%d", date_str(chunk_start), date_str(chunk_end), len(data.index))
 
     # Error if chunk starts before start time
     if chunk_start < start_time:
-        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (chunk_start, start_time))
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (date_str(chunk_start), date_str(start_time)))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
@@ -303,5 +303,4 @@ if __name__ == '__main__':
     station_id  = args.station_id.upper()
 
     with LogContext(network=network, station_id=station_id):
-
         main(network, station_id, args.out, args)

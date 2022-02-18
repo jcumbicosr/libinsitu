@@ -1,5 +1,6 @@
 import logging
 from csv import DictReader
+from datetime import datetime
 from typing import List
 
 import numpy as np
@@ -144,6 +145,17 @@ def file2df(filename):
     df = nc2df(nc)
     nc.close()
     return df
+
+def date_str(val) :
+    """Format date to the minute """
+    if val is None :
+        return ""
+    if isinstance(val, datetime64) :
+        return np.datetime_as_string(val, unit='m')
+    elif isinstance(val, datetime) :
+        return val.strftime("'%Y-%m-%d %H:%M'")
+
+    raise Exception("Unknown date type : " + type(val))
 
 
 

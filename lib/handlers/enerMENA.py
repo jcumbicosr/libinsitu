@@ -1,11 +1,12 @@
 from collections import OrderedDict
 from datetime import timedelta
+from logging import warn
 
 import pandas as pd
 
 from lib.common import GHI_VAR, DIR_VAR, DIF_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
 from lib.handlers.base_handler import InSituHandler
-from lib.log import info
+from lib.log import info, warning
 
 
 def read_mesor(stream, na_values=[-999.0, -99.9, -10.0, -9999.0]):
@@ -38,6 +39,9 @@ def read_mesor(stream, na_values=[-999.0, -99.9, -10.0, -9999.0]):
             if len(parts) >= 2 :
                 metadata[parts[0].strip()] = parts[1].strip()
 
+    def safe_date(v) :
+        return pd.to_datetime(v, errors="coerce")
+
     # Read data as CSV
     data = pd.read_csv(
         stream,
@@ -46,7 +50,14 @@ def read_mesor(stream, na_values=[-999.0, -99.9, -10.0, -9999.0]):
         comment='#',
         parse_dates=[0],
         index_col=0,
-        na_values=na_values)
+        na_values=na_values,
+        date_parser=safe_date)
+
+    # Bad dates ?
+    nb_baddates = sum(data.index.isnull())
+    if nb_baddates > 0 :
+        warning("Skipping %d bad dates" % nb_baddates)
+        data = data[data.index.notnull()]
 
     data.columns = list(channels.keys())[2:]
 
