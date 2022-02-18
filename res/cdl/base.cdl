@@ -30,7 +30,7 @@ variables:
 		elevation:axis = "Z" ; 
 		elevation:comment = "" ;
 		
-	int64 Time(time) ;
+	uint Time(time) ;
 		Time:parameter = "DATE/TIME" ;
 		Time:long_name = "Time of the end of period" ; 
 		Time:standard_name = "time" ; 

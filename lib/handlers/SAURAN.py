@@ -18,9 +18,9 @@ class SAURANHandler(InSituHandler) :
         DNI_Col = self.properties["DNI_Col"]
 
         mapping = {
-           DHI_Col : DIF_VAR,
-           DNI_Col : DIR_VAR,
-        GHI_Col: GHI_VAR}
+           DHI_Col: DIF_VAR,
+           DNI_Col: DIR_VAR,
+           GHI_Col: GHI_VAR}
 
         data = pd.read_csv(
             stream,

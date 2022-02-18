@@ -53,5 +53,5 @@ DAtes min/max SURAN :
 find . -size +560 | awk -F '[_/.]' '{id=$3; date=$5; if (!(id in min) || (min[id] > date)) min[id]=date; if (!(id in max) || (max[id] < date)) max[id]=date} END{for (id in min) {print id "," min[id] "," max[id]}}'
 
 FIXME !
-TN files in TAN input ! => reprocess TAN
-
+* TN files in TAN input ! => reprocess TAN
+* Time type : int (32 bits) = 70 years

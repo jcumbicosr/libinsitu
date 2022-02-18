@@ -89,6 +89,10 @@ def parse_cdl(lines, attributes) :
                 type ="c"
             elif type == "float" :
                 type="f4"
+            elif type == "int" :
+                type="i4"
+            elif type == "uint":
+                type = "u4"
 
             dims=[]
             if "(" in var :
