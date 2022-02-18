@@ -224,14 +224,21 @@ def process_chunck(handler, infile, ncfile, args):
     chunk_dates = data.index.values
 
     times_int = datetime64_to_int(ncfile, chunk_dates)
-    time_idx = times_int // resolution_s
+
 
     # Ensure all timestamps fall into resolution
-    exact = ((times_int % resolution_s) == 0).all()
-    if not exact:
-        wrong_times_int = times_int[times_int % resolution_s != 0]
-        wrong_times_str = ",".join(str(date) for date in int_to_datetime64(ncfile, wrong_times_int))
-        raise Exception("Timestamps do not fit timeresolution of %d seconds : %s" % (resolution_s, wrong_times_str))
+    exact_idx = (times_int % resolution_s) == 0
+    nb_not_exact_times = len(times_int) - np.sum(exact_idx)
+    if nb_not_exact_times > 0:
+
+        # Remove lines with wrong times
+        data = data[exact_idx]
+        times_int = times_int[exact_idx]
+
+        warning("%d rows had timings not fitting the time resolution : skipping them" % nb_not_exact_times)
+
+
+    time_idx = times_int // resolution_s
 
     next_time_int = 0 if len(ncfile.variables[TIME_VAR]) == 0 else ncfile.variables[TIME_VAR][-1] + resolution_s
     chunk_start = min(chunk_dates)
@@ -264,6 +271,8 @@ def process_chunck(handler, infile, ncfile, args):
 
     # Store data values
     check_and_assign(ncfile, data, time_idx, size_before, args)
+
+    info("Chunk processed successfully")
 
 
 def sort_files(files) :
