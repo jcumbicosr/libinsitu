@@ -9,15 +9,15 @@ from netCDF4 import Dataset
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import nc2df, GHI_VAR, DIF_VAR, DIR_VAR, PRESSURE_VAR, \
+from lib.common import nc2df, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
     HUMIDITY_VAR, TEMP_VAR
 from lib.log import *
 import numpy as np
 
 NAN_VALUES = {
-    GHI_VAR : -999.0,
-    DIF_VAR : -999.0,
-    DIR_VAR : -999.0,
+    GLOBAL_VAR : -999.0,
+    DIFFUSE_VAR : -999.0,
+    DIRECT_VAR : -999.0,
     TEMP_VAR : 173.25,
     HUMIDITY_VAR : -0.999,
     PRESSURE_VAR: -99900.0

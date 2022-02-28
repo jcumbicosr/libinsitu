@@ -1,0 +1,169 @@
+netcdf base {
+
+dimensions:
+	time = UNLIMITED ;
+	ncshort = 10;
+
+variables:
+
+	char station_name(ncshort) ;
+		station_name:long_name = "station_name" ;
+		station_name:cf_role = "timeseries_id" ;
+
+    float latitude ;
+		latitude:long_name = "station latitude" ;
+		latitude:standard_name = "latitude" ;
+		latitude:units = "degrees_north" ;
+		latitude:_CoordinateAxisType = "Lat" ;
+		latitude:axis = "Y" ;
+
+	float longitude ;
+		longitude:long_name = "station longitude" ;
+		longitude:standard_name = "longitude" ;
+		longitude:units = "degrees_east" ;
+		longitude:_CoordinateAxisType = "Lon" ;
+		longitude:axis = "X" ;
+
+	float elevation ;
+		elevation:long_name = "Elevation above mean seal level" ;
+		elevation:standard_name = "height_above_mean_sea_level" ;
+		elevation:units = "m" ;
+		elevation:axis = "Z" ;
+		elevation:comment = "" ;
+
+	uint Time(time) ;
+		Time:parameter = "DATE/TIME" ;
+		Time:long_name = "Time of the end of period" ;
+		Time:standard_name = "time" ;
+		Time:abbreviation = "Date/Time" ;
+		Time:units = "seconds since {Station_StartDate} 00:00:00" ;
+		Time:time_origin = "{Station_StartDate} 00:00:00" ;
+		Time:resolution = "{Station_TimeResolution} min"
+		Time:time_zone= "UTC"
+		Time:axis = "T" ;
+		Time:calendar = "gregorian" ;
+
+    float GHI(time) ;
+		GHI:parameter = "Short-wave downward (GLOBAL) radiation" ;
+		GHI:long_name = "Global Horizontal Irradiance" ;
+		GHI:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
+		GHI:abbreviation = "SWD" ;
+		GHI:units = "W m-2" ;
+		GHI:Range_LowerBoundary=-10.0 ;
+		GHI:Range_UpperBoundary=3000 ;
+		GHI:Description="global, mean";
+
+	float DHI(time) ;
+		DHI:parameter = "Diffuse horizontal radiation" ;
+		DHI:long_name = "Diffuse horizontal radiation" ;
+		DHI:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
+		DHI:abbreviation = "DHI" ;
+		DHI:units = "W m-2" ;
+		DHI:Range_LowerBoundary=-10.0 ;
+		DHI:Range_UpperBoundary=3000 ;
+
+	float BNI(time) ;
+		BNI:parameter = "Beam (or direct) normal radiation" ;
+		BNI:long_name = "Beam (or direct) normal radiation" ;
+		BNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
+		BNI:abbreviation = "BNI" ;
+		BNI:units = "W m-2" ;
+		BNI:Range_LowerBoundary=-10.0 ;
+		BNI:Range_UpperBoundary=3000 ;
+
+	float T2(time) ;
+		T2:parameter = "Air temperature at 2 m height" ;
+		T2:long_name = "Air temperature at 2 m height" ;
+		T2:standard_name = "air_temperature" ;
+		T2:abbreviation = "T2" ;
+		T2:units = "K" ;
+		T2:Range_LowerBoundary=123.0 ;
+		T2:Range_UpperBoundary=372.9 ;
+
+	float RH(time) ;
+		RH:parameter = "Humidity, relative" ;
+		RH:long_name = "relative humidity" ;
+		RH:standard_name = "relative_humidity" ;
+		RH:abbreviation = "RH" ;
+		RH:units = "1" ;
+		RH:Range_LowerBoundary=0.0 ;
+		RH:Range_UpperBoundary=1.0 ;
+
+	float WS(time) ;
+		WS:parameter = "Wind speed" ;
+		WS:long_name = "Wind speed" ;
+		WS:standard_name = "wind_speed" ;
+		WS:abbreviation = "windspd" ;
+		WS:units = "m s-1" ;
+		WS:height = -999 ;
+		WS:Range_LowerBoundary=0.0;
+
+	float WD(time) ;
+		WD:parameter = "Wind direction" ;
+		WD:long_name = "Wind direction, clockwise from north" ;
+		WD:standard_name = "wind_direction" ;
+		WD:abbreviation = "winddir" ;
+		WD:units = "degrees" ;
+		WD:height = -999 ;
+		WD:Range_LowerBoundary=0.0;
+		WD:Range_UpperBoundary=360.0;
+
+	float P(time) ;
+		P:parameter = "Station pressure" ;
+		P:long_name = "air pressure at station height" ;
+		P:standard_name = "air_pressure" ;
+		P:abbreviation = "PoPoPoPo" ;
+		P:units = "Pa" ;
+		P:Range_LowerBoundary=0.0 ;
+		P:Range_UpperBoundary=120000.0;
+
+        // Global attributes
+
+		:description = "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server." ;
+		:title = "Timeseries of {Network_LongName} ({Network_ID})" ;
+		:keywords = "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure"
+		:keywords_vocabulary = "GCMD Science Keywords" ;
+		:keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
+		:contact = "Lionel MENARD, Raphael JOLIVET, Yves-Marie SAINT-DRENAN, Philippe BLANC" ;
+		:institution = " MINES Paris PSL" ;
+        :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
+		:Network_ShortName = "{Network_ID}";
+		:Network_LongName = "{Network_LongName}";
+		:Network_Region = "{Network_Region}";
+		:Network_TimeResolution = "{Network_TimeResolution}";
+		:Network_Description = "{Network_DescriptionURL}" ;
+		:Network_References = "{Network_References}" ;
+		:Network_License = "{Network_LicenseInfoURL}" ;
+		:Network_Contact = "{Network_ContactPersonMail}" ;
+		:Station_WMO_ID =  "{Station_WMOID}";
+		:Station_FullName = "{Station_FullName}" ;
+		:Station_ShortName = "{Station_ShortName}" ;
+		:Station_Latitude = "{Station_Latitude}" ;
+		:Station_Longitude = "{Station_Longitude}" ;
+		:Station_Elevation = "{Station_Elevation}" ;
+		:Station_RawTimeZone = "{Station_RawTimeZone}" ;
+        :Station_Address =  "{Station_Address}" ;
+		:Station_city =  "{Station_city}" ;
+		:Station_country =  "{Station_country}" ;
+		:Station_SurfaceType = "{Station_SurfaceType}" ;
+		:Station_TopographyType = "{Station_TopographyType}" ;
+		:Station_Rural_Urban = "{Station_RuralUrban}" ;
+		:Station_KoeppenGeigerClimate = "{Station_KoeppenGeigerClimate}" ;
+		:Station_StationType = "{Station_StationType}";
+		:Station_OperationStatus =  "{Station_OperationStatus}";
+		:Station_DiffusionStatus =  "{Station_DiffusionStatus}";
+		:Station_TimeResolution =  "{Station_TimeResolution}";
+		:Station_DataBegin = "{Station_DataBegin}" ;
+		:Station_DataEnd = "{Station_DataEnd}";
+		:Station_ContactPerson =  "{Station_ContactName}" ;
+		:Station_Institute =  "{Station_Institute}" ;
+		:Station_url =  "{Station_url}";
+		:Station_CommissionDate  =  "{Station_CommissionDate}";
+		:Station_DecommissionDate =  "{Station_DecommissionDate}";
+		:Station_Comment = "{Station_Comment}" ;
+		:featureType = "TimeSeries" ;
+		:cdm_data_type = "TimeSeries" ;
+		:Conventions = "CF-1.6" ;
+		:cdm_timeseries_variables = "station_name,latitude,longitude" ;
+        :creation_date = "{Station_CurrentTime}" ;
+}

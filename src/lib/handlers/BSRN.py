@@ -1,7 +1,7 @@
 
 
 from pvlib.iotools import parse_bsrn
-from lib.common import GHI_VAR, DIR_VAR, DIF_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
 from lib.handlers.base_handler import InSituHandler
 from lib.log import error
 import pandas as pd
@@ -13,9 +13,9 @@ class BSRNHandler(InSituHandler) :
         data, metadata = parse_bsrn(stream)
 
         mapping = dict(
-            ghi=GHI_VAR,
-            dni=DIR_VAR,
-            dhi=DIF_VAR,
+            ghi=GLOBAL_VAR,
+            dni=DIRECT_VAR,
+            dhi=DIFFUSE_VAR,
             temp_air=TEMP_VAR,
             relative_humidity=HUMIDITY_VAR,
             pressure=PRESSURE_VAR)

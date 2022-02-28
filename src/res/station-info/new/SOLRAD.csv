@@ -1,0 +1,10 @@
+ID,WMOID,FullName,ShortName,Latitude,Longitude,Elevation,Timezone,Address,City,Country,SurfaceType,TopographyType,RuralUrban,KoeppenGeigerClimate,StationType,OperationStatus,DiffusionStatus,TimeResolution,StartDate,EndDate,ContactName,Institute,Url,CommissionDate,DecommissionDate,Comment
+ABQ,,"Albuquerque, New Mexico",Albuquerque,,,1617.0,UTC-07:00,,"Albuquerque, New Mexico",USA,,,,,,,,,,,,,,,,
+BIS,,"Bismarck, North Dakota",Bismarck,,,503.0,UTC-06:00,,"Bismarck, North Dakota",USA,,,,,,,,,,,,,,,,
+HNX,,"Hanford, California",Hanford,,,73.0,UTC-08:00,,"Hanford, California",USA,,,,,,,,,,,,,,,,
+SEA,,"Seattle, Washington",Seattle,,,20.0,UTC-08:00,,"Seattle, Washington",USA,,,,,,,,,,,,,,,,
+TLH,,"Tallahassee, Florida",Tallahassee,,,18.0,UTC-05:00,,"Tallahassee, Florida",USA,,,,,,,,,,,,,,,,
+SLC,,"Salt Lake City, Utah",Salt Lake City,,,1288.0,UTC-07:00,,"Salt Lake City, Utah",USA,,,,,,,,,,,,,,,,
+STE,,"Sterling, Virginia",Sterling,,,85.0,UTC-05:00,,"Sterling, Virginia",USA,,,,,,,,,,,,,,,,
+MSN,,"Madison, Wisconsin",Madison,,,271.0,UTC-06:00,,"Madison, Wisconsin",USA,,,,,,,,,,,,,,,,
+ORT,,"Oak Ridge, Tennessee",Oak Ridge,,,334.0,UTC-05:00,,"Oak Ridge, Tennessee",USA,,,,,,,,,,,,,,,,

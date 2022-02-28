@@ -1,6 +1,6 @@
 
 
-from lib.common import GHI_VAR, DIR_VAR, DIF_VAR
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
 from lib.handlers.base_handler import InSituHandler
 import pandas as pd
 
@@ -18,9 +18,9 @@ class SAURANHandler(InSituHandler) :
         DNI_Col = self.properties["DNI_Col"]
 
         mapping = {
-           DHI_Col: DIF_VAR,
-           DNI_Col: DIR_VAR,
-           GHI_Col: GHI_VAR}
+           DHI_Col: DIFFUSE_VAR,
+           DNI_Col: DIRECT_VAR,
+           GHI_Col: GLOBAL_VAR}
 
         data = pd.read_csv(
             stream,
@@ -39,7 +39,7 @@ class SAURANHandler(InSituHandler) :
 
     def data_vars(self):
         """ @override """
-        return [GHI_VAR, DIF_VAR, DIR_VAR]
+        return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR]
 
     def pattern(self):
         return "{ID}_minute_{YYYY}{MM}.csv"

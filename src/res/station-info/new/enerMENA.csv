@@ -1,0 +1,12 @@
+ID,WMOID,FullName,ShortName,Latitude,Longitude,Elevation,Timezone,Address,City,Country,SurfaceType,TopographyType,RuralUrban,KoeppenGeigerClimate,StationType,OperationStatus,DiffusionStatus,TimeResolution,StartDate,EndDate,ContactName,Institute,Url,CommissionDate,DecommissionDate,Comment
+TN,,Tataouine,TN,,,210.0,,,,Tunisia,,,,,TS,,,1.0,40524.0,,,CRTEn,,,,
+JOR,,Ma'an,JOR,,,1012.0,,,,Jordan,,,,,TS,,,1.0,40585.0,,,University of Jordan,,,,
+OUJ,,Oujda,OUJ,,,617.0,,,,Morocco,,,,,TS,,,1.0,40773.0,,,University of oujda,,,,
+CAI,,Cairo,CAI,,,104.0,,,,Egypt,,,,,TS,,,1.0,41066.0,,,Cairo University,,,,
+ADR,,Adrar,ADR,,,262.0,,,,Algeria,,,,,TS,,,1.0,41179.0,,,CDER,,,,
+GHA,,Ghardaia,GHA,,,463.0,,,,Algeria,,,,,TS,,,1.0,41182.0,,,CDER,,,,
+MIS,,Missour,MIS,,,1107.0,,,,Morocco,,,,,TS,,,1.0,41421.0,,,IRESEN,,,,
+ERF,,Erfoud,ERF,,,859.0,,,,Morocco,,,,,RSI,,,1.0,41424.0,,,IRESEN,,,,
+ZAG,,Zagora,ZAG,,,783.0,,,,Morocco,,,,,RSI,,,1.0,41425.0,,,IRESEN,,,,
+TAN,,Tan-Tan,TAN,,,75.0,,,,Morocco,,,,,TS,,,1.0,41430.0,,,IRESEN,,,,
+FKI,,Ben Salah,FKI,,,485.0,,,,Morocco,,,,,,,,1.0,43466.0,,,IRESEN,,,,
