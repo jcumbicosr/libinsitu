@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 # Temp file for merging input XLS file with CSV files
+import argparse
+import json
 import re
 import sys, os
 from collections import defaultdict
 from csv import DictReader
+from glob import glob
+from os.path import basename
+from shutil import copy
+
 from openpyxl import load_workbook
 import csv
 from unidecode import unidecode
 from datetime import datetime
+from urllib.request import urlretrieve
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -21,11 +28,13 @@ ALTERNATE_FORMAT="%d/%m/%Y"
 
 COL_SUBS = {
     "StationID" : "ID",
+    "FullName" : "Name",
     "RawTimeZone" : "Timezone",
     "KoeppenGeigerClimate" : "Climate",
     "DNI" : "DNI_Col",
     "DHI" : "DHI_Col",
-    "GHI" : "GHI_Col"
+    "GHI" : "GHI_Col",
+    "Type" : "QualityStandard"
 }
 
 # Columns, in order to appear
@@ -33,13 +42,14 @@ VALID_COLS = [
     "ID",
     "UID",
     "WMOID",
-    "FullName",
+    "Name",
     "Latitude",
     "Longitude",
     "Elevation",
     "Timezone",
     "Address",
     "City",
+    "Region",
     "Country",
     "SurfaceType",
     "TopographyType",
@@ -47,8 +57,8 @@ VALID_COLS = [
     "Climate",
     "OperationStatus",
     "TimeResolution",
-    "DataBegin",
-    "DataEnd",
+ #   "DataBegin",
+ #   "DataEnd",
     "ContactName",
     "Institute",
     "Url",
@@ -59,7 +69,15 @@ VALID_COLS = [
     "DNI_Col",
     "DHI_Col",
     "GHI_Col",
+    "QualityStandard",
     "Comment"]
+
+GEOLOC = {
+    "Country" : ["country"],
+    "Region" : ["region", "state", "territory"],
+    "Address": ["house_name", "house_number", "road"],
+    "City" : ["municipality", "city", "town", "village"]
+}
 
 LOCKED_COLS = ["StartDate", "EndDate", "TimeResolution"]
 
@@ -152,7 +170,7 @@ def read_sheet_raw(sheet) :
 def generate_id(row) :
 
     if "ID" not in row or row["ID"] == "" :
-        fullname = row["FullName"]
+        fullname = row["Name"]
         fullname = unidecode(fullname).upper()
         for key, repl in FULLNAME_REPL.items():
             fullname = fullname.replace(key, repl).strip()
@@ -246,9 +264,6 @@ def save_csv(path, rows) :
         for row in rows:
             writer.writerow(row)
 
-def reorder_cols(row):
-    return {col:row[col] for col in sorted(row.keys(), key=lambda col : VALID_COLS.index(col))}
-
 def merge(initial_rows, updated_rows) :
 
     initial_by_id = dict((row["ID"], row) for row in initial_rows)
@@ -259,8 +274,6 @@ def merge(initial_rows, updated_rows) :
             initial_by_id[id] = row
         else:
             initial_row = initial_by_id[id]
-            initial_row = reorder_cols(initial_row)
-            initial_by_id[id] = initial_row
 
             for col, val in row.items() :
                 if not col in initial_row :
@@ -293,17 +306,87 @@ def save(networks, out_folder) :
 
         save_csv(path, merged)
 
+def get_loc(network, id, lat, lon) :
+    filename = os.path.join(CACHE_FOLDER, "%s-%s.js" % (network, id))
+    if not os.path.exists(filename) :
+        url ="https://nominatim.openstreetmap.org/reverse?lat=%f&lon=%f&format=json&accept-language=en" % (lat, lon)
+        urlretrieve(url, filename)
 
-def main(xls_file, out_folder) :
+    with open(filename, "r") as f :
+        return json.load(f)
+
+
+def enrich_coords(network, rows) :
+    for row in rows:
+
+        id = row["ID"]
+
+        lat = str2val(row["Latitude"])
+        lon = str2val(row["Longitude"])
+
+        loc = get_loc(network, id, lat, lon)
+
+        if "error" in loc :
+            print("Error for : %s/%s : %s" % (network, id, loc["error"]))
+            continue
+
+        address = loc["address"]
+
+        for col, keys in GEOLOC.items() :
+            val = ", ".join(address[key] for key in keys if key in address)
+            val = unidecode(val)
+            row[col] = val
+            print("%s#%s : %s" % (id, col, val))
+
+    return rows
+
+
+def main_xls(xls_file, out_folder) :
+
     wb = load_workbook(xls_file)
     networks = read_networks(wb)
-    save(networks, out_folder)
 
+    save(networks, out_folder)
 
     # Show empty cols
     for col, count in colCounter.items():
         print("Count '%s' : %d" % (col, count))
 
 
+
+def main_coords(out_folder) :
+    for file in glob(os.path.join(out_folder, "*.csv")) :
+        rows = load_csv(file)
+
+        network = basename(file)
+        network = network.replace(".csv", "")
+
+        rows = enrich_coords(network, rows)
+        rows = filter_redorder_cols(rows)
+
+        save_csv(file, rows)
+
+
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+
+    parser = argparse.ArgumentParser(description='Enrich CSV files of stations')
+    subparsers = parser.add_subparsers(help="commands", dest="command")
+    parser.add_argument('out_folder', metavar='<output-folder>', type=str, help='Output folder')
+
+    xls_parser = subparsers.add_parser('xls', help="Enrich data from single XLS file")
+    xls_parser.add_argument("input_file", metavar="<input.xls>", type=str)
+
+    coords_parser = subparsers.add_parser('coords', help="Enrich data from coordinates")
+    coords_parser.add_argument("--cache", "-c", metavar="<input.xls>", type=str, help="Cache folder", default="/tmp")
+
+    args = parser.parse_args()
+
+    if args.command == "xls" :
+        main_xls(args.input_file, args.out_folder)
+    elif args.command == "coords" :
+
+        CACHE_FOLDER = args.cache
+        main_coords(args.out_folder)
+
+    else:
+        raise Exception("Unknown command" + args.command)

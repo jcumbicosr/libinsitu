@@ -128,7 +128,7 @@ variables:
 		:institution = " MINES Paris PSL" ;
         :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
 		:Network_ShortName = "{Network_ID}";
-		:Network_LongName = "{Network_LongName}";
+		:Network_Name = "{Network_LongName}";
 		:Network_Region = "{Network_Region}";
 		:Network_TimeResolution = "{Network_TimeResolution}";
 		:Network_Description = "{Network_DescriptionURL}" ;
@@ -136,12 +136,11 @@ variables:
 		:Network_License = "{Network_LicenseInfoURL}" ;
 		:Network_Contact = "{Network_ContactPersonMail}" ;
 		:Station_WMO_ID =  "{Station_WMOID}";
-		:Station_FullName = "{Station_FullName}" ;
-		:Station_ShortName = "{Station_ShortName}" ;
+		:Station_Name = "{Station_Name}" ;
 		:Station_Latitude = "{Station_Latitude}" ;
 		:Station_Longitude = "{Station_Longitude}" ;
 		:Station_Elevation = "{Station_Elevation}" ;
-		:Station_RawTimeZone = "{Station_RawTimeZone}" ;
+		:Station_LocalTimeZone = "{Station_Timezone}" ;
         :Station_Address =  "{Station_Address}" ;
 		:Station_city =  "{Station_city}" ;
 		:Station_country =  "{Station_country}" ;
