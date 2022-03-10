@@ -1,12 +1,12 @@
-ID,FullName,Location,Partner,StationType,Elevation,Latitude,Longitude,StartDate,TimeResolution
-TN,Tataouine,Tunisia,CRTEn,TS,210,32.974,10.485,2010-12-12,1
-JOR,Ma'an,Jordan,University of Jordan,TS,1012,30.172,35.818,2011-01-13,1
-OUJ,Oujda,Morocco,University of oujda,TS,617,34.650,-1.900,2011-08-18,1
-CAI,Cairo,Egypt,Cairo University,TS,104,30.036,31.009,2012-06-06,1
-ADR,Adrar,Algeria,CDER,TS,262,27.880,-0.274,2012-09-27,1
-GHA,Ghardaia,Algeria,CDER,TS,463,32.386,3.780,2012-09-30,1
-MIS,Missour,Morocco,IRESEN,TS,1107,32.860,-4.107,2013-05-27,1
-ERF,Erfoud,Morocco,IRESEN,RSI,859,31.491,-4.218,2013-05-30,1
-ZAG,Zagora,Morocco,IRESEN,RSI,783,30.272,-5.852,2013-05-31,1
-TAN,Tan-Tan,Morocco,IRESEN,TS,75,28.498,-11.322,2013-06-05,1
-FKI,,,,,485,32.578,-6.622,2019-01-01,1
+ID,WMOID,FullName,Latitude,Longitude,Elevation,Timezone,Address,City,Country,SurfaceType,TopographyType,RuralUrban,Climate,OperationStatus,TimeResolution,ContactName,Institute,Url,CommissionDate,DecommissionDate,StartDate,EndDate,Comment
+TN,,Tataouine,32.974,10.485,210,,,,Tunisia,,,,,,1,,CRTEn,,,,2010-12-12,,
+JOR,,Ma'an,30.172,35.818,1012,,,,Jordan,,,,,,1,,University of Jordan,,,,2011-01-13,,
+OUJ,,Oujda,34.650,-1.900,617,,,,Morocco,,,,,,1,,University of oujda,,,,2011-08-18,,
+CAI,,Cairo,30.036,31.009,104,,,,Egypt,,,,,,1,,Cairo University,,,,2012-06-06,,
+ADR,,Adrar,27.880,-0.274,262,,,,Algeria,,,,,,1,,CDER,,,,2012-09-27,,
+GHA,,Ghardaia,32.386,3.780,463,,,,Algeria,,,,,,1,,CDER,,,,2012-09-30,,
+MIS,,Missour,32.860,-4.107,1107,,,,Morocco,,,,,,1,,IRESEN,,,,2013-05-27,,
+ERF,,Erfoud,31.491,-4.218,859,,,,Morocco,,,,,,1,,IRESEN,,,,2013-05-30,,
+ZAG,,Zagora,30.272,-5.852,783,,,,Morocco,,,,,,1,,IRESEN,,,,2013-05-31,,
+TAN,,Tan-Tan,28.498,-11.322,75,,,,Morocco,,,,,,1,,IRESEN,,,,2013-06-05,,
+FKI,,Ben Salah,32.578,-6.622,485,,,,Morocco,,,,,,1,,IRESEN,,,,2019-01-01,,

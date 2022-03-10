@@ -2,7 +2,7 @@
 import os, sys
 
 this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, ".."))
+sys.path.append(os.path.join(this_folder, "../src"))
 
 from dateutil.relativedelta import relativedelta
 from netCDF4 import Dataset

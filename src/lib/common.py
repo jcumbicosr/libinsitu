@@ -139,8 +139,14 @@ def nc2df(ncfile, drop_duplicates=True, start_idx=None, end_idx=None) :
     """Read netCDF file into Dataframe, indexed by time"""
     times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx])
 
+    # List of VArs (along time)
+    data_vars = []
+    for varname, var in ncfile.variables.items() :
+        if TIME_DIM in var.dimensions and varname != TIME_VAR :
+            data_vars.append(varname)
+
     df = DataFrame(
-        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in DATA_VARS if var in ncfile.variables),
+        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in data_vars),
         index=times)
 
     # Set global attributes in DataFrame

@@ -1,38 +1,82 @@
 #!/usr/bin/env python
 # Temp file for merging input XLS file with CSV files
-
+import re
 import sys, os
-import xlrd
+from collections import defaultdict
+from csv import DictReader
+from openpyxl import load_workbook
 import csv
-
+from unidecode import unidecode
+from datetime import datetime
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lib.log import error
 
-FIRST_ROW = 1
-FIRST_COL = 1
+FIRST_ROW = 2
+FIRST_COL = 2
+
+DATE_FORMAT="%Y-%m-%d"
+ALTERNATE_FORMAT="%d/%m/%Y"
 
 COL_SUBS = {
     "StationID" : "ID",
-    "RawTimeZone" : "Timezone"
+    "RawTimeZone" : "Timezone",
+    "KoeppenGeigerClimate" : "Climate",
+    "DNI" : "DNI_Col",
+    "DHI" : "DHI_Col",
+    "GHI" : "GHI_Col"
+}
+
+# Columns, in order to appear
+VALID_COLS = [
+    "ID",
+    "UID",
+    "WMOID",
+    "FullName",
+    "Latitude",
+    "Longitude",
+    "Elevation",
+    "Timezone",
+    "Address",
+    "City",
+    "Country",
+    "SurfaceType",
+    "TopographyType",
+    "RuralUrban",
+    "Climate",
+    "OperationStatus",
+    "TimeResolution",
+    "DataBegin",
+    "DataEnd",
+    "ContactName",
+    "Institute",
+    "Url",
+    "CommissionDate",
+    "DecommissionDate",
+    "StartDate",
+    "EndDate",
+    "DNI_Col",
+    "DHI_Col",
+    "GHI_Col",
+    "Comment"]
+
+LOCKED_COLS = ["StartDate", "EndDate", "TimeResolution"]
+
+# For ID generation
+FULLNAME_REPL = {
+    "ST." : "",
+    "SCHWABISCH" : "SCH"
 }
 
 def idTransformer(value) :
     return value.upper()
 
-def latlonTransform(value) :
-    value = value.replace(",", ".")
-    if len(value) > 0 :
-        tstfloat = float(value)
-
 TRANSFORMERS = {
     "ID" : idTransformer,
-    "Latitude" : latlonTransform,
-    "Longitude" : latlonTransform
 }
 
-
+colCounter = defaultdict(lambda : 0)
 
 
 def cleanColName(col) :
@@ -42,23 +86,93 @@ def cleanColName(col) :
     col = col[0].upper() + col[1:]
     return col
 
+COMMA_NUMBER = r"^[0-9,]*$"
+
+
+def str2val(val) :
+    try:
+        date = datetime.strptime(ALTERNATE_FORMAT, val)
+        return date.strftime(DATE_FORMAT)
+    except:
+        pass
+
+    if re.match(COMMA_NUMBER, val):
+        val = val.replace(",", ".")
+    try:
+        return int(val)
+    except:
+        try:
+            fval = float(val)
+            if fval.is_integer():
+                return int(fval)
+            else:
+                return fval
+        except:
+            return val
+
+def get_value(cell):
+
+    val = cell.value
+
+    if val is None :
+        return ""
+
+    if cell.is_date :
+        return val.strftime(DATE_FORMAT)
+
+    elif isinstance(val, str) :
+        return str2val(val)
+    else:
+        return cell.value
+
 def read_sheet_raw(sheet) :
     """Read raw sheet into a list of dict"""
-    cols = list(sheet.cell_value(FIRST_ROW, col) for col in range(FIRST_COL, sheet.ncols))
-    cols = list(cleanColName(col) for col in cols if len(col) > 0)
+
+    cols_idx = dict((sheet.cell(FIRST_ROW, col_idx).value, col_idx) for col_idx in range(FIRST_COL, sheet.max_column+1))
+    cols_idx = dict((cleanColName(col), idx) for col, idx in cols_idx.items() if col is not None)
+
+    # Filter and sort columns
+    sorted_cols = sorted(list(col for col in cols_idx.keys() if col in VALID_COLS), key=lambda col : VALID_COLS.index(col))
+
+    # Filter valid co land sort by column order
+    sorted_cols_idx = dict((col, cols_idx[col]) for col in sorted_cols)
     res = []
 
-    def clean_val(value) :
-        return str(value).strip()
+    for row_idx in range(FIRST_ROW+1, sheet.max_row+1) :
+        row = dict((col, get_value(sheet.cell(row_idx, col_idx))) for col, col_idx in sorted_cols_idx.items())
 
-    for row_idx in range(FIRST_ROW+1, sheet.nrows) :
-        row = dict((col, clean_val(sheet.cell_value(row_idx, FIRST_COL + col_idx)))
-                   for col_idx, col in enumerate(cols))
+        # Skip empty rows
+        if all(val == "" for key, val in row.items()) :
+            continue
+
         res.append(row)
     return res
 
+
+def generate_id(row) :
+
+    if "ID" not in row or row["ID"] == "" :
+        fullname = row["FullName"]
+        fullname = unidecode(fullname).upper()
+        for key, repl in FULLNAME_REPL.items():
+            fullname = fullname.replace(key, repl).strip()
+        fullname = fullname.replace(' ', "")
+
+        id = fullname[0:4]
+        print("Generate ID: '%s' -> '%s'" % (fullname, id))
+
+        row["ID"] = id
+
+def count_cols(rows) :
+    for row in rows :
+        for key, val in row.items() :
+            if val is not None and val != "" :
+                colCounter[key] +=1
+            else:
+                colCounter[key] += 0
+
 def read_network(network, sheet) :
-    print(network, sheet.ncols, sheet.nrows)
+
     rows = read_sheet_raw(sheet)
 
     # Transform values if needed
@@ -67,17 +181,31 @@ def read_network(network, sheet) :
             try:
                 if key in row :
                     row[key] = transformer(row[key])
+
+                generate_id(row)
+
+                if row["ID"] == "" :
+                    raise Exception("Empty ID")
+
             except Exception as e :
                 error("Happened in %s: line %d, col:%s" % (network, row_idx, key))
                 raise e
 
-    # Filter non null IDS
-    rows = list(row for row in rows if len(row["ID"]) > 0)
+    # Check IDS are unique
+    ids = set()
+    for row in rows :
+        id = row["ID"]
+        if id in ids :
+            raise Exception("Duplicate ID for network %s : %s" % (network, id))
+        ids.add(id)
+
+    count_cols(rows)
+
     return rows
 
 def read_networks(workbook):
-
-    networks = set(workbook.sheet_names())
+    dir(workbook)
+    networks = workbook.sheetnames
     res = dict()
 
     for network in networks:
@@ -85,23 +213,96 @@ def read_networks(workbook):
         if network == "OverviewNetworks":
             continue
 
-        res[network] = read_network(network, workbook.sheet_by_name(network))
+        res[network] = read_network(network, workbook[network])
 
     return res
 
+def load_csv(path) :
+    if not os.path.exists(path) :
+        return []
+    with open(path, 'r') as f :
+        reader = DictReader(f)
+        return list(reader)
+
+def filter_redorder_cols(rows) :
+    cols = list(rows[0].keys())
+    filtered_cols = list(col for col in cols if col in VALID_COLS)
+
+    if len(filtered_cols) < len(cols) :
+        removed = set(cols) - set(filtered_cols)
+        print("Removed columns: %s" % str(removed))
+
+    sorted_cols = sorted(filtered_cols, key=lambda col : VALID_COLS.index(col))
+
+    res = []
+    for row in rows :
+        res.append({col: row[col] for col in sorted_cols})
+    return res
+
+def save_csv(path, rows) :
+    with open(path, "w") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()), delimiter=",", lineterminator=os.linesep)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+def reorder_cols(row):
+    return {col:row[col] for col in sorted(row.keys(), key=lambda col : VALID_COLS.index(col))}
+
+def merge(initial_rows, updated_rows) :
+
+    initial_by_id = dict((row["ID"], row) for row in initial_rows)
+
+    for row in updated_rows :
+        id = row["ID"]
+        if not id in initial_by_id :
+            initial_by_id[id] = row
+        else:
+            initial_row = initial_by_id[id]
+            initial_row = reorder_cols(initial_row)
+            initial_by_id[id] = initial_row
+
+            for col, val in row.items() :
+                if not col in initial_row :
+                    initial_row[col] = val
+                else:
+                    initial_val = initial_row[col]
+                    if str2val(initial_val) != val and col not in LOCKED_COLS :
+                        print("Updating %s#%s : %s => %s " % (id, col, initial_val, val))
+                        initial_row[col] = val
+
+    print("Cols after merge", initial_rows[0].keys())
+
+    return list(initial_by_id.values())
+
+
+
+def save(networks, out_folder) :
+    """Update existing CSV or create one"""
+    for network, rows in networks.items() :
+
+        print("Processing network %s" % network)
+
+        path = os.path.join(out_folder, network + ".csv")
+
+        initial = load_csv(path)
+
+        initial = filter_redorder_cols(initial)
+
+        merged = merge(initial, rows)
+
+        save_csv(path, merged)
+
 
 def main(xls_file, out_folder) :
-    wb = xlrd.open_workbook(xls_file)
+    wb = load_workbook(xls_file)
     networks = read_networks(wb)
-
-    for network, rows in networks.items() :
-        with open(os.path.join(out_folder, "%s.csv" % network), "w") as f:
-            writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()), delimiter=",")
-            writer.writeheader()
-            for row in rows :
-                writer.writerow(row)
+    save(networks, out_folder)
 
 
+    # Show empty cols
+    for col, count in colCounter.items():
+        print("Count '%s' : %d" % (col, count))
 
 
 if __name__ == '__main__':

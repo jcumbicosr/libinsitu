@@ -1,8 +1,0 @@
-ID,WMOID,FullName,ShortName,Latitude,Longitude,Elevation,Timezone,Address,City,Country,SurfaceType,TopographyType,RuralUrban,KoeppenGeigerClimate,StationType,OperationStatus,DiffusionStatus,TimeResolution,StartDate,EndDate,ContactName,Institute,Url,CommissionDate,DecommissionDate,Comment
-PHIMAI,,phimai,phimai,,,212.0,,"Rang Ka Yai, Phimai, Nakhon, Ratchasima 30110",phimai,Thailand,,,,,,,,,,,Hitoshi Irie and Tamio Takamura (CEReS/Chiba-U.),Bureau of Royal Rainmaking and Agricultural Aviation (BRRAA),http://atmos3.cr.chiba-u.jp/skynet/phimai/phimai.html,,,
-SEOUL,,seoul,seoul,,,85.0,,,seoul,South Korea,,,,,,,,,,,Sang Woo Kim and B. J. Sohn,,http://atmos3.cr.chiba-u.jp/skynet/seoul/seoul.html,,,
-SENDAI,,sendai,sendai,,,153.0,,,sendai,Japan,,,,,,,,,,,Tadahiro Hayasaka,Tohoku Univ.,http://atmos3.cr.chiba-u.jp/skynet/sendai/sendai.html,,,
-MIYAKO,,Miyako-jima,Miyako-jima,,,50.0,,,Miyako-jima,Japan,,,,,,,,,,,Hitoshi Irie and Tamio Takamura,CEReS/Chiba-U.,http://atmos3.cr.chiba-u.jp/skynet/miyako/miyako.html,,,
-FUKUE,,Fukue-jima,Fukue-jima,,,80.0,,,Fukue-jima,Japan,,,,,,,,,,,Hitoshi Irie and Tamio Takamura,CEReS/Chiba-U.,http://atmos3.cr.chiba-u.jp/skynet/fukue/fukue.html,,,
-CAPEHEDO,,Cape Hedo,Cape Hedo,,,65.0,,,Cape Hedo,Japan,,,,,,,,,,,Hitoshi Irie and Tamio Takamura,CEReS/Chiba-U.,http://atmos3.cr.chiba-u.jp/skynet/capehedo/capehedo.html,,,
-CHIBA,,Chiba,Chiba,,,21.0,,,Chiba,Japan,,,,,,,,,,,Hitoshi Irie and Tamio Takamura,CEReS/Chiba-U.,http://atmos3.cr.chiba-u.jp/skynet/chiba/chiba.html,,,
