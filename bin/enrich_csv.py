@@ -9,6 +9,8 @@ from csv import DictReader
 from glob import glob
 from os.path import basename
 from shutil import copy
+import numpy as np
+import netCDF4
 
 from openpyxl import load_workbook
 import csv
@@ -315,28 +317,36 @@ def get_loc(network, id, lat, lon) :
     with open(filename, "r") as f :
         return json.load(f)
 
+def enrich_address(network, row, lat, lon) :
 
-def enrich_coords(network, rows) :
+
+    loc = get_loc(network, id, lat, lon)
+
+    if "error" in loc:
+        print("Error for : %s/%s : %s" % (network, id, loc["error"]))
+        return
+
+    address = loc["address"]
+
+    for col, keys in GEOLOC.items():
+        val = ", ".join(address[key] for key in keys if key in address)
+        val = unidecode(val)
+        row[col] = val
+        print("%s#%s : %s" % (id, col, val))
+
+def enrich_climate(nc, row, lat, lon) :
+    climate = get_KG_ClimZone(nc, lat, lon)
+    row["Climate"] = climate
+
+def enrich_coords(network, rows, nc_climate) :
     for row in rows:
-
-        id = row["ID"]
 
         lat = str2val(row["Latitude"])
         lon = str2val(row["Longitude"])
 
-        loc = get_loc(network, id, lat, lon)
+        # enrich_address(network, row, lat, lon)
+        enrich_climate(nc_climate, row, lat, lon)
 
-        if "error" in loc :
-            print("Error for : %s/%s : %s" % (network, id, loc["error"]))
-            continue
-
-        address = loc["address"]
-
-        for col, keys in GEOLOC.items() :
-            val = ", ".join(address[key] for key in keys if key in address)
-            val = unidecode(val)
-            row[col] = val
-            print("%s#%s : %s" % (id, col, val))
 
     return rows
 
@@ -353,15 +363,41 @@ def main_xls(xls_file, out_folder) :
         print("Count '%s' : %d" % (col, count))
 
 
+def get_KG_ClimZone(ds, lat, lon):
+    vlat = ds['lat'][:]
+    dlat = np.abs(vlat - lat)
+    ilat = np.where(dlat == min(dlat))[0][0]
 
-def main_coords(out_folder) :
+    if (lon > 180):
+        lon += -360
+    vlon = ds['lon'][:]
+    dlon = np.abs(vlon - lon)
+    ilon = np.where(dlon == min(dlon))[0][0]
+
+    ID = ds['Band1'][ilat, ilon].data
+
+
+    if str(ID) in ["0.0", "31"] :
+        return ""
+
+    print(str(ID))
+
+    ClimZone = ds.getncattr(str(ID))
+
+    return ClimZone
+
+
+def main_coords(out_folder, climate_file) :
+
+    nc_climate = netCDF4.Dataset(climate_file)
+
     for file in glob(os.path.join(out_folder, "*.csv")) :
         rows = load_csv(file)
 
         network = basename(file)
         network = network.replace(".csv", "")
 
-        rows = enrich_coords(network, rows)
+        rows = enrich_coords(network, rows, nc_climate)
         rows = filter_redorder_cols(rows)
 
         save_csv(file, rows)
@@ -378,6 +414,7 @@ if __name__ == '__main__':
 
     coords_parser = subparsers.add_parser('coords', help="Enrich data from coordinates")
     coords_parser.add_argument("--cache", "-c", metavar="<input.xls>", type=str, help="Cache folder", default="/tmp")
+    coords_parser.add_argument("--climate", "-cli", metavar="<climate.nc>", type=str, help="NetCDF climate file")
 
     args = parser.parse_args()
 
@@ -386,7 +423,7 @@ if __name__ == '__main__':
     elif args.command == "coords" :
 
         CACHE_FOLDER = args.cache
-        main_coords(args.out_folder)
+        main_coords(args.out_folder, args.climate)
 
     else:
         raise Exception("Unknown command" + args.command)
