@@ -319,8 +319,7 @@ def get_loc(network, id, lat, lon) :
 
 def enrich_address(network, row, lat, lon) :
 
-
-    loc = get_loc(network, id, lat, lon)
+    loc = get_loc(network, row["ID"], lat, lon)
 
     if "error" in loc:
         print("Error for : %s/%s : %s" % (network, id, loc["error"]))
@@ -330,9 +329,9 @@ def enrich_address(network, row, lat, lon) :
 
     for col, keys in GEOLOC.items():
         val = ", ".join(address[key] for key in keys if key in address)
-        val = unidecode(val)
+        #val = unidecode(val)
         row[col] = val
-        print("%s#%s : %s" % (id, col, val))
+        #print("%s#%s : %s" % (id, col, val))
 
 def enrich_climate(nc, row, lat, lon) :
     climate = get_KG_ClimZone(nc, lat, lon)
@@ -344,7 +343,7 @@ def enrich_coords(network, rows, nc_climate) :
         lat = str2val(row["Latitude"])
         lon = str2val(row["Longitude"])
 
-        # enrich_address(network, row, lat, lon)
+        enrich_address(network, row, lat, lon)
         enrich_climate(nc_climate, row, lat, lon)
 
 
@@ -379,7 +378,6 @@ def get_KG_ClimZone(ds, lat, lon):
         return
     else:
         return ds.getncattr(str(ID))
-
 
 
 def main_coords(out_folder, climate_file) :
