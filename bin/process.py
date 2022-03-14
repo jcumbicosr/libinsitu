@@ -168,7 +168,7 @@ def main(network, station_id, out_filename, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
-def check_and_assign(ncfile, data, time_idx, size_before, args) :
+def check_and_assign(ncfile, data, time_idx, times_int, size_before, args) :
 
     # Check once for all if new chunk overlaps
     overlapping_mask = time_idx < size_before
@@ -222,18 +222,18 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
                 write_mask = nan_mask | ~overlapping_mask
 
         # Update time range in var attributes
-        update_time_range(ncfile, new_values, time_idx, var)
+        update_time_range(ncfile, new_values, times_int, var)
 
         var[time_idx[write_mask]] = new_values[write_mask]
 
 
-def update_time_range(ncfile, new_values, time_idx, var):
+def update_time_range(ncfile, new_values, times_int, var):
     notnan_mask = ~np.isnan(new_values)
     if np.any((notnan_mask)):
-        notnan_timeidx = time_idx[notnan_mask]
+        notnan_time = times_int[notnan_mask]
         minMaxTimes = {
-            FIRST_DATA_ATT: (int_to_datetime64(ncfile, np.min(notnan_timeidx)), False),
-            LAST_DATA_ATT: (int_to_datetime64(ncfile, np.max(notnan_timeidx)), True)}
+            FIRST_DATA_ATT: (int_to_datetime64(ncfile, np.min(notnan_time)), False),
+            LAST_DATA_ATT: (int_to_datetime64(ncfile, np.max(notnan_time)), True)}
 
         for key, (currTime, inverse) in minMaxTimes.items():
             currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
@@ -308,7 +308,7 @@ def process_chunck(handler, infile, ncfile, args):
     ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
 
     # Store data values
-    check_and_assign(ncfile, data, time_idx, size_before, args)
+    check_and_assign(ncfile, data, time_idx, times_int, size_before, args)
 
     info("Chunk processed successfully")
 
