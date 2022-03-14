@@ -366,7 +366,7 @@ def enrich_coords(network, rows, nc_climate) :
         enrich_address(network, row, lat, lon)
         enrich_climate(nc_climate, row, lat, lon)
         enrich_timezone(tzFinder, row, lat, lon)
-        
+
     return rows
 
 

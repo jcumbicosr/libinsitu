@@ -24,7 +24,7 @@ class BSRNHandler(InSituHandler) :
         data = data.rename(columns=mapping)
 
         # Check type of column
-        for col in DATA_VARS :
+        for col in self.data_vars() :
             if data[col].dtype == object :
                 # String ? A couple of values might be incorrent.
                 # Try to convert to float, ignoring errors
