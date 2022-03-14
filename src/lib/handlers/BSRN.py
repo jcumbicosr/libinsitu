@@ -38,5 +38,9 @@ class BSRNHandler(InSituHandler) :
 
         return data
 
+    def data_vars(self):
+        """ @override """
+        return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
+
     def pattern(self):
         return "{ID}{MM}{YY}*.dat.gz"

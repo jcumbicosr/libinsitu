@@ -1,6 +1,8 @@
+import datetime
+
 import numpy as np
 
-from lib.common import is_uniform, parse_value
+from lib.common import is_uniform, parse_value, parseTimezone
 import pytest
 import sys
 
@@ -28,6 +30,11 @@ def test_parse_value() :
     assert parse_value("12A") == "12A"
     assert parse_value('"12A"') == "12A"
     assert parse_value('') is None
+
+def test_parse_timezone() :
+
+    assert parseTimezone("UTC-03:30") == datetime.timedelta(minutes=-(60*3+30))
+    assert parseTimezone("UTC+02:00") == datetime.timedelta(minutes=2*60)
 
 if __name__ == '__main__':
     pytest.main(sys.argv)

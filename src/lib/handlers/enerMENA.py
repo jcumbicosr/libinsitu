@@ -4,7 +4,8 @@ from logging import warn
 
 import pandas as pd
 
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
+    WIND_DIRECTION_VAR
 from lib.handlers.base_handler import InSituHandler
 from lib.log import info, warning
 
@@ -75,7 +76,9 @@ class EnerMENAHandler(InSituHandler) :
             dhi=DIFFUSE_VAR,
             t_air=TEMP_VAR,
             rh=HUMIDITY_VAR,
-            bp=PRESSURE_VAR)
+            bp=PRESSURE_VAR,
+            ws=WIND_SPEED_VAR,
+            wd=WIND_DIRECTION_VAR)
 
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
@@ -100,3 +103,7 @@ class EnerMENAHandler(InSituHandler) :
 
     def pattern(self):
         return "*{ID}*.txt"
+
+    def data_vars(self):
+        """ @override """
+        return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
