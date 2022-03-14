@@ -374,17 +374,12 @@ def get_KG_ClimZone(ds, lat, lon):
     dlon = np.abs(vlon - lon)
     ilon = np.where(dlon == min(dlon))[0][0]
 
-    ID = ds['Band1'][ilat, ilon].data
+    ID = np.minimum(30, ds['Band1'][ilat, ilon].data.astype(int))
+    if (ID == 0):
+        return
+    else:
+        return ds.getncattr(str(ID))
 
-
-    if str(ID) in ["0.0", "31"] :
-        return ""
-
-    print(str(ID))
-
-    ClimZone = ds.getncattr(str(ID))
-
-    return ClimZone
 
 
 def main_coords(out_folder, climate_file) :
