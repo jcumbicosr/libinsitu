@@ -9,3 +9,5 @@ test.*
 inter
 status
 *.ipynb
+in
+cron
