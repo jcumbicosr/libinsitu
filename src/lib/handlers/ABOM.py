@@ -1,7 +1,8 @@
 
 
 from pvlib.iotools import parse_bsrn
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS, \
+    parseTimezone
 from lib.handlers.base_handler import InSituHandler
 from lib.log import error
 import pandas as pd
@@ -31,10 +32,9 @@ class ABOMHandler(InSituHandler) :
         data = data.rename(columns=mapping)
 
         # Apply timezone
-        data.index -= pd.to_timedelta(self.properties["Timezone"], "H")
+        data.index -= parseTimezone(self.properties["Timezone"])
 
         return data
-
 
     def data_vars(self):
         """ @override """

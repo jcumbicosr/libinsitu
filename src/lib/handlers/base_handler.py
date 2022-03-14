@@ -132,11 +132,9 @@ class InSituHandler :
         return sorted(list(filenames_keys.keys()), key=lambda filename : filenames_keys[filename])
 
 
-
-
     def data_vars(self):
-        """Should return the list of data variables supported by the network. All by default"""
-        return DATA_VARS
+        """Should return the list of data variables supported by the network."""
+        raise Exception("Should return the list of supported VARS")
 
     @abstractmethod
     def _read_chunk(self, stream) -> DataFrame:

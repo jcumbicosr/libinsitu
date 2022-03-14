@@ -11,6 +11,9 @@ from os.path import basename
 from shutil import copy
 import numpy as np
 import netCDF4
+import pytz
+from timezonefinder import TimezoneFinder
+from datetime import datetime
 
 from openpyxl import load_workbook
 import csv
@@ -337,7 +340,24 @@ def enrich_climate(nc, row, lat, lon) :
     climate = get_KG_ClimZone(nc, lat, lon)
     row["Climate"] = climate
 
+def enrich_timezone(tzFinder, row, lat, lon) :
+    tzname = tzFinder.timezone_at(lng=lon, lat=lat)
+    tz = pytz.timezone(tzname)
+    now = datetime.now(tz)
+
+    offset_min = now.utcoffset().total_seconds() / 60
+
+    sign="+"
+    if offset_min < 0 :
+        sign = "-"
+        offset_min = - offset_min
+
+    row["Timezone"] = "UTC%s%02d:%02d" % (sign, offset_min / 60, offset_min % 60)
+
 def enrich_coords(network, rows, nc_climate) :
+
+    tzFinder = TimezoneFinder()
+
     for row in rows:
 
         lat = str2val(row["Latitude"])
@@ -345,8 +365,8 @@ def enrich_coords(network, rows, nc_climate) :
 
         enrich_address(network, row, lat, lon)
         enrich_climate(nc_climate, row, lat, lon)
-
-
+        enrich_timezone(tzFinder, row, lat, lon)
+        
     return rows
 
 

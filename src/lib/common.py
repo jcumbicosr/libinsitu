@@ -9,6 +9,7 @@ from netCDF4 import Dataset
 from numpy import timedelta64, datetime64
 from numpy.typing import NDArray
 from pandas import DataFrame
+import pandas as pd
 from pkgutil import get_data
 import os
 
@@ -21,6 +22,9 @@ TEMP_VAR = "T2"
 HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 
+WIND_SPEED_VAR = "WS"
+WIND_DIRECTION_VAR = "WD"
+
 LATITUDE_VAR = "latitude"
 LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
@@ -30,7 +34,7 @@ STATION_NAME_DIM = "ncshort"
 
 
 
-DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
+DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
 
 STATION_INFO_PATTERN = "station-info/%s.csv"
 NETWORK_INFO_FILE = "networks.csv"
@@ -202,4 +206,14 @@ def get_periods(time_s) :
     return list((int(period), count) for period, count in periods_dic.items())
 
 
+def parseTimezone(val) :
+    """Parse timezone UTC+HH:MM to timedelta"""
+    val = val.strip("UTC")
+    hh, mm = val.split(":")
+    hh= int(hh)
+    mm = int(mm)
 
+    if hh < 0 :
+        mm = -mm
+
+    return pd.to_timedelta(60*hh+mm, "min")
