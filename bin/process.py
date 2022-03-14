@@ -3,10 +3,11 @@ import datetime
 import glob
 import os.path
 import sys
-from datetime import datetime
 from os.path import basename, dirname
 
 import netCDF4
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
@@ -33,16 +34,17 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS) :
     cdl =  parse_cdl(read_res(CDL_PATH), properties)
 
     # Filter data vars (variables with "time" dimension)
+    # Also adds the "Time" variable
     cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
 
     cdl2netcdf(netcdf, cdl)
 
     # Init scalar vars
-    netcdf.variables[LONGITUDE_VAR][0] = properties["Longitude"]
-    netcdf.variables[LATITUDE_VAR][0] = properties["Latitude"]
-    netcdf.variables[ELEVATION_VAR][0] = properties["Elevation"]
+    netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
+    netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
+    netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
 
-    fillShortName(netcdf, properties["ID"])
+    fillShortName(netcdf, properties["Station_ID"])
 
 
 def check_boundaries(var, data) :
@@ -60,7 +62,7 @@ def check_boundaries(var, data) :
                     np.min(data[idx]),
                     np.max(data[idx]))
 
-def get_files(in_files, handler, properties) :
+def list_files(in_files, handler, properties) :
 
     # Gather and sort files with pattern
     files = []
@@ -79,24 +81,38 @@ def get_files(in_files, handler, properties) :
 
     return in_files
 
+def prefix_properties(properties) :
+    """ Add Station_ prefix in properties for CDL template """
+    return dict((key if key.startswith("Network_") else "Station_" + key, val) for key, val in properties.items())
+
 def main(network, station_id, out_filename, args) :
 
     # Get properties for this station
     properties = getStationInfo(network, station_id)
+
+    # Add properties of this network
+    for key, val in getNetworkInfo(network).items() :
+        properties["Network_" + key] = val
+
+    # Add current time as properties
     properties["CurrentTime"] = datetime.now().isoformat()
 
     handler : InSituHandler = HANDLERS[network](properties)
 
-    in_files = get_files(args.in_files, handler, properties)
+    in_files = list_files(args.in_files, handler, properties)
 
-    # Open or create netCDF file
+
     new = False
     if not os.path.exists(out_filename) :
+
+        # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", out_filename)
         ncfile = Dataset(out_filename, mode="w")
-        init_nc(ncfile, properties, handler.data_vars())
+        init_nc(ncfile, prefix_properties(properties), handler.data_vars())
         new=True
     else:
+
+        # Update ncFile
         ncfile = Dataset(out_filename, mode="a")
         start_time = get_start_time(ncfile)
         # If start time changed, the whole file should be processed again
@@ -107,11 +123,10 @@ def main(network, station_id, out_filename, args) :
                     start_time,
                     expected_time)))
 
-
     # Loop on input files
     for infile in in_files :
 
-        # Icremental mode : check status files
+        # Incremental mode : check status files
         status_folder = args.status_folder or dirname(infile)
         status_file = os.path.join(status_folder, basename(infile) + DONE_SUFFIX)
         err_file = os.path.join(status_folder, basename(infile) + ERR_SUFFIX)

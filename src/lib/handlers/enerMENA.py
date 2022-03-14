@@ -4,7 +4,7 @@ from logging import warn
 
 import pandas as pd
 
-from lib.common import GHI_VAR, DIR_VAR, DIF_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
 from lib.handlers.base_handler import InSituHandler
 from lib.log import info, warning
 
@@ -70,9 +70,9 @@ class EnerMENAHandler(InSituHandler) :
         metadata, data = read_mesor(stream)
 
         mapping = dict(
-            ghi=GHI_VAR,
-            dni=DIR_VAR,
-            dhi=DIF_VAR,
+            ghi=GLOBAL_VAR,
+            dni=DIRECT_VAR,
+            dhi=DIFFUSE_VAR,
             t_air=TEMP_VAR,
             rh=HUMIDITY_VAR,
             bp=PRESSURE_VAR)

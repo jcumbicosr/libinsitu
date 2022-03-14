@@ -1,7 +1,7 @@
 
 
 from pvlib.iotools import parse_bsrn
-from lib.common import GHI_VAR, DIR_VAR, DIF_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
 from lib.handlers.base_handler import InSituHandler
 from lib.log import error
 import pandas as pd
@@ -23,9 +23,9 @@ class ABOMHandler(InSituHandler) :
         dif_col = data.columns[12]
 
         mapping = {
-            ghi_col:GHI_VAR,
-            dir_col:DIR_VAR,
-            dif_col:DIF_VAR}
+            ghi_col:GLOBAL_VAR,
+            dir_col:DIRECT_VAR,
+            dif_col:DIFFUSE_VAR}
 
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
@@ -38,7 +38,7 @@ class ABOMHandler(InSituHandler) :
 
     def data_vars(self):
         """ @override """
-        return [GHI_VAR, DIF_VAR, DIR_VAR]
+        return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR]
 
     def pattern(self):
         #return "sl_*{UID}_{YYYY}_{M}.zip"

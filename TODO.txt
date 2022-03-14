@@ -55,3 +55,7 @@ find . -size +560 | awk -F '[_/.]' '{id=$3; date=$5; if (!(id in min) || (min[id
 FIXME !
 * TN files in TAN input ! => reprocess TAN
 * Time type : int (32 bits) = 70 years
+
+EXCEL :
+- Removed extra lines
+- ESMAP : StationID => Station_UID

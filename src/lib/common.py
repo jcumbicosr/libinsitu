@@ -14,9 +14,9 @@ import os
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
-GHI_VAR = "GHI"
-DIF_VAR = "DIF"
-DIR_VAR = "DIR"
+GLOBAL_VAR = "GHI"
+DIFFUSE_VAR = "DHI"
+DIRECT_VAR = "BNI"
 TEMP_VAR = "T2"
 HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
@@ -28,22 +28,29 @@ STATION_NAME_VAR= "station_name"
 
 STATION_NAME_DIM = "ncshort"
 
-DATA_VARS = [GHI_VAR, DIF_VAR, DIR_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
+DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 
 STATION_INFO_PATTERN = "station-info/%s.csv"
+NETWORK_INFO_FILE = "networks.csv"
 
 DATE_FORMAT = '%Y-%m-%d'
 SECOND = timedelta64(1, 's')
 
-def getStationsInfo(network) :
-    """REad station info from CSV"""
-
+def parseCSV(res_path, key = "ID") :
+    """Generic parser """
     res = dict()
-
-    rows = DictReader(read_res(STATION_INFO_PATTERN % network))
+    rows = DictReader(read_res(res_path))
     for row in rows:
-        res[row["ID"]] = {key: parse_value(val) for key, val in row.items()}
+        res[row[key]] = {key: parse_value(val) for key, val in row.items()}
     return res
+
+def getStationsInfo(network) :
+    """Read station info from CSV"""
+    return parseCSV(STATION_INFO_PATTERN % network)
+
+def getNetworksInfo() :
+    return parseCSV(NETWORK_INFO_FILE)
+
 
 def older_than(file1, file2) :
     """Return True if file1 is older than file2"""
@@ -62,6 +69,12 @@ def getStationInfo(network, station_id) :
     if not station_id in stations :
         raise Exception("Station %s not found in Station Info of %s" % (station_id, network))
     return stations[station_id]
+
+def getNetworkInfo(network) :
+    networks = getNetworksInfo()
+    if not network in networks :
+        raise Exception("Network %s not found in Network infp of %s" % network)
+    return networks[network]
 
 def is_uniform(vector) :
 
@@ -86,11 +99,11 @@ def int_to_datetime64(ncfile, times_int: NDArray[int]) ->  NDArray[datetime64]:
     start_time64 = get_start_time(ncfile)
     return start_time64 + SECOND * times_int
 
-def read_res(path) :
+def read_res(path, encoding="utf8") :
     """Read package resources and returns a fie like object (splitted lines)
     path should be relative to ./res/
     """
-    return get_data(__name__, os.path.join("..", "res", path)).decode().splitlines()
+    return get_data(__name__, os.path.join("..", "res", path)).decode(encoding).splitlines()
 
 def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
@@ -126,8 +139,14 @@ def nc2df(ncfile, drop_duplicates=True, start_idx=None, end_idx=None) :
     """Read netCDF file into Dataframe, indexed by time"""
     times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx])
 
+    # List of VArs (along time)
+    data_vars = []
+    for varname, var in ncfile.variables.items() :
+        if TIME_DIM in var.dimensions and varname != TIME_VAR :
+            data_vars.append(varname)
+
     df = DataFrame(
-        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in DATA_VARS if var in ncfile.variables),
+        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in data_vars),
         index=times)
 
     # Set global attributes in DataFrame

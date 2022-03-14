@@ -1,0 +1,12 @@
+ID,WMOID,Name,Latitude,Longitude,Elevation,Timezone,Address,City,Region,Country,SurfaceType,TopographyType,RuralUrban,Climate,OperationStatus,TimeResolution,ContactName,Institute,Url,CommissionDate,DecommissionDate,StartDate,EndDate,Comment
+TN,,Tataouine,32.974,10.485,210,,RR 111 T j,Oued El Ghar,Tataouine,Tunisia,,,,BWh,,1,,CRTEn,,,,2010-12-12,,
+JOR,,Ma'an,30.172,35.818,1012,,,,Maan,Jordan,,,,BWk,,1,,University of Jordan,,,,2011-01-13,,
+OUJ,,Oujda,34.650,-1.900,617,,Rue Assouadad,Oujda,Oriental,Morocco,,,,BSk,,1,,University of oujda,,,,2011-08-18,,
+CAI,,Cairo,30.036,31.009,104,,Doctor Atef Sedky Street,Legenda,Giza,Egypt,,,,BWh,,1,,Cairo University,,,,2012-06-06,,
+ADR,,Adrar,27.880,-0.274,262,,,Adrar,Adrar,Algeria,,,,BWh,,1,,CDER,,,,2012-09-27,,
+GHA,,Ghardaia,32.386,3.780,463,,Trans-Sahara,El Atteuf,Ghardaia,Algeria,,,,BWh,,1,,CDER,,,,2012-09-30,,
+MIS,,Missour,32.860,-4.107,1107,,RR601,"caidat de Missour, Ouizeght, Megdoul Ouled Dahou",Fez-Meknes,Morocco,,,,BWh,,1,,IRESEN,,,,2013-05-27,,
+ERF,,Erfoud,31.491,-4.218,859,,RN17,"caidat d'Arab Sebbah Ziz qyd@ `rb SbH zyz, Maadid",Draa-Tafilalet,Morocco,,,,BWh,,1,,IRESEN,,,,2013-05-30,,
+ZAG,,Zagora,30.272,-5.852,783,,,"Caidat de Tinzouline qyd@ tynzwlyn, Ternata trnt@",Draa-Tafilalet,Morocco,,,,BWh,,1,,IRESEN,,,,2013-05-31,,
+TAN,,Tan-Tan,28.498,-11.322,75,,,El Ouatia,Guelmim-Oued Noun,Morocco,,,,,,1,,IRESEN,,,,2013-06-05,,
+FKI,,Ben Salah,32.578,-6.622,485,,,"caidat de Bni Amir Charkia, Al Khalfia",Beni Mellal-Khenifra,Morocco,,,,Csa,,1,,IRESEN,,,,2019-01-01,,

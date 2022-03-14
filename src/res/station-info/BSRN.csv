@@ -1,0 +1,79 @@
+ID,WMOID,Name,Latitude,Longitude,Elevation,Timezone,Address,City,Region,Country,SurfaceType,TopographyType,RuralUrban,Climate,OperationStatus,TimeResolution,ContactName,Institute,Url,CommissionDate,DecommissionDate,StartDate,EndDate,Comment
+ABS,,Abashiri,44.0178,144.2797,38.0,,,Abashiri,Okhotsk Subprefecture,Japan,asphalt,flat,rural,,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,,2021-03-01,,
+ALE,,Alert,82.49,-62.42,127.0,,,Canadian Forces Station Alert,Nunavut,Canada,tundra,hilly,rural,ET,,1,Christopher Cox (christopher.j.cox@noaa.gov),NOAA,,,,2004-08-01,,Closed
+ASP,,Alice Springs,-23.798000000000002,133.888,547.0,,Roger Vale Drive,,Northern Territory,Australia,grass,flat,rural,BWh,,1,Matt Tully (m.tully@bom.gov.au),ABOM,,,,1995-01-01,,
+BAR,,Barrow,71.32300000000001,-156.607,8.0,,,,Alaska,United States,tundra,flat,rural,,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),NOAA,,,,1992-01-01,,
+BER,,Bermuda,32.266999999999996,-64.667,8.0,,,Hamilton,,Bermuda,"water, ocean",flat,rural,,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),NOAA,,,,1992-01-01,,
+BIL,,Billings,36.605,-97.516,317.0,,N3080 Road,,Oklahoma,United States,grass,flat,rural,Cfa,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),NOAA,,,,1993-06-01,,
+BON,,Bondville,40.0667,-88.3667,213.0,,County Road 500 East,,Illinois,United States,grass,flat,rural,Dfa,,1,John A. Augustine (john.a.augustine@noaa.gov),NOAA,,,,1995-01-01,,
+BOS,,Boulder,40.125,-105.23700000000001,1689.0,,Ouray Drive,,Colorado,United States,grass,hilly,rural,Dfa,,1,John A. Augustine (john.a.augustine@noaa.gov),NOAA,,,,1995-07-01,,
+BOU,,Boulder,40.05,-105.007,1577.0,,County Road 7,Erie,Colorado,United States,grass,flat,rural,BSk,,1,David Longenecker (David.U.Longenecker@noaa.gov),NOAA,,,2016-07,1992-01-01,,Closed in July 2016
+BRB,,Brasilia,-15.600999999999999,-47.713,1023.0,,,"Regiao Geografica Imediata do Distrito Federal, Planaltina","Central-West Region, Federal District",Brazil,"concrete, since 2015: shrub",flat,rural,Aw,,1,Enio Bueno Pereira (enio.pereira@inpe.br),INPE,,,,2006-02-01,,
+BUD,,Budapest-Lorinc,47.4291,19.1822,139.1,,"39, Gilice ter",Budapest,Central Hungary,Hungary,grass,flat,rural,Dfb,,1,Dénes Fekete (fekete.d@met.hu), ,,,,2019-06-01,,pest-Lorinc
+CAB,,Cabauw,51.9711,4.9267,0.0,,"1, Zijdeweg","Lopik, Lopik",Utrecht,Netherlands,grass,flat,rural,Cfb,,1,Wouter Knap (knap@knmi.nl),KNMI,,,,2005-02-01,,
+CAM,,Camborne,50.2167,-5.3167,88.0,,Formal Industrial Park,"Camborne, Penponds",England,United Kingdom,grass,flat,rural,Cfb,,1,Grant Hodgetts (grant.hodgetts@metoffice.gov.uk),metoffice,,,,2001-01-01,,
+CAP,,Cape Baranova,79.27,101.75,,,,gorodskoe poselenie Dikson,"Siberian Federal District, Krasnoyarsk Krai",Russia,tundra,flat,rural,EF,,1,Olga Sidorova (olsid@aari.ru), ,,,,2016-01-01,,
+CAR,,Carpentras,44.083,5.059,100.0,,"785, Chemin de l'Hermitage","Carpentras, Carpentras","Metropolitan France, Provence-Alpes-Cote d'Azur",France,cultivated,hilly,rural,Csb,,1,Thierry Duprat (thierry.duprat@meteo.fr),Meteo France,,,2018-12,1996-08-01,,Closed in Dec 2018
+CLH,,Chesapeake Light,36.905,-75.71300000000001,37.0,,,,,"USA, North Atlantic Ocean","water, ocean",flat,rural,,,1,Fred M. Denn (Frederick.M.Denn@nasa.gov),NASA,,,2016-12,2000-05-01,,"Closed in Dec 2016, structural issues"
+CNR,,Cener,42.816,-1.601,471.0,,Avenida Ciudad de la Innovacion,Valle de Egues/Eguesibar,Navarre,Spain,asphalt,mountain valley,urban,Cfb,,1,Xabier Olano (xolano@cener.com),CENER,,,,2009-07-01,,
+COC,,Cocos Island,-12.193,96.835,6.0,,Air Force Road,"Shire of Cocos (Keeling) Islands, West Island",Cocos (Keeling) Islands,Australia,grass,flat,rural,,,1,Matt Tully (m.tully@bom.gov.au),ABOM,,,,2004-09-14,,
+DAA,,De Aar,-30.6667,23.993000000000002,1287.0,,,"Emthanjeni Local Municipality, Britstown",Northern Cape,South Africa,sand,flat,rural,BSk,,1,Joel Botai (Joel.Botai@weathersa.co.za), ,,,,2000-05-01,,
+DAR,,Darwin,-12.425,130.891,30.0,,Darwin-Palmerston Intercity Bike Path,Darwin,Northern Territory,Australia,grass,flat,rural,Aw,,1,Charles Long,,,,2015-01,2002-03-01,,Closed Jan 2015
+DOM,,"Concordia Station, Dome C",-75.1,123.383,3233.0,,Route du Raid,Concordia Station,,,"glacier, accumulation area",flat,rural,EF,,1,Angelo Lupi (a.lupi@isac.cnr.it), ,,,,2006-01-01,,
+DON,,Dongsha Atoll,20.7,116.73,2.0,,,Kaohsiung,,Taiwan,,,,,,1,Carlo Wang (carlo@cc.ncu.edu.tw), ,,,,,,Candidate
+DRA,,Desert Rock,36.626,-116.01799999999999,1007.0,,Desert Rock Drive,,Nevada,United States,"desert, gravel",flat,rural,BWh,,1,John A. Augustine (john.a.augustine@noaa.gov),NOAA,,,,1998-02-01,,
+DWN,,Darwin Met Office,-12.424000000000001,130.8925,32.0,,Darwin-Palmerston Intercity Bike Path,Darwin,Northern Territory,Australia,grass,flat,rural,Aw,,1,Matt Tully (m.tully@bom.gov.au),ABOM,,,,2008-01-01,,
+E13,,Southern Great Plains,36.605,-97.485,318.0,,E0280 Road,,Oklahoma,United States,grass,flat,rural,Cfa,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),NOAA,,,,1994-01-01,,
+ENA,,Eastern North Atlantic,39.0911,-28.0292,15.2,,EN 1,"Santa Cruz da Graciosa, Santa Cruz da Graciosa, Santa Cruz da Graciosa",,Portugal,grass,hilly,rural,,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),NOAA,,,,2015-01-01,,Candidate
+EUR,,Eureka,79.98899999999999,-85.9404,85.0,,,,Nunavut,Canada,tundra,hilly,rural,,,1,,,,,,2007-09-01,,Closed
+FLO,,Florianopolis,-27.6047,-48.5227,11.0,,"56, Avenida Cesar Seara","Regiao Geografica Imediata de Florianopolis, Florianopolis","Regiao Geografica Intermediaria de Florianopolis, Santa Catarina",Brazil,concrete,mountain valley,urban,,,1,Sergio Colle (sergio.colle@ufsc.br),UFSC,,,,1994-06-01,,
+FPE,,Fort Peck,48.3167,-105.1,634.0,,,Brockton District,Montana,United States,grass,flat,rural,BSk,,1,John A. Augustine (john.a.augustine@noaa.gov),NOAA,,,,1995-01-01,,
+FUA,,Fukuoka,33.5822,130.3764,3.0,,Guo Ti Dao Lu  (Kokutai-doro);Shi Dao Jian Po Xi Xin 2Hao Xian ,Fukuoka,,Japan,asphalt,flat,urban,,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,,2010-04-01,,
+GAN,,Gandhinagar,23.1101,72.6276,65.0,,Gandhinagar-Ahmedabad Highway,,Gujarat,India,shrub,flat,urban,BSh,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-05-19,,
+GCR,,Goodwin Creek,34.2547,-89.8729,98.0,,Baker Road,,Mississippi,United States,grass,hilly,rural,Cfa,,1,John A. Augustine (john.a.augustine@noaa.gov),,,,,1995-01-01,,
+GIM,,Granite Island,46.721000000000004,87.411,208.0,,,Qiganjidie,"Altay Prefecture, Xinjiang",China,grass,flat,urban,BWk,,1,Bryan Fabbri (bryan.e.fabbri@nasa.gov),NASA,,,,2018-10-01,,
+GOB,,Gobabeb,-23.5614,15.042,407.0,,,Gobabeb Research & Training,Erongo Region,Namibia,desert gravel,flat,rural,BWh,,1,Roland Vogt (Roland.Vogt@unibas.ch),,,,,2012-05-15,,
+GUR,,Gurgaon,28.4249,77.156,259.0,,,Gurugram,Haryana,India,shrub,flat,urban,BSh,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-04-21,,
+GVN,,Georg von Neumayer,-70.65,-8.25,42.0,,,,,"Antarctica, Dronning Maud Land",iceshelf,flat,rural,,,1,Holger Schmithüsen (Holger.Schmithuesen@awi.de).,,,,,1992-01-01,,
+HOW,,Howrah,22.5535,88.3064,51.0,,Palmyra Avenue,Howrah,West Bengal,India,shrub,flat,urban,Aw,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-06-15,,
+ILO,,Ilorin,8.5333,4.5667,350.0,,,Ilorin,Kwara,Nigeria,shrub,flat,rural,Aw,,1,T O Aro,,,,2005,1992-08-01,,"Station closed in mid-2005, no funding"
+ISH,,Ishigakijima,24.3367,124.1644,5.7,,Guo Dao 390Hao ,Ishigaki,,Japan,asphalt,flat,rural,Af,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,,2010-04-01,,
+IZA,,IzaÃ±a,28.3093,-16.4993,2372.9,,TF-514,La Orotava,,Spain,rock,mountain top,rural,BWk,,1, Emilio Cuevas-Agulló (ecuevasa@aemet.es)	,,,,,2009-03-01,,
+KWA,,Kwajalein,8.72,167.731,10.0,,,,,Marshall Islands,"water, ocean",flat,rural,,,1, Laura Riihimaki (laura.riihimaki@noaa.gov),,,,,1992-03-01,,Closed
+LAU,,Lauder,-45.045,169.68900000000002,350.0,,Becks Lauder Road,Vincent Community,Otago,New Zealand,grass,flat,rural,Cfb,,1,Matt Tully (m.tully@bom.gov.au),,,,,1998-07-01,,
+LER,,Lerwick,60.1389,-1.1847,80.0,,Nordavatn,Lerwick,Scotland,United Kingdom,grass,hilly,rural,,,1,Grant Hodgetts (grant.hodgetts@metoffice.gov.uk),,,,,2001-01-01,,
+LIN,,Lindenberg,52.21,14.122,125.0,,Schulstrasse,"Tauche, Lindenberg",Brandenburg,Germany,cultivated,hilly,rural,Dfb,,1,Stefan Wacker (Stefan.Wacker@dwd.de),,,,,1994-09-01,,
+LRC,,Langley Research Center,37.1038,-76.3872,3.0,,Wythe Landing Loop,Hampton,Virginia,United States,grass,flat,urban,,,1,Fred M. Denn (Frederick.M.Denn@nasa.gov),,,,,2014-12-01,,
+LYU,,Lanyu Station,22.037,121.5583,324.0,,Lan Yu Heng Guan Gong Lu ,Orchid Island,Taiwan Province,Taiwan,"forest, mixed",mountain top,rural,Af,,1,Kun-Wei Lin (adenins@cwb.gov.tw),,,,,2018-03-01,,
+MAN,,Momote,-2.0580000000000003,147.425,6.0,,Lorengau Road,,"Islands Region, Manus",Papua New Guinea,grass,flat,rural,,,1,Charles Long,,,,2013,1996-09-01,,Closed late 2013
+MNM,,Minamitorishima,24.2883,153.9833,7.1,,,"Tokyo, Ogasawara",,Japan,water (ocean),flat,rural,,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,,2010-04-01,,
+NAU,,Nauru Island,-0.521,166.9167,7.0,,Island Ring Road,Arijejen,,Nauru,rock,flat,rural,,,1,Charles Long.,,,,2013,1998-11-01,,Closed late 2013
+NEW,,Newcastle,-32.8842,151.7289,18.5,,McIntosh Drive,"Newcastle City Council, Newcastle",New South Wales,Australia,grass,hilly,urban,Cfa,,1,Ben Duck (Benjamin.Duck@csiro.au),,,,,2017-09-01,,
+NYA,,Ny-Ã…lesund,78.925,11.93,11.0,,Ny Alesund paved roads,Ny-Alesund,Svalbard,Norway,tundra,mountain valley,rural,ET,,1,Marion.Maturilli@awi.de,,,,,1992-08-01,,
+OHY,,Observatory of Huancayo,-12.05,-75.32,3314.0,,PE-24,Chupaca,"Province of Chupaca, Junin",Peru,grass,mountain valley,rural,Cwb,,1,Luis Suarez Salas (lsuarez@igp.gob.pe),,,,,2017-08-01,,
+PAL,,"Palaiseau, SIRTA Observatory",48.713,2.208,156.0,,Avenue Michel Chasles,"Palaiseau, Palaiseau","Metropolitan France, Ile-de-France",France,concrete,flat,urban,Cfb,,1,Jordi Badosa (jordi.badosa@lmd.polytechnique.fr),,,,,2003-05-01,,
+PAR,,Paramaribo,5.806,-55.2146,4.0,,"41, Magnesiumstraat",Tammenga,Paramaribo,Suriname,grass,flat,urban,Af,,1,Ankie Piters (piters@knmi.nl),,,,,2019-01-01,,
+PAY,,Payerne,46.815,6.944,491.0,,Chemin de l'Aerologie,Payerne,Vaud,Switzerland,cultivated,hilly,rural,Dfb,,1,Laurent Vuilleumier (laurent.vuilleumier@meteoswiss.ch),,,,,1992-09-01,,
+PSU,,Rock Springs,40.72,-77.9333,376.0,,West Pine Grove Road,,Pennsylvania,United States,cultivated,mountain valley,rural,Dfb,,1,John A. Augustine (john.a.augustine@noaa.gov),,,,,1998-05-01,,
+PTR,,Petrolina,-9.068,-40.319,387.0,,,"Regiao Geografica Imediata de Petrolina, Petrolina","Northeast Region, Pernambuco",Brazil,"concrete, since 2015: shrub",flat,rural,BSh,,1,Enio Bueno Pereira (enio.pereira@inpe.br),,,,,2006-12-01,,
+REG,,Regina,50.205,-104.713,578.0,,,,Saskatchewan,Canada,cultivated,flat,rural,Dfb,,1,,,,,2011,1995-01-01,,Closed end of 2011
+RLM,,Rolim de Moura,-11.582,-61.773,252.0,,RO-479,"Regiao Geografica Imediata de Cacoal, Rolim de Moura","North Region, Rondonia",Brazil,concrete,flat,rural,Aw,,1,Enio Bueno Pereira (enio.pereira@inpe.br),,,,2008,2007-01-01,,Closed in 2008
+RUN,,"Reunion Island, University",-20.9014,55.4836,116.0,,Avenue Rene Cassin,"Saint-Denis, Saint-Denis",Reunion,France,concrete,flat,rural,Af,,1,Béatrice Morel (beatrice.morel@univ-reunion.fr),,,,,2019-06-01,,
+SAP,,Sapporo,43.06,141.3286,17.2,,Kita1jo miyanosawa dori,Sapporo,Ishikari Subprefecture,Japan,asphalt,flat,urban,Dfa,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,2020-12,2010-04-01,,Closed in Dec 2020
+SBO,,Sede Boqer,30.8597,34.7794,500.0,,40,Ramat Negev Regional Council,South District,Israel,desert rock,hilly,rural,BWh,,1,Dr. Nurit Agam (agam@bgu.ac.il),,,,2012,2003-01-01,,Closed 2012
+SEL,,"Selegua, Mexico Solarimetric Station",15.784,-91.9902,602.0,,,Nuevo 3 Lagunas,Chiapas,Mexico,grass,flat,rural,Aw,,1,Roberto Bonifaz (bonifaz@unam.mx),,,,,2020-01-01,,
+SMS,,SÃ£o Martinho da Serra,-29.4428,-53.8231,489.0,,Sao Martinho - Val de Serra,"Regiao Geografica Imediata de Santa Maria, Sao Martinho da Serra","South Region, Rio Grande do Sul",Brazil,"concrete, since 2015: grass",flat,rural,Cfa,,1,Enio Bueno Pereira (enio.pereira@inpe.br),,,,,2006-01-01,,
+SON,,Sonnblick,47.053999999999995,12.9577,3108.9,,"100, Erfurterweg (123)",Rauris,Salzburg,Austria,rock,mountain top,rural,,,1,Marc Olefs (marc.olefs@zamg.ac.at),,,,,2013-01-01,,
+SOV,,Solar Village,24.91,46.41,650.0,,5762,Al `Uyaynah,Riyadh Region,Saudi Arabia,"desert, sand",flat,rural,BWh,,1,,,,,,1998-08-01,,Closed/no longer maintained since 2002
+SPO,,South Pole,-89.98299999999999,-24.799,2800.0,,,,,Antarctica,"glacier, accumulation area",flat,rural,EF,,1,Laura Riihimaki (laura.riihimaki@noaa.gov),,,,,1992-01-01,,
+SXF,,Sioux Falls,43.73,-96.62,473.0,,252nd Street,,South Dakota,United States,grass,hilly,rural,Dfa,,1,John A. Augustine (john.a.augustine@noaa.gov),,,,,2003-06-01,,
+SYO,,Syowa,-69.005,39.589,18.0,,,,,,sea ice,hilly,rural,,,1,Yoshinobu Tanaka (antarctic@met.kishou.go.jp),,,,,1994-01-01,,
+TAM,,Tamanrasset,22.7903,5.5292,1385.0,,shr` lHfr@,Tamanghasset,Tamanrasset,Algeria,"desert, rock",flat,rural,BWh,,1,Sidi BAIKA (s.baika@meteo.dz),,,,,2000-03-01,,
+TAT,,Tateno,36.0581,140.1258,25.0,,Gakuennishi-odori Avenue,Tsukuba,,Japan,grass,flat,urban,Cfa,,1,Osamu Ijima (ijima@met.kishou.go.jp),,,,,1996-02-01,,
+TIK,,Tiksi,71.5862,128.9188,48.0,,,"Tiksi, Tiksi","Far Eastern Federal District, Sakha Republic",Russia,tundra,flat,rural,,,1,Olga Sidorova (olsid@aari.ru),,,,,2010-06-01,,
+TIR,,Tiruvallur,13.0923,79.9738,36.0,,,,Tamil Nadu,India,rock,,urban,Aw,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-04-16,,
+TOR,,Toravere,58.254,26.462,70.0,,Johvi -- Tartu -- Valga,"Noo vald, Toravere",,Estonia,grass,flat,rural,Dfb,,1,Ain Kallis (kallis@aai.ee),,,,,1999-01-01,,
+XIA,,Xianghe,39.754,116.962,32.0,,,Langfang City,Hebei,China,"desert, rock",flat,rural,Dwa,,1,Xiangao Xia (xxa@mail.iap.ac.cn),,,,2016,2005-01-01,,"Station obstructed, no longer in BSRN since 2016"
+YUS,,Yushan Station,23.4876,120.9595,3858.0,,Yushan North Peak Trail,Xinyi Township,Taiwan Province,Taiwan,"forest, mixed",mountain top,rural,Cfa,,1,Kun-Wei Lin (adenins@cwb.gov.tw),,,,,2018-04-01,,
+INO,,Magurele (MARS),44.3439,26.0123,110,,In camp,Magurele,,Romania,grass,flat,rural,Dfb,,1,Konstantinos Fragkos (kostas.fragkos@inoe.ro),,,,,2021-05-01,,
+LLN,,Lulin,23.4686,120.8736,2862,,Yu Shan Lin Dao ,Xinyi Township,Taiwan Province,Taiwan,Mixed forest,mountain,rural,Cfa,,1,Carlo Wang (carlo@cc.ncu.edu.tw),,,,,	2009-01-20,,
