@@ -28,12 +28,15 @@ STATION_NAME_VAR= "station_name"
 
 STATION_NAME_DIM = "ncshort"
 
+
+
 DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
 
 STATION_INFO_PATTERN = "station-info/%s.csv"
 NETWORK_INFO_FILE = "networks.csv"
 
 DATE_FORMAT = '%Y-%m-%d'
+TIME_FORMAT_MIN= '%Y-%m-%d %H:%M'
 SECOND = timedelta64(1, 's')
 
 def parseCSV(res_path, key = "ID") :
@@ -165,16 +168,22 @@ def file2df(filename):
     nc.close()
     return df
 
-def date_str(val) :
+def time2str(val) :
     """Format date to the minute """
     if val is None :
         return ""
     if isinstance(val, datetime64) :
         return np.datetime_as_string(val, unit='m')
     elif isinstance(val, datetime) :
-        return val.strftime("'%Y-%m-%d %H:%M'")
+        return val.strftime(TIME_FORMAT_MIN)
 
     raise Exception("Unknown date type : " + type(val))
+
+def str2time64(val) :
+    if val is None or val == "":
+        return None
+    return np.datetime64(val)
+
 
 MIN_STEP=0
 MAX_STEP=1000

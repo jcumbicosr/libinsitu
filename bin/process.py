@@ -6,6 +6,7 @@ import sys
 from os.path import basename, dirname
 
 import netCDF4
+import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -16,10 +17,14 @@ from lib.log import debug, info, warning, logger, LogContext
 import argparse
 
 
-CDL_PATH = "cdl/base.cdl"
+CDL_PATH = "base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
 EPSILON = 0.001
+
+FIRST_DATA_ATT = "FirstData"
+LAST_DATA_ATT = "LastData"
+
 
 
 def fillShortName(nc, shortname) :
@@ -167,7 +172,6 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
 
     # Check once for all if new chunk overlaps
     overlapping_mask = time_idx < size_before
-    is_overlapping = np.any(overlapping_mask)
     overlapping_indices = time_idx[overlapping_mask]
 
     for varname in DATA_VARS:
@@ -180,8 +184,8 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
 
         check_boundaries(var, new_values)
 
-        if not is_overlapping or not args.check:
-            # No need for check
+        if not np.any(overlapping_mask) or not args.check:
+            # No overlap with previous data ? no need for check
             write_mask = np.ones(new_values.shape, dtype=bool)
 
         else :
@@ -189,7 +193,7 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
 
             if np.all(np.isnan(var[overlapping_indices])) :
 
-                debug("All nans : don't check further")
+                # All nans ? don't check further"
                 write_mask = np.ones(new_values.shape, dtype=bool)
 
             else:
@@ -217,7 +221,25 @@ def check_and_assign(ncfile, data, time_idx, size_before, args) :
                 # Write NaN if they do not overlap with existing data (this extends the dimension)
                 write_mask = nan_mask | ~overlapping_mask
 
+        # Update time range in var attributes
+        update_time_range(ncfile, new_values, time_idx, var)
+
         var[time_idx[write_mask]] = new_values[write_mask]
+
+
+def update_time_range(ncfile, new_values, time_idx, var):
+    notnan_mask = ~np.isnan(new_values)
+    if np.any((notnan_mask)):
+        notnan_timeidx = time_idx[notnan_mask]
+        minMaxTimes = {
+            FIRST_DATA_ATT: (int_to_datetime64(ncfile, np.min(notnan_timeidx)), False),
+            LAST_DATA_ATT: (int_to_datetime64(ncfile, np.max(notnan_timeidx)), True)}
+
+        for key, (currTime, inverse) in minMaxTimes.items():
+            currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
+            if currentLimit is None or (inverse ^ (currTime < currentLimit)):
+                var.setncattr(key, time2str(currTime))
+
 
 def process_chunck(handler, infile, ncfile, args):
 
@@ -260,11 +282,11 @@ def process_chunck(handler, infile, ncfile, args):
     chunk_end = max(chunk_dates)
     chunk_end_int = datetime64_to_int(ncfile, chunk_end)
 
-    info("chunck range: %s to %s. samples:%d", date_str(chunk_start), date_str(chunk_end), len(data.index))
+    info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(data.index))
 
     # Error if chunk starts before start time
     if chunk_start < start_time:
-        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (date_str(chunk_start), date_str(start_time)))
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (time2str(chunk_start), time2str(start_time)))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
@@ -280,7 +302,8 @@ def process_chunck(handler, infile, ncfile, args):
                 return
 
     # Fill time variable with proper values
-    size_before = len(ncfile.variables[TIME_VAR])
+    size_before = len(ncfile.variables[TIME_VAR]) # Remember the size of TIME before it is extended
+
     new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
     ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
 
