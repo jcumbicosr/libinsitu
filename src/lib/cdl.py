@@ -125,9 +125,8 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
             if (val is None or val == "") and not delete :
                 continue
-
-            if oldval is not None :
-                info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
+                
+            info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
 
             if not dry_run:
                 dest.setncattr(key, val)
