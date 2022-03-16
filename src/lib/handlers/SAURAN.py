@@ -42,4 +42,4 @@ class SAURANHandler(InSituHandler) :
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR]
 
     def pattern(self):
-        return "{ID}_minute_{YYYY}{MM}.csv"
+        return "{Station_ID}_minute_{YYYY}{MM}.csv"

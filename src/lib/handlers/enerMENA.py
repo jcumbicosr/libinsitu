@@ -102,7 +102,7 @@ class EnerMENAHandler(InSituHandler) :
         return data
 
     def pattern(self):
-        return "*{ID}*.txt"
+        return "*{Station_ID}*.txt"
 
     def data_vars(self):
         """ @override """

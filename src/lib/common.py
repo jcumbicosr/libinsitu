@@ -32,6 +32,8 @@ STATION_NAME_VAR= "station_name"
 
 STATION_NAME_DIM = "ncshort"
 
+STATION_PREFIX = "Station_"
+NETWORK_PREFIX = "Network_"
 
 
 DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
@@ -40,7 +42,8 @@ STATION_INFO_PATTERN = "station-info/%s.csv"
 NETWORK_INFO_FILE = "networks.csv"
 
 DATE_FORMAT = '%Y-%m-%d'
-TIME_FORMAT_MIN= '%Y-%m-%d %H:%M'
+TIME_FORMAT_MIN= '%Y-%m-%dT%H:%M'
+TIME_FORMAT_SEC= '%Y-%m-%dT%H:%M:%S'
 SECOND = timedelta64(1, 's')
 
 def parseCSV(res_path, key = "ID") :
@@ -99,12 +102,14 @@ def get_start_time(ncfile) -> datetime64 :
     return np.datetime64(start_time)
 
 def datetime64_to_int(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
+    """Transform datetime64 to number of seconds since start date """
     start_time64 = get_start_time(ncfile)
     return ((dates - start_time64) / SECOND).astype(int)
 
-def int_to_datetime64(ncfile, times_int: NDArray[int]) ->  NDArray[datetime64]:
+def int_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
+    """Transform number of seconds since start time into datetime64 """
     start_time64 = get_start_time(ncfile)
-    return start_time64 + SECOND * times_int
+    return start_time64 + SECOND * times_s
 
 def read_res(path, encoding="utf8") :
     """Read package resources and returns a fie like object (splitted lines)
@@ -217,3 +222,4 @@ def parseTimezone(val) :
         mm = -mm
 
     return pd.to_timedelta(60*hh+mm, "min")
+

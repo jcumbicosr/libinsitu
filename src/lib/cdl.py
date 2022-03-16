@@ -104,36 +104,56 @@ def parse_cdl(lines, attributes) :
 
     return res
 
+def update_attributes(dest, src, dry_run=False, delete=False) :
+    existing_attrs = set(dest.ncattrs())
+    new_attrs = set(src.keys())
+
+    extra_attrs = existing_attrs - new_attrs
+
+    if delete :
+        for attrname in extra_attrs :
+            if dry_run :
+                print("Would delete attribute %s#%s" % (dest.name, attrname))
+            else :
+                dest.delncattr(attrname)
+
+    for key, val in src.items() :
+        oldval = None if not key in existing_attrs else dest.getncattr(key)
+        if oldval != val :
+
+            if (val is None or val == "") and not delete :
+                continue
+
+            if dry_run :
+                print("Would update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
+            else:
+                dest.setncattr(key, val)
 
 
-def cdl2netcdf(ncfile, cdl: CDL) :
+def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
     """Init NetCDF file from a CDL"""
 
     for dimname, dim in cdl.dimensions.items() :
 
         # Already there, skipping
-        if dimname in ncfile.dimensions :
-            continue
-
-        info("Adding dimension '%s'", dimname)
-        ncfile.createDimension(dimname, dim)
+        if not dimname in ncfile.dimensions :
+            info("Adding dimension '%s'", dimname)
+            ncfile.createDimension(dimname, dim)
 
     for varname, vardef in cdl.variables.items() :
 
         # Already there, skipping
-        if varname in ncfile.variables:
-            continue
+        if not varname in ncfile.variables:
+            info("Adding variable '%s'", varname)
+            ncfile.createVariable(varname, vardef.type, vardef.dimensions, zlib=True)
 
-        info("Adding variable '%s'", varname)
-        var = ncfile.createVariable(varname, vardef.type, vardef.dimensions, zlib=True)
+        var = ncfile.variables[varname]
 
-        # Set attributes
-        for key, val in vardef.attributes.items():
-            var.setncattr(key, val)
+        # Update attributes
+        update_attributes(var, vardef.attributes, dry_run, delete_attrs)
 
-    # Global attributes
-    for key, val in cdl.global_attributes.items():
-        ncfile.setncattr(key, val)
+    # Update global attributes
+    update_attributes(ncfile, cdl.global_attributes, dry_run, delete_attrs)
 
 
 

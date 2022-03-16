@@ -4,9 +4,9 @@ import glob
 import os.path
 import sys
 from os.path import basename, dirname
+from time import ctime
 
 import netCDF4
-import numpy as np
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -25,8 +25,6 @@ EPSILON = 0.001
 FIRST_DATA_ATT = "FirstData"
 LAST_DATA_ATT = "LastData"
 
-
-
 def fillShortName(nc, shortname) :
     size = nc.dimensions[STATION_NAME_DIM].size
 
@@ -34,7 +32,15 @@ def fillShortName(nc, shortname) :
     shortname_ = netCDF4.stringtochar(np.array(shortname, 'S%d' % size))
     nc.variables[STATION_NAME_VAR][:] = shortname_
 
-def init_nc(netcdf, properties, data_vars=DATA_VARS) :
+def readShortname(nc) :
+    char_array = nc.variables[STATION_NAME_VAR][:]
+
+    # This is a 0D (no dimension) array !
+    string_array = netCDF4.chartostring(char_array)
+
+    return string_array[()]
+
+def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
 
     cdl =  parse_cdl(read_res(CDL_PATH), properties)
 
@@ -42,14 +48,15 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS) :
     # Also adds the "Time" variable
     cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
 
-    cdl2netcdf(netcdf, cdl)
+    cdl2netcdf(netcdf, cdl, dry_run, delete_attrs)
 
-    # Init scalar vars
-    netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
-    netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
-    netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
+    if not dry_run :
+        # Init scalar vars
+        netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
+        netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
+        netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
 
-    fillShortName(netcdf, properties["Station_ID"])
+        fillShortName(netcdf, properties["Station_ID"])
 
 
 def check_boundaries(var, data) :
@@ -67,18 +74,18 @@ def check_boundaries(var, data) :
                     np.min(data[idx]),
                     np.max(data[idx]))
 
-def list_files(in_files, handler, properties) :
+def list_files(in_files, handler) :
 
     # Gather and sort files with pattern
     files = []
     for file_or_dir in in_files:
         if os.path.isdir(file_or_dir):
-            files += list(glob.glob(file_or_dir + "/" + handler.glob_pattern()))
+            files += handler.list_files(file_or_dir)
         else:
             files.append(file_or_dir)
 
     # Sort input files
-    in_files = handler.sort_files(files, properties)
+    in_files = handler.sort_files(files)
 
     if len(in_files) == 0:
         warning("No input file found")
@@ -86,47 +93,53 @@ def list_files(in_files, handler, properties) :
 
     return in_files
 
-def prefix_properties(properties) :
-    """ Add Station_ prefix in properties for CDL template """
-    return dict((key if key.startswith("Network_") else "Station_" + key, val) for key, val in properties.items())
+
+def getProperties(network_id, station_id) :
+    """Gather Network_ and Station_ properties """
+
+    # Get properties for this station
+    properties = {STATION_PREFIX + k : v for k, v in getStationInfo(network_id, station_id).items()}
+
+    # Add properties of this network
+    for key, val in getNetworkInfo(network_id).items():
+        properties[NETWORK_PREFIX + key] = val
+
+    return properties
 
 def main(network, station_id, out_filename, args) :
 
     # Get properties for this station
-    properties = getStationInfo(network, station_id)
+    properties = getProperties(network, station_id)
 
-    # Add properties of this network
-    for key, val in getNetworkInfo(network).items() :
-        properties["Network_" + key] = val
+    now = datetime.now().isoformat()
 
-    # Add current time as properties
-    properties["CurrentTime"] = datetime.now().isoformat()
+    properties["UpdateTime"] = now
+    properties["CreationTime"] = now
 
     handler : InSituHandler = HANDLERS[network](properties)
 
-    in_files = list_files(args.in_files, handler, properties)
+    in_files = list_files(args.in_files, handler)
 
+    new = not os.path.exists(out_filename)
+    mode = "w" if new else "a"
+    ncfile = Dataset(out_filename, mode=mode)
 
-    new = False
-    if not os.path.exists(out_filename) :
-
+    if  new :
         # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", out_filename)
-        ncfile = Dataset(out_filename, mode="w")
-        init_nc(ncfile, prefix_properties(properties), handler.data_vars())
-        new=True
+        init_nc(ncfile, properties, handler.data_vars())
     else:
 
-        # Update ncFile
-        ncfile = Dataset(out_filename, mode="a")
         start_time = get_start_time(ncfile)
         # If start time changed, the whole file should be processed again
         if len(ncfile.variables[TIME_VAR]) > 0 :
-            expected_time = datetime.strptime(properties["StartDate"], DATE_FORMAT)
+            expected_time = datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
             if start_time != expected_time :
                 raise(Exception("Start time of output file (%s) is different from start time in station info (%s). Please delete output file and process it completely" % (
                     start_time,
                     expected_time)))
+
+
 
     # Loop on input files
     for infile in in_files :
@@ -168,11 +181,11 @@ def main(network, station_id, out_filename, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
-def check_and_assign(ncfile, data, time_idx, times_int, size_before, args) :
+def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
     # Check once for all if new chunk overlaps
-    overlapping_mask = time_idx < size_before
-    overlapping_indices = time_idx[overlapping_mask]
+    overlapping_mask = times_idx < size_before
+    overlapping_indices = times_idx[overlapping_mask]
 
     for varname in DATA_VARS:
 
@@ -201,7 +214,7 @@ def check_and_assign(ncfile, data, time_idx, times_int, size_before, args) :
                 nan_mask = np.isnan(new_values)
 
                 nna_overlapping_mask = overlapping_mask & ~nan_mask
-                overlapping_idx = time_idx[nna_overlapping_mask]
+                overlapping_idx = times_idx[nna_overlapping_mask]
                 overlapping_values = new_values[nna_overlapping_mask]
                 overlapped_values = var[overlapping_idx]
 
@@ -222,24 +235,35 @@ def check_and_assign(ncfile, data, time_idx, times_int, size_before, args) :
                 write_mask = nan_mask | ~overlapping_mask
 
         # Update time range in var attributes
-        update_time_range(ncfile, new_values, times_int, var)
+        update_time_range(ncfile, var, new_values, times_idx)
 
-        var[time_idx[write_mask]] = new_values[write_mask]
+        var[times_idx[write_mask]] = new_values[write_mask]
 
 
-def update_time_range(ncfile, new_values, times_int, var):
+def update_time_range(ncfile, var, new_values, times_idx, dry_run=False, keys=[FIRST_DATA_ATT, LAST_DATA_ATT]):
+    """Update FirstData / LastData attribute of a variable """
+
+    resolution = getTimeResolution(ncfile)
+    times_s = resolution * times_idx
+
     notnan_mask = ~np.isnan(new_values)
     if np.any((notnan_mask)):
-        notnan_time = times_int[notnan_mask]
+        notnan_time_s = times_s[notnan_mask]
         minMaxTimes = {
-            FIRST_DATA_ATT: (int_to_datetime64(ncfile, np.min(notnan_time)), False),
-            LAST_DATA_ATT: (int_to_datetime64(ncfile, np.max(notnan_time)), True)}
+            FIRST_DATA_ATT: int_to_datetime64(ncfile, np.min(notnan_time_s)),
+            LAST_DATA_ATT: int_to_datetime64(ncfile, np.max(notnan_time_s))}
 
-        for key, (currTime, inverse) in minMaxTimes.items():
+        for key in keys:
+
+            currTime = minMaxTimes[key]
+            inverse = key == LAST_DATA_ATT
+
             currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
             if currentLimit is None or (inverse ^ (currTime < currentLimit)):
-                var.setncattr(key, time2str(currTime))
-
+                if dry_run :
+                    info("Would update %s#%s : %s -> %s" % (var.name, key, time2str(currentLimit), time2str(currTime)))
+                else:
+                    var.setncattr(key, time2str(currTime))
 
 def process_chunck(handler, infile, ncfile, args):
 
@@ -308,7 +332,7 @@ def process_chunck(handler, infile, ncfile, args):
     ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
 
     # Store data values
-    check_and_assign(ncfile, data, time_idx, times_int, size_before, args)
+    check_and_assign(ncfile, data, time_idx, size_before, args)
 
     info("Chunk processed successfully")
 
@@ -341,7 +365,7 @@ if __name__ == '__main__':
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True, choices=list(HANDLERS.keys()))
-    parser.add_argument('--station_id', '-s', metavar='<SID>', help='Station ID', required=True)
+    parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
     parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")
     parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")

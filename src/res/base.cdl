@@ -136,6 +136,8 @@ variables:
 		:Network_License = "{Network_LicenseInfoURL}" ;
 		:Network_Contact = "{Network_ContactPersonMail}" ;
 		:Station_WMO_ID =  "{Station_WMOID}";
+		:Station_UID = "{Station_UID}" ;
+		:Station_ID = "{Station_ID}" ;
 		:Station_Name = "{Station_Name}" ;
 		:Station_Latitude = "{Station_Latitude}" ;
 		:Station_Longitude = "{Station_Longitude}" ;
@@ -162,5 +164,6 @@ variables:
 		:cdm_data_type = "TimeSeries" ;
 		:Conventions = "CF-1.6" ;
 		:cdm_timeseries_variables = "station_name,latitude,longitude" ;
-        :creation_date = "{Station_CurrentTime}" ;
+        :creation_time = "{CreationTime}";
+        :update_time = "{UpdateTime}";
 }

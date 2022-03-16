@@ -8,13 +8,15 @@ from pandas import DataFrame
 from datetime import datetime
 import re
 
-from lib.common import DATA_VARS
+from lib.common import STATION_PREFIX, NETWORK_PREFIX
 from lib.log import warning, debug
+from glob import glob
+
+
 
 
 class InSituHandler :
     """ Virtual class to be implemented for each new network """
-    
     
     def __init__(self, properties):
         self.properties = properties
@@ -70,37 +72,53 @@ class InSituHandler :
 
         return re.sub(r'\{\w+\}', subf, self.pattern())
 
-
-
-    def sort_files(self, filenames, properties):
-
-        properties = properties.copy()
-
-        # Transform pattern to regexp
+    def re_pattern(self) :
+        """ Transform pattern to regexp maith matching groups for replacement """
         def subf(match):
             key = match.group(1)
             if key in ["M", "MM", "YY", "YYYY"] :
                 pattern = r'\d+' if key == "M" else r'\d' * len(key)
                 return r'(?P<%s>%s)' % (key,pattern)
             else :
-                if key in properties :
-                    return str(properties[key])
+                if key in self.properties :
+                    return str(self.properties[key])
                 else:
                     raise Exception("Key '%s' in file pattern '%s' not found in station info" % (key, self.pattern()))
 
         # Transforms pattern to regular expression for matching
         re_pattern = self.pattern().replace("?", ".").replace("*", ".*")
-        re_pattern = re.sub(r'\{(\w+)\}', subf, re_pattern)
+        return re.sub(r'\{(\w+)\}', subf, re_pattern)
+
+    def list_files(self, folder):
+        """List files from folder matching the pattern """
+
+        # First go a glob
+        filenames = list(glob(folder + "/" + self.glob_pattern()))
 
 
-        debug(re_pattern=re_pattern)
+        debug(filenames)
+
+        re_pattern = self.re_pattern()
+
+        debug(re_pattern)
+
+        # Finer filter on each name
+        def filter_f(filename) :
+            basename = os.path.basename(filename)
+            return True if re.match(re_pattern, basename, flags=re.IGNORECASE) else False
+
+        return list(filename for filename in filenames if filter_f(filename))
+
+    def sort_files(self, filenames):
+
+        re_pattern = self.re_pattern()
 
         def sort_key(filename) :
             basename = os.path.basename(filename)
             match = re.match(re_pattern, basename, flags=re.IGNORECASE)
             if not match :
-                warning("File %s does not match pattern %s. Skipping" % (basename, self.pattern()))
-                return None
+                warning("File %s does not match pattern %s. It may not not be included in correct order" % (basename, self.pattern()))
+                return basename
 
             # By default, use year and month of modification time
             mtime = datetime.fromtimestamp(os.path.getmtime(filename))
@@ -121,13 +139,7 @@ class InSituHandler :
 
             return (year, month, basename)
 
-        filenames_keys = dict()
-        for filename in filenames :
-            key = sort_key(filename)
-            if key is not None :
-                filenames_keys[filename] = key
-
-        debug(filenames_keys)
+        filenames_keys = { filename: sort_key(filename) for filename in filenames}
 
         return sorted(list(filenames_keys.keys()), key=lambda filename : filenames_keys[filename])
 
