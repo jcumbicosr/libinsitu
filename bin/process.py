@@ -15,6 +15,7 @@ from lib.common import *
 from lib.handlers import HANDLERS, InSituHandler
 from lib.log import debug, info, warning, logger, LogContext
 import argparse
+from numpy.ma import is_masked
 
 
 CDL_PATH = "base.cdl"
@@ -240,30 +241,45 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
         var[times_idx[write_mask]] = new_values[write_mask]
 
 
-def update_time_range(ncfile, var, new_values, times_idx, dry_run=False, keys=[FIRST_DATA_ATT, LAST_DATA_ATT]):
+def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
+
+    # For masked array => replace with nan
+    if is_masked(data) :
+        data = data.filled(np.nan)
+
+    notnan_mask = ~np.isnan(data)
+    if np.any(notnan_mask):
+
+        resolution = getTimeResolution(ncfile)
+        times_s = resolution * times_idx
+        notnan_time_s = times_s[notnan_mask]
+
+        min_time = int_to_datetime64(ncfile, np.min(notnan_time_s))
+        max_time = int_to_datetime64(ncfile, np.max(notnan_time_s))
+
+        return {
+            FIRST_DATA_ATT : min_time,
+            LAST_DATA_ATT : max_time}
+    else :
+        return {FIRST_DATA_ATT: None, LAST_DATA_ATT: None}
+
+def update_time_range(ncfile, var, new_values, times_idx):
     """Update FirstData / LastData attribute of a variable """
 
-    resolution = getTimeResolution(ncfile)
-    times_s = resolution * times_idx
+    minMaxTime = getMinMaxTimes(ncfile, new_values, times_idx, var.name)
 
-    notnan_mask = ~np.isnan(new_values)
-    if np.any((notnan_mask)):
-        notnan_time_s = times_s[notnan_mask]
-        minMaxTimes = {
-            FIRST_DATA_ATT: int_to_datetime64(ncfile, np.min(notnan_time_s)),
-            LAST_DATA_ATT: int_to_datetime64(ncfile, np.max(notnan_time_s))}
+    for key in [FIRST_DATA_ATT, LAST_DATA_ATT]:
 
-        for key in keys:
+        inverse = key == LAST_DATA_ATT
+        currTime = minMaxTime[key]
 
-            currTime = minMaxTimes[key]
-            inverse = key == LAST_DATA_ATT
+        if currTime is None :
+            continue
 
-            currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
-            if currentLimit is None or (inverse ^ (currTime < currentLimit)):
-                if dry_run :
-                    info("Would update %s#%s : %s -> %s" % (var.name, key, time2str(currentLimit), time2str(currTime)))
-                else:
-                    var.setncattr(key, time2str(currTime))
+        currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
+
+        if currentLimit is None or (inverse ^ (currTime < currentLimit)):
+            var.setncattr(key, time2str(currTime))
 
 def process_chunck(handler, infile, ncfile, args):
 

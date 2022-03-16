@@ -105,6 +105,9 @@ def parse_cdl(lines, attributes) :
     return res
 
 def update_attributes(dest, src, dry_run=False, delete=False) :
+
+    dry_prefix = "would " if dry_run else ""
+
     existing_attrs = set(dest.ncattrs())
     new_attrs = set(src.keys())
 
@@ -112,9 +115,8 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
     if delete :
         for attrname in extra_attrs :
-            if dry_run :
-                print("Would delete attribute %s#%s" % (dest.name, attrname))
-            else :
+            info(dry_prefix + "delete attribute %s#%s" % (dest.name, attrname))
+            if not dry_run :
                 dest.delncattr(attrname)
 
     for key, val in src.items() :
@@ -124,9 +126,10 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
             if (val is None or val == "") and not delete :
                 continue
 
-            if dry_run :
-                print("Would update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
-            else:
+            if oldval is not None :
+                info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
+
+            if not dry_run:
                 dest.setncattr(key, val)
 
 
@@ -136,14 +139,14 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
     for dimname, dim in cdl.dimensions.items() :
 
         # Already there, skipping
-        if not dimname in ncfile.dimensions :
+        if not dimname in ncfile.dimensions and not dry_run :
             info("Adding dimension '%s'", dimname)
             ncfile.createDimension(dimname, dim)
 
     for varname, vardef in cdl.variables.items() :
 
         # Already there, skipping
-        if not varname in ncfile.variables:
+        if not varname in ncfile.variables and not dry_run:
             info("Adding variable '%s'", varname)
             ncfile.createVariable(varname, vardef.type, vardef.dimensions, zlib=True)
 

@@ -1,27 +1,29 @@
 #!/usr/bin/env python
-import datetime
-import os.path
-import sys
-
-import numpy as np
-from netCDF4 import Dataset
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lib.handlers import HANDLERS
-from process import init_nc, getProperties, readShortname, update_time_range, FIRST_DATA_ATT, LAST_DATA_ATT
+from process import *
 import argparse
 
 CHUNK_SIZE = 10000
 
 def update_times(nc, ncvar, dry_run=False) :
 
+    dry_prefix = "would " if dry_run else ""
+
     def process_chunk(start, stop, key) :
         data = ncvar[start:stop]
         if np.any(~np.isnan(data)):
             times_idx = np.arange(start, stop, 1, dtype=int)
-            update_time_range(nc, ncvar, data, times_idx, dry_run, [key])
-            return True # should break loop
+            time_limit = getMinMaxTimes(nc, data, times_idx, ncvar.name)[key]
+
+            # debug(key=key, time_limit=time_limit, data=data, times_idx=times_idx)
+
+            if time_limit is not None :
+                new_val = time2str(time_limit)
+                old_val = None if not key in ncvar.ncattrs() else ncvar.getncattr(key)
+                if old_val != new_val:
+                    info(dry_prefix + "update %s:%s %s -> %s" % (ncvar.name, key, old_val, new_val))
+                if not dry_run:
+                    ncvar.setncattr(key, time2str(time_limit))
+                return True # should break loop
         return False # continue loop
 
     # Search start
