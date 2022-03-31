@@ -7,10 +7,10 @@ from os.path import basename, dirname
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from lib.common import *
+from lib.cdl import *
 from lib.handlers import HANDLERS, InSituHandler
 from lib.log import debug, info, warning, logger, LogContext
 import argparse
-from numpy.ma import is_masked
 
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'

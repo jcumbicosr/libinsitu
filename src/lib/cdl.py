@@ -1,7 +1,8 @@
 import re
 from typing import Dict
 
-from lib.common import parse_value
+from lib.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
+    fillShortName, TIME_VAR
 from lib.log import info, warning
 
 
@@ -156,6 +157,27 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
 
     # Update global attributes
     update_attributes(ncfile, cdl.global_attributes, dry_run, delete_attrs)
+
+
+def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
+
+    cdl =  parse_cdl(read_res(CDL_PATH), properties)
+
+    # Filter data vars (variables with "time" dimension)
+    # Also adds the "Time" variable
+    cdl.variables = dict((key, var)
+                         for key, var in cdl.variables.items()
+                         if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
+
+    cdl2netcdf(netcdf, cdl, dry_run, delete_attrs)
+
+    if not dry_run :
+        # Init scalar vars
+        netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
+        netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
+        netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
+
+        fillShortName(netcdf, properties["Station_ID"])
 
 
 
