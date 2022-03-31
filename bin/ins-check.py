@@ -1,22 +1,18 @@
 #!/usr/bin/env python
 
 # Performs various checks
-from netCDF4 import Dataset
 import os, sys
 
 this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, ".."))
 
-from lib.common import nc2df, file2df, get_periods
+from lib.common import nc2df, get_periods
 from lib.log import *
 import numpy as np
 
-
-
-
 def check_time(filename) :
 
-    df = file2df(filename)
+    df = nc2df(filename)
     station_id = df.attrs["StationInfo_Abbreviation"]
     network = df.attrs["source"]
     if " " in network :

@@ -1,64 +1,19 @@
 #!/usr/bin/env python
 import datetime
-import glob
 import os.path
 import sys
 from os.path import basename, dirname
-from time import ctime
-
-import netCDF4
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from lib.cdl import parse_cdl, cdl2netcdf
 from lib.common import *
 from lib.handlers import HANDLERS, InSituHandler
 from lib.log import debug, info, warning, logger, LogContext
 import argparse
 from numpy.ma import is_masked
 
-
-CDL_PATH = "base.cdl"
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
-EPSILON = 0.001
-
-FIRST_DATA_ATT = "FirstData"
-LAST_DATA_ATT = "LastData"
-
-def fillShortName(nc, shortname) :
-    size = nc.dimensions[STATION_NAME_DIM].size
-
-    # Transform to null terminated fixed length array of chars
-    shortname_ = netCDF4.stringtochar(np.array(shortname, 'S%d' % size))
-    nc.variables[STATION_NAME_VAR][:] = shortname_
-
-def readShortname(nc) :
-    char_array = nc.variables[STATION_NAME_VAR][:]
-
-    # This is a 0D (no dimension) array !
-    string_array = netCDF4.chartostring(char_array)
-
-    return string_array[()]
-
-def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
-
-    cdl =  parse_cdl(read_res(CDL_PATH), properties)
-
-    # Filter data vars (variables with "time" dimension)
-    # Also adds the "Time" variable
-    cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
-
-    cdl2netcdf(netcdf, cdl, dry_run, delete_attrs)
-
-    if not dry_run :
-        # Init scalar vars
-        netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
-        netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
-        netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
-
-        fillShortName(netcdf, properties["Station_ID"])
-
 
 def check_boundaries(var, data) :
     """Check boundaries of a variable"""
@@ -94,18 +49,6 @@ def list_files(in_files, handler) :
 
     return in_files
 
-
-def getProperties(network_id, station_id) :
-    """Gather Network_ and Station_ properties """
-
-    # Get properties for this station
-    properties = {STATION_PREFIX + k : v for k, v in getStationInfo(network_id, station_id).items()}
-
-    # Add properties of this network
-    for key, val in getNetworkInfo(network_id).items():
-        properties[NETWORK_PREFIX + key] = val
-
-    return properties
 
 def main(network, station_id, out_filename, args) :
 
@@ -240,29 +183,6 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
         var[times_idx[write_mask]] = new_values[write_mask]
 
-
-def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
-
-    # For masked array => replace with nan
-    if is_masked(data) :
-        data = data.filled(np.nan)
-
-    notnan_mask = ~np.isnan(data)
-    if np.any(notnan_mask):
-
-        resolution = getTimeResolution(ncfile)
-        times_s = resolution * times_idx
-        notnan_time_s = times_s[notnan_mask]
-
-        min_time = int_to_datetime64(ncfile, np.min(notnan_time_s))
-        max_time = int_to_datetime64(ncfile, np.max(notnan_time_s))
-
-        return {
-            FIRST_DATA_ATT : min_time,
-            LAST_DATA_ATT : max_time}
-    else :
-        return {FIRST_DATA_ATT: None, LAST_DATA_ATT: None}
-
 def update_time_range(ncfile, var, new_values, times_idx):
     """Update FirstData / LastData attribute of a variable """
 
@@ -377,7 +297,7 @@ def dir_path(path):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
+    parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True, choices=list(HANDLERS.keys()))

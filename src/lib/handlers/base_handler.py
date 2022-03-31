@@ -1,18 +1,16 @@
 import os.path
+import re
 from abc import abstractmethod
+from datetime import datetime
+from glob import glob
 from gzip import GzipFile
 from io import TextIOWrapper
 from typing import final
 from zipfile import ZipFile
+
 from pandas import DataFrame
-from datetime import datetime
-import re
 
-from lib.common import STATION_PREFIX, NETWORK_PREFIX
 from lib.log import warning, debug
-from glob import glob
-
-
 
 
 class InSituHandler :
