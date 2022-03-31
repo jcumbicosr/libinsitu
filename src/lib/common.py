@@ -1,17 +1,19 @@
-import logging
 from csv import DictReader
 from datetime import datetime
-from typing import List
+from typing import Union
+from urllib.parse import urlsplit, quote_plus
 
 import numpy as np
-from cftime import num2date
-from netCDF4 import Dataset
+from netCDF4 import *
 from numpy import timedelta64, datetime64
+from numpy.ma import is_masked
 from numpy.typing import NDArray
 from pandas import DataFrame
 import pandas as pd
 from pkgutil import get_data
 import os
+
+from lib.cdl import parse_cdl, cdl2netcdf
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -35,6 +37,8 @@ STATION_NAME_DIM = "ncshort"
 STATION_PREFIX = "Station_"
 NETWORK_PREFIX = "Network_"
 
+CHUNK_SIZE=5000
+
 
 DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
 
@@ -45,6 +49,11 @@ DATE_FORMAT = '%Y-%m-%d'
 TIME_FORMAT_MIN= '%Y-%m-%dT%H:%M'
 TIME_FORMAT_SEC= '%Y-%m-%dT%H:%M:%S'
 SECOND = timedelta64(1, 's')
+
+CDL_PATH = "base.cdl"
+
+FIRST_DATA_ATT = "FirstData"
+LAST_DATA_ATT = "LastData"
 
 def parseCSV(res_path, key = "ID") :
     """Generic parser """
@@ -146,36 +155,116 @@ def getTimeResolution(ncfile) :
     else:
         raise Exception("Unknown unit for time resolution : '%s'" % unit)
 
+def openNetCDF(filename, mode='r', user=None, password=None) :
+    """ Open either a filename or OpenDAP URL with user /password"""
+    if '://' in filename :
+        if user :
+            filename = with_auth(filename, user, password)
+        filename = "[FillMismatch]" + filename
+    return Dataset(filename, mode=mode)
 
-def nc2df(ncfile, drop_duplicates=True, start_idx=None, end_idx=None) :
-    """Read netCDF file into Dataframe, indexed by time"""
-    times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx])
+def date_to_timeidx(nc, date) :
+    """Transform date to NetCDF index along Time dimension"""
+    if isinstance(date, datetime) :
+        date = datetime64(date)
+    time_int = datetime64_to_int(nc, date)
+    return int(time_int / getTimeResolution(nc))
 
-    # List of VArs (along time)
+
+def nc2df(
+        ncfile : Union[Dataset, str],
+        start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
+        drop_duplicates=True,
+        skip_na=False,
+        vars=None,
+        user=None,
+        password=None,
+        chunked=False,
+        chunk_size=CHUNK_SIZE,
+        steps=1) :
+    """
+        Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
+
+        :param ncfile: NetCDF Dataset or filename, or URL
+        :param drop_duplicates: If true (default), duplicate rows with same time are droppped
+        :param skip_na : If True, drop rows containing only nan values
+        :param start_time: Start time (first one by default) : Datetime or datetime64
+        :param end_time: End time (last one by default) : Datetile or datetime64
+        :param vars: List of columns names to  convert (all by default)
+        :param user: Optional login for URL
+        :param password: Optional password for URL
+        :param chunk_size Size of chunks for chunked data
+        :param steps Downsampling (1 by default)
+        :return: Dataframe or Iterator (yield) of Dataframes
+        """
+
+    chunks = __nc2df(
+        ncfile, start_time, end_time,
+        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps)
+
+    # Hadling either single result or chunked generator
+    if not chunked :
+        for result in chunks:
+            return result
+    else :
+        return chunks
+
+def __nc2df(
+        ncfile : Union[Dataset, str],
+        start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
+        drop_duplicates=True,
+        skip_na=False,
+        vars=None,
+        user=None,
+        password=None,
+        chunked=False,
+        chunk_size=CHUNK_SIZE,
+        steps=1) :
+    """Private generator use by nc2df """
+
+    if isinstance(ncfile, str) :
+        ncfile = openNetCDF(ncfile, mode='r', user=user, password=password)
+
+    size = len(ncfile.variables[TIME_VAR])
+
+    start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
+    end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size
+
+    # List of vars (along time)
     data_vars = []
     for varname, var in ncfile.variables.items() :
         if TIME_DIM in var.dimensions and varname != TIME_VAR :
-            data_vars.append(varname)
+            if vars is None or varname in vars :
+                data_vars.append(varname)
 
-    df = DataFrame(
-        dict((var, ncfile.variables[var][start_idx:end_idx]) for var in data_vars),
-        index=times)
 
-    # Set global attributes in DataFrame
-    attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
-    df.attrs.update(attrs)
+    def to_df(start_idx, end_idx) :
 
-    # Drop duplicated : only keep last
-    if drop_duplicates :
-        df = df[~df.index.duplicated(keep="last")]
+        times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx:steps])
 
-    return df
+        df = DataFrame(
+            dict((var, ncfile.variables[var][start_idx:end_idx:steps]) for var in data_vars),
+            index=times)
 
-def file2df(filename):
-    nc = Dataset(filename, mode='r')
-    df = nc2df(nc)
-    nc.close()
-    return df
+        # Set global attributes in DataFrame
+        attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
+        df.attrs.update(attrs)
+
+        # Drop duplicated : only keep last
+        if drop_duplicates :
+            df = df[~df.index.duplicated(keep="last")]
+
+        if skip_na :
+            df = df.dropna(axis=0, how='all')
+
+        return df
+
+    if chunked :
+        chunk_size = chunk_size * steps
+        for idx in range(start_idx, end_idx, chunk_size):
+            yield to_df(start_idx=idx, end_idx=min(idx + chunk_size, end_idx))
+    else :
+        yield to_df(start_idx, end_idx)
 
 def time2str(val) :
     """Format date to the minute """
@@ -223,3 +312,75 @@ def parseTimezone(val) :
 
     return pd.to_timedelta(60*hh+mm, "min")
 
+def with_auth(url, user, password) :
+    parts = urlsplit(url)
+    return "%s://%s:%s@%s/%s" % (parts.scheme, quote_plus(user), quote_plus(password), parts.netloc, parts.path)
+
+
+def fillShortName(nc, shortname) :
+    size = nc.dimensions[STATION_NAME_DIM].size
+
+    # Transform to null terminated fixed length array of chars
+    shortname_ = stringtochar(np.array(shortname, 'S%d' % size))
+    nc.variables[STATION_NAME_VAR][:] = shortname_
+
+def readShortname(nc) :
+    char_array = nc.variables[STATION_NAME_VAR][:]
+
+    # This is a 0D (no dimension) array !
+    string_array = chartostring(char_array)
+
+    return string_array[()]
+
+
+def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
+
+    cdl =  parse_cdl(read_res(CDL_PATH), properties)
+
+    # Filter data vars (variables with "time" dimension)
+    # Also adds the "Time" variable
+    cdl.variables = dict((key, var) for key, var in cdl.variables.items() if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
+
+    cdl2netcdf(netcdf, cdl, dry_run, delete_attrs)
+
+    if not dry_run :
+        # Init scalar vars
+        netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
+        netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
+        netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
+
+        fillShortName(netcdf, properties["Station_ID"])
+
+def getProperties(network_id, station_id) :
+    """Gather Network_ and Station_ properties """
+
+    # Get properties for this station
+    properties = {STATION_PREFIX + k : v for k, v in getStationInfo(network_id, station_id).items()}
+
+    # Add properties of this network
+    for key, val in getNetworkInfo(network_id).items():
+        properties[NETWORK_PREFIX + key] = val
+
+    return properties
+
+def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
+
+    # For masked array => replace with nan
+    if is_masked(data) :
+        data = data.filled(np.nan)
+
+    notnan_mask = ~np.isnan(data)
+    if np.any(notnan_mask):
+
+        resolution = getTimeResolution(ncfile)
+        times_s = resolution * times_idx
+        notnan_time_s = times_s[notnan_mask]
+
+        min_time = int_to_datetime64(ncfile, np.min(notnan_time_s))
+        max_time = int_to_datetime64(ncfile, np.max(notnan_time_s))
+
+        return {
+            FIRST_DATA_ATT : min_time,
+            LAST_DATA_ATT : max_time}
+    else :
+        return {FIRST_DATA_ATT: None, LAST_DATA_ATT: None}

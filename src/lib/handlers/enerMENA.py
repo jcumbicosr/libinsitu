@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from datetime import timedelta
-from logging import warn
 
 import pandas as pd
 

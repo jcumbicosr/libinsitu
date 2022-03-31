@@ -5,22 +5,17 @@ this_folder =  os.path.dirname(__file__)
 sys.path.append(os.path.join(this_folder, "../src"))
 
 from dateutil.relativedelta import relativedelta
-from netCDF4 import Dataset
 import argparse
 import numpy as np
 from numpy import datetime64
-
+from line_profiler_pycharm import profile
 from six import StringIO
 from datetime import datetime
 
 from lib.log import debug
 
-this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, ".."))
+from lib.common import nc2df, CHUNK_SIZE
 
-from lib.common import file2df, nc2df, TIME_VAR, datetime64_to_int, getTimeResolution, DATA_VARS
-
-CHUNK_SIZE=1000
 DATE_FORMATS_PARTS = [
     ("%Y", 4, "years"),
     ("-%m", 3, "months"),
@@ -51,28 +46,26 @@ def parse_date_filter(strval) -> (datetime64, datetime64):
 
     return np.datetime64(start), np.datetime64(end)
 
-def date_to_timeidx(nc, date) :
-    time_int = datetime64_to_int(nc, date)
-    return int(time_int / getTimeResolution(nc))
-
+@profile
 def main() :
 
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
-    parser.add_argument('filename', metavar='<file.nc>', type=str, help='Input file')
+    parser.add_argument('filename', metavar='<file.nc> or <http://opendap-url/.nc>', type=str, help='Input file or URL')
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
     parser.add_argument('--cols', '-c', metavar="<col1>,<col2> ..", help="Selection of columns. All by default")
+    parser.add_argument('--user', '-u', help='User login (or TDS_USER env var), for URL',
+                        default=os.environ.get("TDS_USER", None))
+    parser.add_argument('--password', '-p', help='User password (or TDS_PASS env var), for URL',
+                        default=os.environ.get("TDS_PASS", None))
+    parser.add_argument('--steps', '-st', help='Downsampling', type=int, default=1)
+    parser.add_argument('--chunk_size', '-cs', help='Size of chunks', type=int, default=CHUNK_SIZE)
     args = parser.parse_args()
     cols = args.cols.split(",") if args.cols else None
 
-    nc = Dataset(args.filename, mode='r')
-
-
-    size = len(nc.variables[TIME_VAR])
-    start_idx = 0
-    end_idx = size
-
+    fromTime=None
+    toTime=None
     if args.filter :
         if "~" in args.filter :
             filter1, filter2 = args.filter.split("~")
@@ -81,20 +74,16 @@ def main() :
         else :
             fromTime, toTime = parse_date_filter(args.filter)
 
-        start_idx = max(0, date_to_timeidx(nc, fromTime))
-        end_idx = min(date_to_timeidx(nc, toTime), size)
-
     header = True
 
-    for idx in range(start_idx, end_idx, CHUNK_SIZE) :
+    chunks = nc2df(
+        args.filename,
+        fromTime, toTime,
+        user=args.user, password=args.password,
+        drop_duplicates=True, skip_na=args.skip_na, vars=cols, chunked=True,
+        steps=args.steps, chunk_size=args.chunk_size)
 
-        chunk = nc2df(nc, start_idx=idx, end_idx=min(idx+CHUNK_SIZE, end_idx))
-
-        if cols :
-            chunk = chunk[cols]
-
-        if args.skip_na :
-            chunk = chunk.dropna(axis=0, how='all')
+    for chunk in chunks :
 
         if len(chunk) == 0 :
             continue

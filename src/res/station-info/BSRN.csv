@@ -31,7 +31,7 @@ FPE,,Fort Peck,48.3167,-105.1,634.0,UTC-06:00,,Brockton District,Montana,United 
 FUA,,Fukuoka,33.5822,130.3764,3.0,UTC+09:00,国体道路 (Kokutai-doro);市道堅粕西新２号線,Fukuoka,,Japan,asphalt,flat,urban,,,1,OHTAKE Jun (rrc-jma@met.kishou.go.jp),,,,,2010-04-01,,
 GAN,,Gandhinagar,23.1101,72.6276,65.0,UTC+05:30,Gandhinagar-Ahmedabad Highway,,Gujarat,India,shrub,flat,urban,BSh,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-05-19,,
 GCR,,Goodwin Creek,34.2547,-89.8729,98.0,UTC-05:00,Baker Road,,Mississippi,United States,grass,hilly,rural,Cfa,,1,John A. Augustine (john.a.augustine@noaa.gov),,,,,1995-01-01,,
-GIM,,Granite Island,46.721000000000004,87.411,208.0,UTC+08:00,,Qiganjidie,"Altay Prefecture, Xinjiang",China,grass,flat,urban,BWk,,1,Bryan Fabbri (bryan.e.fabbri@nasa.gov),NASA,,,,2018-10-01,,
+GIM,,Granite Island,46.721000000000004,-87.411,208.0,UTC-04:00,,Marquette Township,Michigan,United States,grass,flat,urban,Dfb,,1,Bryan Fabbri (bryan.e.fabbri@nasa.gov),NASA,,,,2018-10-01,,
 GOB,,Gobabeb,-23.5614,15.042,407.0,UTC+02:00,,Gobabeb Research & Training,Erongo Region,Namibia,desert gravel,flat,rural,BWh,,1,Roland Vogt (Roland.Vogt@unibas.ch),,,,,2012-05-15,,
 GUR,,Gurgaon,28.4249,77.156,259.0,UTC+05:30,,Gurugram,Haryana,India,shrub,flat,urban,BSh,,1,Kadhirvel Boopathi (boopathi.niwe@nic.in),,,,,2014-04-21,,
 GVN,,Georg von Neumayer,-70.65,-8.25,42.0,UTC+00:00,,Abashiri,Okhotsk Subprefecture,Japan,iceshelf,flat,rural,,,1,Holger Schmithüsen (Holger.Schmithuesen@awi.de).,,,,,1992-01-01,,

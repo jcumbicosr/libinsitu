@@ -1,8 +1,13 @@
 #!/usr/bin/env python
-from process import *
-import argparse
+import os, sys
 
-CHUNK_SIZE = 10000
+from lib.handlers import HANDLERS
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
+from lib.common import *
+from lib.log import *
+import argparse
 
 def update_times(nc, ncvar, dry_run=False) :
 
@@ -13,8 +18,6 @@ def update_times(nc, ncvar, dry_run=False) :
         if np.any(~np.isnan(data)):
             times_idx = np.arange(start, stop, 1, dtype=int)
             time_limit = getMinMaxTimes(nc, data, times_idx, ncvar.name)[key]
-
-            # debug(key=key, time_limit=time_limit, data=data, times_idx=times_idx)
 
             if time_limit is not None :
                 new_val = time2str(time_limit)

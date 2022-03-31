@@ -1,9 +1,9 @@
-import sys
+import re
 from typing import Dict
 
 from lib.common import parse_value
-from lib.log import info, obj2json, warning, debug
-import re
+from lib.log import info, warning
+
 
 class Variable :
     def __init__(self, name, type, dimensions):
@@ -125,7 +125,7 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
             if (val is None or val == "") and not delete :
                 continue
-                
+
             info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
 
             if not dry_run:

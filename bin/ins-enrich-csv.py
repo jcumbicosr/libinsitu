@@ -8,18 +8,18 @@ from collections import defaultdict
 from csv import DictReader
 from glob import glob
 from os.path import basename
-from shutil import copy
 import numpy as np
 import netCDF4
 import pytz
 from timezonefinder import TimezoneFinder
-from datetime import datetime
 
 from openpyxl import load_workbook
 import csv
 from unidecode import unidecode
 from datetime import datetime
 from urllib.request import urlretrieve
+
+OUT_DIR = "src/res/station-info/"
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -354,11 +354,14 @@ def enrich_timezone(tzFinder, row, lat, lon) :
 
     row["Timezone"] = "UTC%s%02d:%02d" % (sign, offset_min / 60, offset_min % 60)
 
-def enrich_coords(network, rows, nc_climate) :
+def enrich_coords(network, rows, nc_climate, ids=None) :
 
     tzFinder = TimezoneFinder()
 
     for row in rows:
+
+        if ids is not None and row["ID"] not in ids :
+            continue
 
         lat = str2val(row["Latitude"])
         lon = str2val(row["Longitude"])
@@ -400,17 +403,28 @@ def get_KG_ClimZone(ds, lat, lon):
         return ds.getncattr(str(ID))
 
 
-def main_coords(out_folder, climate_file) :
+def main_coords(out_folder, climate_file, network=None, ids=None) :
 
-    nc_climate = netCDF4.Dataset(climate_file)
+
+    nc_climate = netCDF4.Dataset(climate_file) if climate_file else None
 
     for file in glob(os.path.join(out_folder, "*.csv")) :
+
+        base = basename(file)
+
+        if network != None and base != network + ".csv" :
+            continue
+
+        print("Processing %s" % base)
+
         rows = load_csv(file)
 
         network = basename(file)
         network = network.replace(".csv", "")
 
-        rows = enrich_coords(network, rows, nc_climate)
+        if nc_climate :
+            rows = enrich_coords(network, rows, nc_climate, ids)
+
         rows = filter_redorder_cols(rows)
 
         save_csv(file, rows)
@@ -419,16 +433,18 @@ def main_coords(out_folder, climate_file) :
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Enrich CSV files of stations')
-    subparsers = parser.add_subparsers(help="commands", dest="command")
-    parser.add_argument('out_folder', metavar='<output-folder>', type=str, help='Output folder')
+    subparsers = parser.add_subparsers(help="commands", dest="command", required=True)
+
+    parser.add_argument('--out-folder', "-o", metavar='<output-folder>', type=str, help='Output folder', default=OUT_DIR)
 
     xls_parser = subparsers.add_parser('xls', help="Enrich data from single XLS file")
     xls_parser.add_argument("input_file", metavar="<input.xls>", type=str)
 
     coords_parser = subparsers.add_parser('coords', help="Enrich data from coordinates")
-    coords_parser.add_argument("--cache", "-c", metavar="<input.xls>", type=str, help="Cache folder", default="/tmp")
+    coords_parser.add_argument("--cache", "-c", metavar="<tmp_dir>", type=str, help="Cache folder", default="/tmp")
     coords_parser.add_argument("--climate", "-cli", metavar="<climate.nc>", type=str, help="NetCDF climate file")
-
+    coords_parser.add_argument("--network", "-net", metavar="<network>", type=str, help="Only process a single network")
+    coords_parser.add_argument("--stations-ids", "-ids", metavar="<id1>,<ids2>,...", type=str, help="Only process given stations")
     args = parser.parse_args()
 
     if args.command == "xls" :
@@ -436,7 +452,10 @@ if __name__ == '__main__':
     elif args.command == "coords" :
 
         CACHE_FOLDER = args.cache
-        main_coords(args.out_folder, args.climate)
+
+        ids = None if args.stations_ids is None else args.stations_ids.split(",")
+
+        main_coords(args.out_folder, args.climate, args.network, ids)
 
     else:
         raise Exception("Unknown command" + args.command)
