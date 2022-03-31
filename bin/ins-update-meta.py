@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import os, sys
 
-from lib.handlers import HANDLERS
-
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from lib.handlers import HANDLERS
 from lib.common import *
+from lib.cdl import init_nc
 from lib.log import *
 import argparse
 
