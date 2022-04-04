@@ -6,12 +6,7 @@ import argparse
 from rich.console import Console
 from rich.table import Table
 
-this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, "../src/"))
-
-from lib.catalog import *
-
-
+from libinsitu.catalog import *
 
 
 def printCatalog(catalog) :
@@ -70,5 +65,3 @@ def main():
 
     printCatalog(catalog)
 
-if __name__ == '__main__':
-    main()

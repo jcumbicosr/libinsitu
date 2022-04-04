@@ -1,9 +1,9 @@
 
 
 from pvlib.iotools import parse_bsrn
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
-from lib.handlers.base_handler import InSituHandler
-from lib.log import error
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.log import error
 import pandas as pd
 
 class BSRNHandler(InSituHandler) :

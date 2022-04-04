@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-import os, sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lib.handlers import HANDLERS
-from lib.common import *
-from lib.cdl import init_nc
-from lib.log import *
+from libinsitu.handlers import HANDLERS
+from libinsitu.common import *
+from libinsitu.cdl import init_nc
+from libinsitu.log import *
 import argparse
 
 def update_times(nc, ncvar, dry_run=False) :
@@ -62,7 +58,7 @@ def update_meta(file, network, dry_run=False, delete=False, update_time=False) :
             update_times(ncfile, ncfile.variables[varname], dry_run)
 
 
-if __name__ == '__main__':
+def main() :
 
     parser = argparse.ArgumentParser(description='Update meta attributes in NetCDF file')
     parser.add_argument('network', metavar='<NETWORK>', type=str, help='Network')

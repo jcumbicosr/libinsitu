@@ -1,13 +1,5 @@
-#!/usr/bin/env python
-
-# Performs various checks
-import os, sys
-
-this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, ".."))
-
-from lib.common import nc2df, get_periods
-from lib.log import *
+from libinsitu.common import nc2df, get_periods
+from libinsitu.log import *
 import numpy as np
 
 def check_time(filename) :
@@ -34,7 +26,8 @@ def check_time(filename) :
             periods = list(periods.keys())[0]
         info("from:%s, to:%s, %d samples, period:%s", from_date, to_date, nb_samples, periods)
 
-if __name__ == '__main__':
+def main() :
+    """Perform various checks on a InSitu NetCDF file"""
     for file in sys.argv[1:] :
         with IgnoreAndLogExceptions() :
             check_time(filename=file)

@@ -3,10 +3,10 @@ from datetime import timedelta
 
 import pandas as pd
 
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
     WIND_DIRECTION_VAR
-from lib.handlers.base_handler import InSituHandler
-from lib.log import info, warning
+from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.log import info, warning
 
 
 def read_mesor(stream, na_values=[-999.0, -99.9, -10.0, -9999.0]):

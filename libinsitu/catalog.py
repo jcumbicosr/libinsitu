@@ -1,6 +1,5 @@
 # Handling fetch and parsing of Thredds server
 
-import traceback
 import xml.etree.ElementTree as ET
 from typing import Dict
 from urllib.parse import urljoin, urlsplit

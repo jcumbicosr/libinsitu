@@ -1,17 +1,9 @@
-#!/usr/bin/env python
+# Performs various checks on NetCDF files
 import argparse
-import os
-import sys
-
-# Performs various checks
 from netCDF4 import Dataset
-
-this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, ".."))
-
-from lib.common import nc2df, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
+from libinsitu.common import nc2df, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
     HUMIDITY_VAR, TEMP_VAR
-from lib.log import *
+from libinsitu.log import *
 import numpy as np
 
 NAN_VALUES = {
@@ -123,7 +115,7 @@ def dump(df1, df2) :
         chunk.to_string(sys.stdout, header=True, justify="left")
         print("\n")
 
-if __name__ == '__main__':
+def main() :
 
     parser = argparse.ArgumentParser(description='Transform In-Situ data into NetCDF files')
     parser.add_argument('file1', metavar='<file1.nc>', type=str, help='First NetCDF file')

@@ -1,0 +1,3 @@
+include libinsitu/res/*.cdl
+include libinsitu/res/*.csv
+include libinsitu/res/station-info/*.csv

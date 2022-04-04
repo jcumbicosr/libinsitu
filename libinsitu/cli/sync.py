@@ -8,10 +8,10 @@ from urllib.request import urlretrieve
 
 from dateutil.relativedelta import relativedelta
 
-from lib.common import getStationsInfo, DATE_FORMAT, parse_value
+from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value
 from datetime import datetime, timedelta
 
-from lib.log import info, LogContext, IgnoreAndLogExceptions
+from libinsitu.log import info, LogContext, IgnoreAndLogExceptions
 
 URL_PATTERN = "http://reg.bom.gov.au/cgi-bin/climate/oneminsolar/getFile.cgi?stn_num={UID:06d}&year={YYYY}&month={MM}"
 PATH_PATTERN = "{ID}/{ID}-{YYYY}-{MM}.zip"
@@ -87,7 +87,9 @@ def do_download(url_paths, out) :
                 else:
                     shutil.copy(tmpFile.name, path)
 
-def main(network, out) :
+def main() :
+
+    network, out = sys.argv[1:]
 
     stations = getStationsInfo(network)
 
@@ -98,10 +100,6 @@ def main(network, out) :
             do_download(url_paths, out)
 
 
-if __name__ == '__main__':
-
-    network, out = sys.argv[1:]
-    main(network, out)
 
 
 

@@ -1,9 +1,9 @@
 import re
 from typing import Dict
 
-from lib.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
+from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
     fillShortName, TIME_VAR
-from lib.log import info, warning
+from libinsitu.log import info, warning
 
 
 class Variable :

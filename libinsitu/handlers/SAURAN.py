@@ -1,7 +1,7 @@
 
 
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
-from lib.handlers.base_handler import InSituHandler
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
+from libinsitu.handlers.base_handler import InSituHandler
 import pandas as pd
 
 # The time base for all readings is South African Standard Time (SAST" \

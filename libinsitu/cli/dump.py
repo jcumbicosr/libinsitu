@@ -1,20 +1,13 @@
-#!/usr/bin/env python
 import os, sys
-
-this_folder =  os.path.dirname(__file__)
-sys.path.append(os.path.join(this_folder, "../src"))
-
 from dateutil.relativedelta import relativedelta
 import argparse
 import numpy as np
 from numpy import datetime64
-from line_profiler_pycharm import profile
 from six import StringIO
 from datetime import datetime
 
-from lib.log import debug
-
-from lib.common import nc2df, CHUNK_SIZE
+from libinsitu.log import debug
+from libinsitu.common import nc2df, CHUNK_SIZE
 
 DATE_FORMATS_PARTS = [
     ("%Y", 4, "years"),
@@ -46,7 +39,6 @@ def parse_date_filter(strval) -> (datetime64, datetime64):
 
     return np.datetime64(start), np.datetime64(end)
 
-@profile
 def main() :
 
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
@@ -98,7 +90,3 @@ def main() :
             sys.stdout.write(output.read())
 
         header = False
-
-
-if __name__ == '__main__':
-    main()

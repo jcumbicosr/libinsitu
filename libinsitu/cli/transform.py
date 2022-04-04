@@ -4,12 +4,10 @@ import os.path
 import sys
 from os.path import basename, dirname
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lib.common import *
-from lib.cdl import *
-from lib.handlers import HANDLERS, InSituHandler
-from lib.log import debug, info, warning, logger, LogContext
+from libinsitu.common import *
+from libinsitu.cdl import *
+from libinsitu.handlers import HANDLERS, InSituHandler
+from libinsitu.log import debug, info, warning, logger, LogContext
 import argparse
 
 DONE_SUFFIX = '.done'
@@ -50,7 +48,7 @@ def list_files(in_files, handler) :
     return in_files
 
 
-def main(network, station_id, out_filename, args) :
+def process_network(network, station_id, out_filename, args) :
 
     # Get properties for this station
     properties = getProperties(network, station_id)
@@ -295,7 +293,7 @@ def dir_path(path):
         raise argparse.ArgumentTypeError(f"{path} is not a valid folder")
 
 
-if __name__ == '__main__':
+def main():
 
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
@@ -312,4 +310,4 @@ if __name__ == '__main__':
     station_id  = args.station_id.upper()
 
     with LogContext(network=network, station_id=station_id):
-        main(network, station_id, args.out, args)
+        process_network(network, station_id, args.out, args)

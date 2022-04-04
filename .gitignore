@@ -11,3 +11,8 @@ status
 *.ipynb
 in
 cron
+dist
+build
+*.egg-info
+ins-dump.py.pclprof
+build

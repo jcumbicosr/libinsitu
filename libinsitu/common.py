@@ -123,7 +123,7 @@ def read_res(path, encoding="utf8") :
     """Read package resources and returns a fie like object (splitted lines)
     path should be relative to ./res/
     """
-    return get_data(__name__, os.path.join("..", "res", path)).decode(encoding).splitlines()
+    return get_data(__name__, os.path.join("res", path)).decode(encoding).splitlines()
 
 def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""

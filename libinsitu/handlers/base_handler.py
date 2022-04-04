@@ -5,12 +5,11 @@ from datetime import datetime
 from glob import glob
 from gzip import GzipFile
 from io import TextIOWrapper
-from typing import final
 from zipfile import ZipFile
 
 from pandas import DataFrame
 
-from lib.log import warning, debug
+from libinsitu.log import warning, debug
 
 
 class InSituHandler :
@@ -19,7 +18,7 @@ class InSituHandler :
     def __init__(self, properties):
         self.properties = properties
 
-    @final
+    # final
     def read_chunk(self, filename:str, encoding='latin1'):
         """ Handle opening of gz / zip files """
 

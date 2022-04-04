@@ -1,7 +1,7 @@
 import pandas as pd
 
-from lib.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, parseTimezone
-from lib.handlers.base_handler import InSituHandler
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, parseTimezone
+from libinsitu.handlers.base_handler import InSituHandler
 
 
 class ABOMHandler(InSituHandler) :

@@ -21,9 +21,7 @@ from urllib.request import urlretrieve
 
 OUT_DIR = "src/res/station-info/"
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
-
-from lib.log import error
+from libinsitu.log import error
 
 FIRST_ROW = 2
 FIRST_COL = 2
@@ -430,7 +428,7 @@ def main_coords(out_folder, climate_file, network=None, ids=None) :
         save_csv(file, rows)
 
 
-if __name__ == '__main__':
+def main() :
 
     parser = argparse.ArgumentParser(description='Enrich CSV files of stations')
     subparsers = parser.add_subparsers(help="commands", dest="command", required=True)
