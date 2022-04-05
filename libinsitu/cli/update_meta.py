@@ -70,3 +70,6 @@ def main() :
 
     for file in args.files :
         update_meta(file, args.network, args.dry_run, args.delete, args.update_times)
+
+if __name__ == '__main__':
+    main()

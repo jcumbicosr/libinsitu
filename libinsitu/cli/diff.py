@@ -146,4 +146,5 @@ def main() :
             diff(df1, df2, args)
 
 
-
+if __name__ == '__main__':
+    main()
