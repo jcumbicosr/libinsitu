@@ -3,6 +3,7 @@ from setuptools import setup
 import subprocess
 from datetime import datetime
 import pkg_resources
+import pkgutil
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -42,6 +43,15 @@ with open("requirements.txt", "r") as f :
             for requirement
             in pkg_resources.parse_requirements(f)]
 
+
+
+# List all cli modules
+import libinsitu.cli
+entry_points = []
+for importer, modname, ispkg in pkgutil.iter_modules(libinsitu.cli.__path__):
+    entry_points.append('ins-%s = libinsitu.cli.%s:main' % (modname, modname))
+print("entry points :", entry_points)
+
 setup(
     name = name,
     version = version,
@@ -58,5 +68,8 @@ setup(
     long_description_content_type='text/markdown',
     include_package_data=True,
     classifiers=[],
-    install_requires=requirements
+    install_requires=requirements,
+    entry_points={'console_scripts': entry_points}
 )
+
+

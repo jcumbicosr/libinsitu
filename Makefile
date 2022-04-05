@@ -1,6 +1,3 @@
-TST_NOTEBOOK:=example-notebook.ipynb
-VERSION:=$(shell cat VERSION)
-
 .PHONY: doc test package tst-upload
 
 clean:
@@ -10,7 +7,7 @@ package:
 	python setup.py sdist bdist_wheel --universal
 
 tst-upload:
-	twine upload --repository-url https://test.pypi.org/legacy/ dist/lca_algebraic*
+	twine upload --repository-url https://test.pypi.org/legacy/ dist/libinsitu*
 
 upload:
-	twine upload -u oie-minesparistech dist/lca_algebraic*
+	twine upload -u oie-minesparistech dist/libinsitu*

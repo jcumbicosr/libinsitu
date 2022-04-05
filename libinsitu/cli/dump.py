@@ -90,3 +90,6 @@ def main() :
             sys.stdout.write(output.read())
 
         header = False
+
+if __name__ == '__main__':
+    main()

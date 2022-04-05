@@ -99,7 +99,8 @@ def main() :
             url_paths = list_downloads(properties)
             do_download(url_paths, out)
 
-
+if __name__ == '__main__':
+    main()
 
 
 

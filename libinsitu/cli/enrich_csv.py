@@ -457,3 +457,6 @@ def main() :
 
     else:
         raise Exception("Unknown command" + args.command)
+
+if __name__ == '__main__':
+    main()

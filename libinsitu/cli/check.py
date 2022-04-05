@@ -31,3 +31,6 @@ def main() :
     for file in sys.argv[1:] :
         with IgnoreAndLogExceptions() :
             check_time(filename=file)
+
+if __name__ == '__main__':
+    main()

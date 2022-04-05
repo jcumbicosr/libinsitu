@@ -311,3 +311,6 @@ def main():
 
     with LogContext(network=network, station_id=station_id):
         process_network(network, station_id, args.out, args)
+
+if __name__ == '__main__':
+    main()
