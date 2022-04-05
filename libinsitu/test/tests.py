@@ -2,7 +2,7 @@ import datetime
 
 import numpy as np
 
-from lib.common import is_uniform, parse_value, parseTimezone
+from libinsitu.common import is_uniform, parse_value, parseTimezone
 import pytest
 import sys
 

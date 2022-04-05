@@ -24,6 +24,7 @@ curr_branch = curr_branch.replace(" ", "").replace("*", "")
 version = read("VERSION")
 name = "libinsitu"
 
+
 if curr_branch == "dev" :
 
     name += "_dev"
@@ -39,7 +40,7 @@ if curr_branch == "dev" :
 
 with open("requirements.txt", "r") as f :
     requirements = [
-            str(requirement)
+            str(requirement).replace("==", ">=")
             for requirement
             in pkg_resources.parse_requirements(f)]
 
