@@ -13,5 +13,5 @@ else
 	LIST="$INPUT_DIR/$2"
 fi
 
-CMD="$PYTHON bin/process.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {2} $OUT_FOLDER/$NETWORK-{2}.nc {1} | tee $LOGDIR/$NETWORK-{2}.log"
+CMD="$PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {2} $OUT_FOLDER/$NETWORK-{2}.nc {1} | tee $LOGDIR/$NETWORK-{2}.log"
 echo "$LIST" | awk '{st=$1; sub(".*/", "", st); print $1 ";" toupper(st)}' | parallel --lb -C ';' $CMD
