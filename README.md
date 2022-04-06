@@ -141,7 +141,8 @@ This section documents the main functions of the library.
 ### nc2df(...)
 
 Load a NetCDF in-situ file (or part of it) into a panda Dataframe, with time as index.
-Module : libinsitu.common
+
+**module** : ```libinsitu.common```
 
 #### Signature
 
@@ -182,13 +183,15 @@ df = nc2df("data/station.nc")
 
 Feth and parse XML catalog from a TDS (Thredds) server.
 
+**module** : ```libinsitu.catalog```
+
 #### Signature 
 
     fetch_catalog(url, session, recursive=True)
 
-**url** : URL of catalog.xml
-**session** : HTTP session (possibily with user/password)
-**recursive** : Fetch sub catalogs ?
+* **url** : URL of catalog.xml
+* **session** : HTTP session (possibily with user/password)
+* **recursive** : Fetch sub catalogs ?
 
 #### Example
 

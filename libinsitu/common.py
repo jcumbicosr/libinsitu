@@ -367,3 +367,7 @@ def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
             LAST_DATA_ATT : max_time}
     else :
         return {FIRST_DATA_ATT: None, LAST_DATA_ATT: None}
+
+
+def parse_bool(value) :
+    return value in ["true", "True", "1", "yes"]
