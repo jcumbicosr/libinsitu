@@ -1,10 +1,8 @@
-from logging import warn
-
-from pvlib.iotools.midc import format_index_raw, MIDC_VARIABLE_MAP
-from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS, \
-    TIME_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR
+from pvlib.iotools.midc import MIDC_VARIABLE_MAP, TZ_MAP
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR
 from libinsitu.handlers.base_handler import InSituHandler
 import pandas as pd
+from datetime import datetime, timedelta
 
 from libinsitu.log import warning, info
 
@@ -15,6 +13,9 @@ VARIABLE_MAP = {
     'wind_speed' : WIND_SPEED_VAR,
     'temp_air' : TEMP_VAR,
     'relative_humidity': HUMIDITY_VAR}
+
+TIME_FORMAT="%Y%j%H%M" # YYYYJJJHHMM
+ONE_DAY = timedelta(days=1)
 
 class NRELHandler(InSituHandler) :
 
@@ -68,3 +69,43 @@ class NRELHandler(InSituHandler) :
 
     def pattern(self):
         return "{Station_ID}-{YYYY}-{MM}.csv.gz"
+
+def parseTime(yyyyjjjhhmm) :
+    """ Parse time, handling corner case of H:24 """
+    hh = yyyyjjjhhmm[7:9]
+    plusDay = 0
+    if hh == "24" :
+        yyyyjjjhhmm = yyyyjjjhhmm[:7] + "00" + yyyyjjjhhmm[9:]
+        plusDay = 1
+    res = datetime.strptime(yyyyjjjhhmm, TIME_FORMAT)
+    if plusDay > 0 :
+        res += ONE_DAY
+    return res
+
+
+# Adapation of function from pvlib / midc to handle hour=24
+def format_index_raw(data):
+    """Create DatetimeIndex for the Dataframe localized to the timezone provided
+    as the label of the third column.
+
+    Parameters
+    ----------
+    data: Dataframe
+        Must contain columns 'Year' and 'DOY'. Timezone must be found as the
+        label of the third (time) column.
+
+    Returns
+    -------
+    data: Dataframe
+        The data with a Datetime index localized to the provided timezone.
+    """
+    tz_raw = data.columns[3]
+    timezone = TZ_MAP.get(tz_raw, tz_raw)
+    year = data.Year.apply(str)
+    jday = data.DOY.apply(lambda x: '{:03d}'.format(x))
+    time = data[tz_raw].apply(lambda x: '{:04d}'.format(x))
+    time_str = year + jday + time
+    index = time_str.apply(parseTime)
+    data = data.set_index(index)
+    data = data.tz_localize(timezone)
+    return data

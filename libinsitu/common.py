@@ -283,7 +283,7 @@ def str2time64(val) :
 
 
 MIN_STEP=0
-MAX_STEP=1000
+MAX_STEP=7200
 
 def get_periods(time_s) :
     """Compute list of periods, by occurrence. Return list of (period, count)"""

@@ -254,13 +254,14 @@ def process_chunck(handler, infile, ncfile, args):
     if len(times_int) >= 2:
 
         periods = get_periods(times_int)
-        actual_resolution, count = periods[0]
+        if len(periods) >= 1 :
+            actual_resolution, count = periods[0]
 
-        if actual_resolution != resolution_s:
-            warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s))
-            if args.strict_resolution :
-                warning("Strict resolution requested : skipping")
-                return
+            if actual_resolution != resolution_s:
+                warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s))
+                if args.strict_resolution :
+                    warning("Strict resolution requested : skipping")
+                    return
 
     # Fill time variable with proper values
     size_before = len(ncfile.variables[TIME_VAR]) # Remember the size of TIME before it is extended
