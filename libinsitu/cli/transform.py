@@ -7,7 +7,7 @@ from os.path import basename, dirname
 from libinsitu.common import *
 from libinsitu.cdl import *
 from libinsitu.handlers import HANDLERS, InSituHandler
-from libinsitu.log import debug, info, warning, logger, LogContext
+from libinsitu.log import debug, info, warning, logger, LogContext, error
 import argparse
 
 DONE_SUFFIX = '.done'
@@ -220,6 +220,9 @@ def process_chunck(handler, infile, ncfile, args):
 
     times_int = datetime64_to_int(ncfile, chunk_dates)
 
+    for col in list(data.columns):
+        if col not in DATA_VARS:
+            error("Unknown column '%s'. Not part of %s", col, DATA_VARS)
 
     # Ensure all timestamps fall into resolution
     exact_idx = (times_int % resolution_s) == 0

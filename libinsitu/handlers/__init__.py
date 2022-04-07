@@ -1,6 +1,7 @@
 from libinsitu.handlers import SAURAN
 from libinsitu.handlers.ABOM import ABOMHandler
 from libinsitu.handlers.BSRN import BSRNHandler
+from libinsitu.handlers.NREL_MIDC import NRELHandler
 from libinsitu.handlers.SAURAN import SAURANHandler
 
 # Static map of handlers
@@ -11,6 +12,7 @@ HANDLERS = {
     "BSRN" : BSRNHandler,
     "enerMENA" : EnerMENAHandler,
     "ABOM" : ABOMHandler,
-    "SAURAN" : SAURANHandler
+    "SAURAN" : SAURANHandler,
+    "NREL_MIDC" : NRELHandler
 }
 

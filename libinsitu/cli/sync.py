@@ -124,11 +124,9 @@ def do_download(url_paths, out, dry_run=False, compress=False) :
                         else:
                             shutil.copy(tmpFile.name, out_path)
 
-    exec = ThreadPoolExecutor(max_workers=NB_WORKERS)
-
-    # Parallel execution
-    exec.map(process_one, url_paths.items())
-
+    # Parallel execution : wait for all executions to finish
+    with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
+        executor.map(process_one, url_paths.items())
 
 
 
