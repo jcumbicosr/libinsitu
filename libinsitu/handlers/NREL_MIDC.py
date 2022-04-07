@@ -20,6 +20,13 @@ class NRELHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
 
+        # Check file is not Error from REST API
+        first_line = stream.readline()
+        if first_line.startswith("Error") :
+            return None
+
+        stream.seek(0)
+
         # CSV to pandas
         data = pd.read_csv(stream)
         data = format_index_raw(data).tz_convert("UTC")

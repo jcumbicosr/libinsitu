@@ -206,7 +206,7 @@ def process_chunck(handler, infile, ncfile, args):
     # Read data
     data = handler.read_chunk(infile)
 
-    if len(data) == 0 :
+    if data is None or len(data) == 0 :
         warning("Chunk is empty")
         return
 
