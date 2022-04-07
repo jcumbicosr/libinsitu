@@ -1,7 +1,7 @@
 NETWORK=$1
 #INPUT_DIR=/mnt/v1/IN_SITU_data/RawData/$NETWORK
-INPUT_DIR=./in/$NETWORK
-PYTHON=python
+INPUT_DIR=/mnt/v1/in-situ/in/$NETWORK
+PYTHON=python 
 OUT_FOLDER=out/$NETWORK
 LOGDIR=log
 STATUS_FOLDER=status/$NETWORK
@@ -13,5 +13,5 @@ else
 	LIST="$INPUT_DIR/$2"
 fi
 
-CMD="$PYTHON transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {2} $OUT_FOLDER/$NETWORK-{2}.nc {1} | tee $LOGDIR/$NETWORK-{2}.log"
+CMD="$PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {2} $OUT_FOLDER/$NETWORK-{2}.nc {1} | tee $LOGDIR/$NETWORK-{2}.log"
 echo "$LIST" | awk '{st=$1; sub(".*/", "", st); print $1 ";" toupper(st)}' | parallel --lb -C ';' $CMD
