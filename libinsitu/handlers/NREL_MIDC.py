@@ -1,9 +1,12 @@
+from logging import warn
+
 from pvlib.iotools.midc import format_index_raw, MIDC_VARIABLE_MAP
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS, \
     TIME_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR
 from libinsitu.handlers.base_handler import InSituHandler
 import pandas as pd
 
+from libinsitu.log import warning, info
 
 VARIABLE_MAP = {
     'ghi' : GLOBAL_VAR,
@@ -30,12 +33,24 @@ class NRELHandler(InSituHandler) :
         mapping = MIDC_VARIABLE_MAP[station_id]
         mapping = {key: VARIABLE_MAP[val] for key, val in mapping.items()}
 
+        # Filter only the columns that we can find
+        columns = list(data.columns)
+        for key in list(mapping.keys()) :
+            if not key in columns :
+                warning("Column %s was not found in dataset", key)
+                del mapping[key]
+
+        info("Columns : %s", columns)
+
         # Filter and rename columns
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
 
-        data.T2 = data.T2 + 273.15 # T2: °C -> K
-        data.RH = data.RH / 100  # percent -> 1
+        if TEMP_VAR in columns :
+            data[TEMP_VAR] = data[TEMP_VAR] + 273.15 # T2: °C -> K
+
+        if HUMIDITY_VAR in columns :
+            data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1
 
         return data
 
