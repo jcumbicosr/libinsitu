@@ -28,8 +28,13 @@ class NRELHandler(InSituHandler) :
 
         stream.seek(0)
 
+        # Count expected cols
+        first_row = pd.read_csv(stream, nrows=0)
+        col_length = len(first_row.columns)
+        stream.seek(0)
+
         # CSV to pandas
-        data = pd.read_csv(stream)
+        data = pd.read_csv(stream, usecols=range(col_length))
         data = format_index_raw(data).tz_convert("UTC")
 
         station_id = self.properties["Station_ID"]
@@ -54,7 +59,9 @@ class NRELHandler(InSituHandler) :
         data = data[list(mapping.keys())]
         data = data.rename(columns=mapping)
 
-        if TEMP_VAR in columns :
+        columns = list(data.columns)
+
+        if TEMP_VAR in data.columns :
             data[TEMP_VAR] = data[TEMP_VAR] + 273.15 # T2: °C -> K
 
         if HUMIDITY_VAR in columns :
