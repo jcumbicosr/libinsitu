@@ -1,5 +1,6 @@
 from pvlib.iotools.midc import MIDC_VARIABLE_MAP, TZ_MAP
-from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
+    WIND_DIRECTION_VAR, NA_VALUES
 from libinsitu.handlers.base_handler import InSituHandler
 import pandas as pd
 from datetime import datetime, timedelta
@@ -34,7 +35,7 @@ class NRELHandler(InSituHandler) :
         stream.seek(0)
 
         # CSV to pandas
-        data = pd.read_csv(stream, usecols=range(col_length))
+        data = pd.read_csv(stream, usecols=range(col_length), na_values=NA_VALUES)
         data = format_index_raw(data).tz_convert("UTC")
 
         station_id = self.properties["Station_ID"]
@@ -53,7 +54,7 @@ class NRELHandler(InSituHandler) :
                 warning("Column %s was not found in dataset", key)
                 del mapping[key]
 
-        info("Columns : %s", columns)
+        #info("Columns : %s", columns)
 
         # Filter and rename columns
         data = data[list(mapping.keys())]
@@ -90,6 +91,14 @@ def parseTime(yyyyjjjhhmm) :
     return res
 
 
+def tzCol(data) :
+    tz_columns = list(str(col) for col in data.columns if len(str(col)) == 3 and str(col)[1:] == "ST")
+    if len(tz_columns) > 1:
+        raise Exception("Found more than 1 potential Timezone columns : %s" % str(tz_columns))
+    if len(tz_columns) == 0:
+        raise Exception("Found no  Timezone column")
+    return tz_columns[0]
+
 # Adapation of function from pvlib / midc to handle hour=24
 def format_index_raw(data):
     """Create DatetimeIndex for the Dataframe localized to the timezone provided
@@ -106,7 +115,11 @@ def format_index_raw(data):
     data: Dataframe
         The data with a Datetime index localized to the provided timezone.
     """
-    tz_raw = data.columns[3]
+
+
+    # There shoulf be a single TZ column
+    tz_raw = tzCol(data)
+
     timezone = TZ_MAP.get(tz_raw, tz_raw)
     year = data.Year.apply(str)
     jday = data.DOY.apply(lambda x: '{:03d}'.format(x))

@@ -36,6 +36,8 @@ STATION_NAME_DIM = "ncshort"
 STATION_PREFIX = "Station_"
 NETWORK_PREFIX = "Network_"
 
+NA_VALUES=[-999.0, -99.9, -10.0, -9999.0, -99999.0]
+
 CHUNK_SIZE=5000
 
 
