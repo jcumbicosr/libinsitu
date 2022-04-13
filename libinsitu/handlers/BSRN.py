@@ -2,7 +2,7 @@
 
 from pvlib.iotools import parse_bsrn
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
-from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.handlers.base_handler import InSituHandler, map_cols, ZERO_DEG_K
 from libinsitu.log import error
 import pandas as pd
 
@@ -20,8 +20,7 @@ class BSRNHandler(InSituHandler) :
             relative_humidity=HUMIDITY_VAR,
             pressure=PRESSURE_VAR)
 
-        data = data[list(mapping.keys())]
-        data = data.rename(columns=mapping)
+        data = map_cols(data, mapping)
 
         # Check type of column
         for col in self.data_vars() :
@@ -32,9 +31,9 @@ class BSRNHandler(InSituHandler) :
                 data[col] = pd.to_numeric(data[col], errors="coerce")
 
         # Convertions
-        data.T2 = data.T2 + 273.15 # T2: °C -> K
-        data.RH = data.RH / 100  # percent -> 1
-        data.P = data.P * 100 # Pressure hPa->Pa
+        data[TEMP_VAR] = data[TEMP_VAR] + ZERO_DEG_K # T2: °C -> K
+        data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1
+        data[PRESSURE_VAR] = data[PRESSURE_VAR] * 100 # Pressure hPa->Pa
 
         return data
 

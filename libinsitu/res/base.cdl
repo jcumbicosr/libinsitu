@@ -52,6 +52,7 @@ variables:
 		GHI:Range_LowerBoundary=-10.0 ;
 		GHI:Range_UpperBoundary=3000 ;
 		GHI:Description="global, mean";
+        GHI:least_significant_digit=1;
 
 	float DHI(time) ;
 		DHI:parameter = "Diffuse horizontal radiation" ;
@@ -61,6 +62,7 @@ variables:
 		DHI:units = "W m-2" ;
 		DHI:Range_LowerBoundary=-10.0 ;
 		DHI:Range_UpperBoundary=3000 ;
+		DHI:least_significant_digit=1;
 
 	float BNI(time) ;
 		BNI:parameter = "Beam (or direct) normal radiation" ;
@@ -70,6 +72,7 @@ variables:
 		BNI:units = "W m-2" ;
 		BNI:Range_LowerBoundary=-10.0 ;
 		BNI:Range_UpperBoundary=3000 ;
+		BNI:least_significant_digit=1;
 
 	float T2(time) ;
 		T2:parameter = "Air temperature at 2 m height" ;
@@ -79,6 +82,7 @@ variables:
 		T2:units = "K" ;
 		T2:Range_LowerBoundary=123.0 ;
 		T2:Range_UpperBoundary=372.9 ;
+		T2:least_significant_digit=1;
 
 	float RH(time) ;
 		RH:parameter = "Humidity, relative" ;
@@ -88,6 +92,7 @@ variables:
 		RH:units = "1" ;
 		RH:Range_LowerBoundary=0.0 ;
 		RH:Range_UpperBoundary=1.0 ;
+		RH:least_significant_digit=3;
 
 	float WS(time) ;
 		WS:parameter = "Wind speed" ;
@@ -97,6 +102,7 @@ variables:
 		WS:units = "m s-1" ;
 		WS:height = -999 ;
 		WS:Range_LowerBoundary=0.0;
+		WS:least_significant_digit=2;
 
 	float WD(time) ;
 		WD:parameter = "Wind direction" ;
@@ -107,6 +113,7 @@ variables:
 		WD:height = -999 ;
 		WD:Range_LowerBoundary=0.0;
 		WD:Range_UpperBoundary=360.0;
+        WD:least_significant_digit=1;
 
 	float P(time) ;
 		P:parameter = "Station pressure" ;
@@ -116,6 +123,7 @@ variables:
 		P:units = "Pa" ;
 		P:Range_LowerBoundary=0.0 ;
 		P:Range_UpperBoundary=120000.0;
+		P:least_significant_digit=0;
 
         // Global attributes
 

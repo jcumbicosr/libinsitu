@@ -3,7 +3,7 @@
 import argparse
 import json
 import re
-import sys, os
+import  os
 from collections import defaultdict
 from csv import DictReader
 from glob import glob
@@ -429,6 +429,8 @@ def main_coords(out_folder, climate_file, network=None, ids=None) :
 
 
 def main() :
+
+    global CACHE_FOLDER
 
     parser = argparse.ArgumentParser(description='Enrich CSV files of stations')
     subparsers = parser.add_subparsers(help="commands", dest="command", required=True)

@@ -39,4 +39,4 @@ class ABOMHandler(InSituHandler) :
 
     def pattern(self):
         #return "sl_*{UID}_{YYYY}_{M}.zip"
-        return "{ID}-{YYYY}-{MM}.zip"
+        return "{Station_ID}-{YYYY}-{MM}.zip"

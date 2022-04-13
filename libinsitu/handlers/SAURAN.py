@@ -1,7 +1,7 @@
 
 
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
-from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.handlers.base_handler import InSituHandler, map_cols
 import pandas as pd
 
 # The time base for all readings is South African Standard Time (SAST" \
@@ -11,7 +11,6 @@ TIMEZONE=2
 class SAURANHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
-
 
         GHI_Col = self.properties["GHI_Col"]
         DHI_Col = self.properties["DHI_Col"]
@@ -28,10 +27,10 @@ class SAURANHandler(InSituHandler) :
             parse_dates=["TmStamp"], index_col="TmStamp", dayfirst=True,
             usecols=["TmStamp"] + [GHI_Col, DHI_Col, DNI_Col])
 
-        data = data[list(mapping.keys())]
-        data = data.rename(columns=mapping)
 
-        #
+        data = map_cols(data, mapping)
+
+        # Shift Timezone
         data.index -= pd.to_timedelta(TIMEZONE, "H")
 
         return data

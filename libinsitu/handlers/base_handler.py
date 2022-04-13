@@ -11,12 +11,24 @@ from pandas import DataFrame
 
 from libinsitu.log import warning, debug
 
+ZERO_DEG_K = 273.15
+
+def map_cols(data, mapping) :
+    """Filter and rename columns """
+    data = data[list(mapping.keys())]
+    return data.rename(columns=mapping)
 
 class InSituHandler :
     """ Virtual class to be implemented for each new network """
     
     def __init__(self, properties):
-        self.properties = properties
+        self.properties = properties.copy()
+
+        # Also adds lower case version of properties
+        for key, val in properties.items() :
+            if isinstance(val, str) :
+                self.properties[key.lower()] = val.lower()
+
 
     # final
     def read_chunk(self, filename:str, encoding='latin1'):
@@ -47,13 +59,15 @@ class InSituHandler :
         ?: any single caracter
         {MM} : Month of chunk file
         {YYYY} / {YY} : Year of chunk file
-        {PropertyName} : Any property defined in station-info csv file
+        {DDD} : Day of year (1-365)
+        {Property_Name} : Any property defined in station-info csv file
+        {property_name} : Same property, in lower case
 
         The pattern is used to sort file by year and month.
         If not provided, the year and month of the modification of the file are used.
 
         Example patterns :
-        - "{ID}-{YY}-{MM}*.zip"
+        - "{Station_ID}-{YY}-{MM}*.zip"
         - "???{ID}*.txt"
         """
         pass
@@ -61,8 +75,8 @@ class InSituHandler :
     def glob_pattern(self) :
         """Transforms the pattern to a glob pattern"""
         def subf(match) :
-            key = match.group(0)
-            if key in ["YY", "MM", "YYYY"] :
+            key = match.group(0).replace("{", "").replace("}", "")
+            if key in ["YY", "M", "MM", "YYYY", "DDD"] :
                 return "?" * len(key)
             else :
                 return '*'
@@ -70,10 +84,10 @@ class InSituHandler :
         return re.sub(r'\{\w+\}', subf, self.pattern())
 
     def re_pattern(self) :
-        """ Transform pattern to regexp maith matching groups for replacement """
+        """ Transform pattern to regexp matching groups for replacement """
         def subf(match):
             key = match.group(1)
-            if key in ["M", "MM", "YY", "YYYY"] :
+            if key in ["M", "MM", "YY", "YYYY", "DDD"] :
                 pattern = r'\d+' if key == "M" else r'\d' * len(key)
                 return r'(?P<%s>%s)' % (key,pattern)
             else :
@@ -83,17 +97,18 @@ class InSituHandler :
                     raise Exception("Key '%s' in file pattern '%s' not found in station info" % (key, self.pattern()))
 
         # Transforms pattern to regular expression for matching
-        re_pattern = self.pattern().replace("?", ".").replace("*", ".*")
+        pattern = os.path.basename(self.pattern())
+        re_pattern = pattern.replace("?", ".").replace("*", ".*")
         return re.sub(r'\{(\w+)\}', subf, re_pattern)
 
     def list_files(self, folder):
         """List files from folder matching the pattern """
 
         # First go a glob
-        filenames = list(glob(folder + "/" + self.glob_pattern()))
+        pattern = folder + "/" + self.glob_pattern()
+        filenames = list(glob(pattern))
 
-
-        debug(filenames)
+        debug(pattern, filenames)
 
         re_pattern = self.re_pattern()
 
@@ -120,21 +135,23 @@ class InSituHandler :
             # By default, use year and month of modification time
             mtime = datetime.fromtimestamp(os.path.getmtime(filename))
             year = mtime.year
-            month = mtime.month
+            month_or_days = mtime.month
 
             groups = match.groupdict()
 
             if "M" in groups :
-                month = int(groups["M"])
+                month_or_days = int(groups["M"])
             if "MM" in groups:
-                month = int(groups["MM"])
+                month_or_days = int(groups["MM"])
+            if "DDD" in groups:
+                month_or_days = int(groups["DDD"])
             if "YYYY" in groups :
                 year = int(groups["YYYY"])
             if "YY" in groups :
                 year = int(groups["YY"])
                 year = year + (2000 if year < 70 else 1900)
 
-            return (year, month, basename)
+            return (year, month_or_days, basename)
 
         filenames_keys = { filename: sort_key(filename) for filename in filenames}
 

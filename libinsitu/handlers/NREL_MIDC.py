@@ -1,7 +1,7 @@
 from pvlib.iotools.midc import MIDC_VARIABLE_MAP, TZ_MAP
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
     WIND_DIRECTION_VAR, NA_VALUES
-from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.handlers.base_handler import InSituHandler, ZERO_DEG_K
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -63,7 +63,7 @@ class NRELHandler(InSituHandler) :
         columns = list(data.columns)
 
         if TEMP_VAR in data.columns :
-            data[TEMP_VAR] = data[TEMP_VAR] + 273.15 # T2: °C -> K
+            data[TEMP_VAR] = data[TEMP_VAR] + ZERO_DEG_K # T2: °C -> K
 
         if HUMIDITY_VAR in columns :
             data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1

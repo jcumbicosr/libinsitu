@@ -5,7 +5,7 @@ import pandas as pd
 
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
     WIND_DIRECTION_VAR, NA_VALUES
-from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.handlers.base_handler import InSituHandler, ZERO_DEG_K
 from libinsitu.log import info, warning
 
 
@@ -94,9 +94,10 @@ class EnerMENAHandler(InSituHandler) :
             info("Applying timezone : %d", tz)
             data.index = data.index - timedelta(hours=tz)
 
-        data.T2 = data.T2 + 273.15  # T2: °C -> K
-        data.RH = data.RH / 100  # percent -> 1
-        data.P = data.P * 100  # Pressure hPa->Pa
+        # Convertions
+        data[TEMP_VAR] = data[TEMP_VAR] + ZERO_DEG_K  # T2: °C -> K
+        data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1
+        data[PRESSURE_VAR] = data[PRESSURE_VAR] * 100  # Pressure hPa->Pa
 
         return data
 
