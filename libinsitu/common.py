@@ -372,4 +372,4 @@ def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
 
 
 def parse_bool(value) :
-    return value in ["true", "True", "1", "yes"]
+    return value in ["true", "True", "1", "yes", "Yes"]
