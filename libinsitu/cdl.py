@@ -148,7 +148,14 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
         # Already there, skipping
         if not varname in ncfile.variables and not dry_run:
             info("Adding variable '%s'", varname)
-            ncfile.createVariable(varname, vardef.type, vardef.dimensions, zlib=True)
+
+            least_significant_digit = vardef.attributes.get("least_significant_digit", None)
+
+            ncfile.createVariable(
+                varname, vardef.type, vardef.dimensions,
+                zlib=True,
+                complevel=9,
+                least_significant_digit=least_significant_digit)
 
         var = ncfile.variables[varname]
 
