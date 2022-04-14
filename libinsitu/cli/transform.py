@@ -69,7 +69,7 @@ def process_network(network, station_id, out_filename, args) :
     if  new :
         # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", out_filename)
-        init_nc(ncfile, properties, handler.data_vars())
+        init_nc(ncfile, properties, [])
     else:
 
         start_time = get_start_time(ncfile)
@@ -100,7 +100,7 @@ def process_network(network, station_id, out_filename, args) :
 
             # Safe execution : do not stop on error
             try:
-                process_chunck(handler, infile, ncfile, args)
+                process_chunck(handler, infile, ncfile, args, properties)
 
                 # Incremental mode : touch status file
                 if args.incremental:
@@ -199,7 +199,7 @@ def update_time_range(ncfile, var, new_values, times_idx):
         if currentLimit is None or (inverse ^ (currTime < currentLimit)):
             var.setncattr(key, time2str(currTime))
 
-def process_chunck(handler, infile, ncfile, args):
+def process_chunck(handler, infile, ncfile, args, properties):
 
     info("processing chunk : %s", infile)
 
@@ -220,9 +220,16 @@ def process_chunck(handler, infile, ncfile, args):
 
     times_int = datetime64_to_int(ncfile, chunk_dates)
 
-    for col in list(data.columns):
+    columns = list(data.columns)
+    for col in columns:
         if col not in DATA_VARS:
             error("Unknown column '%s'. Not part of %s", col, DATA_VARS)
+
+    # Create vars if not present yet
+    missing_vars = list(col for col in columns if not col in ncfile.variables)
+    if len(missing_vars) > 0:
+        info("Adding missing vars : %s", missing_vars)
+        init_nc(ncfile, properties, missing_vars)
 
     # Ensure all timestamps fall into resolution
     exact_idx = (times_int % resolution_s) == 0

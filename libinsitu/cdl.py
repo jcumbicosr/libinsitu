@@ -1,4 +1,5 @@
 import re
+from copy import deepcopy
 from typing import Dict
 
 from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
@@ -132,6 +133,24 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
             if not dry_run:
                 dest.setncattr(key, val)
 
+def initVar(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
+
+    # Already there, skipping
+    if not vardef.name in ncfile.variables and not dry_run:
+        info("Adding variable '%s'", vardef.name)
+
+        least_significant_digit = vardef.attributes.get("least_significant_digit", None)
+
+        ncfile.createVariable(
+            vardef.name, vardef.type, vardef.dimensions,
+            zlib=True,
+            complevel=9,
+            least_significant_digit=least_significant_digit)
+
+    var = ncfile.variables[vardef.name]
+
+    # Update attributes
+    update_attributes(var, vardef.attributes, dry_run, delete_attrs)
 
 def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
     """Init NetCDF file from a CDL"""
@@ -144,23 +163,7 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
             ncfile.createDimension(dimname, dim)
 
     for varname, vardef in cdl.variables.items() :
-
-        # Already there, skipping
-        if not varname in ncfile.variables and not dry_run:
-            info("Adding variable '%s'", varname)
-
-            least_significant_digit = vardef.attributes.get("least_significant_digit", None)
-
-            ncfile.createVariable(
-                varname, vardef.type, vardef.dimensions,
-                zlib=True,
-                complevel=9,
-                least_significant_digit=least_significant_digit)
-
-        var = ncfile.variables[varname]
-
-        # Update attributes
-        update_attributes(var, vardef.attributes, dry_run, delete_attrs)
+        initVar(ncfile, vardef, dry_run, delete_attrs)
 
     # Update global attributes
     update_attributes(ncfile, cdl.global_attributes, dry_run, delete_attrs)
@@ -168,15 +171,17 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
 
 def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
 
-    cdl =  parse_cdl(read_res(CDL_PATH), properties)
+    cdl = parse_cdl(read_res(CDL_PATH), properties)
+
+    filtered_cdl = deepcopy(cdl)
 
     # Filter data vars (variables with "time" dimension)
     # Also adds the "Time" variable
-    cdl.variables = dict((key, var)
+    filtered_cdl.variables = dict((key, var)
                          for key, var in cdl.variables.items()
-                         if not "time" in var.dimensions or var.name in data_vars + [TIME_VAR])
+                         if (not "time" in var.dimensions) or var.name in data_vars + [TIME_VAR])
 
-    cdl2netcdf(netcdf, cdl, dry_run, delete_attrs)
+    cdl2netcdf(netcdf, filtered_cdl, dry_run, delete_attrs)
 
     if not dry_run :
         # Init scalar vars
@@ -185,6 +190,9 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
         netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
 
         fillShortName(netcdf, properties["Station_ID"])
+
+    return cdl
+
 
 
 

@@ -167,8 +167,8 @@ variables:
 		:Station_KoeppenGeigerClimate = "{Station_Climate}" ;
 		:Station_OperationStatus =  "{Station_OperationStatus}";
 		:Station_TimeResolution =  "{Station_TimeResolution}";
-		:Station_DataBegin = "{Station_DataBegin}" ;
-		:Station_DataEnd = "{Station_DataEnd}";
+		:Station_DataBegin = "{Station_StartDate}" ;
+		:Station_DataEnd = "{Station_EndDate}";
 		:Station_ContactPerson =  "{Station_ContactName}" ;
 		:Station_Institute =  "{Station_Institute}" ;
 		:Station_URL =  "{Station_Url}";
