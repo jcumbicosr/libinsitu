@@ -70,18 +70,6 @@ def process_network(network, station_id, out_filename, args) :
         # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", out_filename)
         init_nc(ncfile, properties, [])
-    else:
-
-        start_time = get_start_time(ncfile)
-        # If start time changed, the whole file should be processed again
-        if len(ncfile.variables[TIME_VAR]) > 0 :
-            expected_time = datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
-            if start_time != expected_time :
-                raise(Exception("Start time of output file (%s) is different from start time in station info (%s). Please delete output file and process it completely" % (
-                    start_time,
-                    expected_time)))
-
-
 
     # Loop on input files
     for infile in in_files :
@@ -210,15 +198,13 @@ def process_chunck(handler, infile, ncfile, args, properties):
         warning("Chunk is empty")
         return
 
-    start_time = get_start_time(ncfile)
-
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
     # Transform time to seconds since start date and time idx
     chunk_dates = data.index.values
 
-    times_int = datetime64_to_int(ncfile, chunk_dates)
+    times_sec = datetime64_to_sec(ncfile, chunk_dates)
 
     columns = list(data.columns)
     for col in columns:
@@ -232,35 +218,36 @@ def process_chunck(handler, infile, ncfile, args, properties):
         init_nc(ncfile, properties, missing_vars)
 
     # Ensure all timestamps fall into resolution
-    exact_idx = (times_int % resolution_s) == 0
-    nb_not_exact_times = len(times_int) - np.sum(exact_idx)
+    exact_idx = (times_sec % resolution_s) == 0
+    nb_not_exact_times = len(times_sec) - np.sum(exact_idx)
     if nb_not_exact_times > 0:
 
         # Remove lines with wrong times
         data = data[exact_idx]
-        times_int = times_int[exact_idx]
+        times_sec = times_sec[exact_idx]
 
         warning("%d rows had timings not fitting the time resolution : skipping them" % nb_not_exact_times)
 
 
-    time_idx = times_int // resolution_s
+    # Seconds to time index, as per start date and resolution
+    time_idx = seconds_to_idx(ncfile, properties, times_sec)
 
-    next_time_int = 0 if len(ncfile.variables[TIME_VAR]) == 0 else ncfile.variables[TIME_VAR][-1] + resolution_s
+
     chunk_start = min(chunk_dates)
     chunk_end = max(chunk_dates)
-    chunk_end_int = datetime64_to_int(ncfile, chunk_end)
+    chunk_end_int = datetime64_to_sec(ncfile, chunk_end)
 
     info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(data.index))
 
     # Error if chunk starts before start time
-    if chunk_start < start_time:
-        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (time2str(chunk_start), time2str(start_time)))
+    if sum(time_idx < 0) > 0 :
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (time2str(chunk_start)))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
-    if len(times_int) >= 2:
+    if len(times_sec) >= 2:
 
-        periods = get_periods(times_int)
+        periods = get_periods(times_sec)
         if len(periods) >= 1 :
             actual_resolution, count = periods[0]
 
@@ -273,8 +260,17 @@ def process_chunck(handler, infile, ncfile, args, properties):
     # Fill time variable with proper values
     size_before = len(ncfile.variables[TIME_VAR]) # Remember the size of TIME before it is extended
 
-    new_times_int = np.arange(next_time_int, chunk_end_int + resolution_s, resolution_s)
-    ncfile.variables[TIME_VAR][next_time_int // resolution_s: chunk_end_int // resolution_s + 1] = new_times_int
+    # Fill Time variable
+    if len(ncfile.variables[TIME_VAR]) == 0 :
+        next_time_sec =  datetime64_to_sec(ncfile, start_date64(properties))
+    else:
+        next_time_sec = ncfile.variables[TIME_VAR][-1] + resolution_s
+
+    end_time_sec = chunk_end_int + resolution_s
+    new_times_sec = np.arange(next_time_sec, end_time_sec, resolution_s)
+    next_time_idx = seconds_to_idx(ncfile, properties, next_time_sec)
+    end_time_idx = seconds_to_idx(ncfile, properties, end_time_sec)
+    ncfile.variables[TIME_VAR][next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values
     check_and_assign(ncfile, data, time_idx, size_before, args)

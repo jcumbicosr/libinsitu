@@ -107,18 +107,34 @@ def is_uniform(vector) :
     ref = np.arange(vector[0], vector[-1] + step, step)
     return np.array_equal(ref, vector)
 
-def get_start_time(ncfile) -> datetime64 :
+def get_origin_time(ncfile) -> datetime64 :
     start_time = num2date(0, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
     return np.datetime64(start_time)
 
-def datetime64_to_int(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
-    """Transform datetime64 to number of seconds since start date """
-    start_time64 = get_start_time(ncfile)
-    return ((dates - start_time64) / SECOND).astype(int)
+def to_int(vals) :
+    """Transform single val or array to int """
+    if isinstance(vals, np.ndarray):
+        return vals.astype(int)
+    else:
+        return int(vals)
 
-def int_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
+def datetime64_to_sec(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
+    """Transform datetime64 to number of seconds since origin date """
+    origin = get_origin_time(ncfile)
+    return to_int((dates - origin) / SECOND)
+
+def start_date64(properties) :
+    return np.datetime64(datetime.strptime(properties["Station_StartDate"], DATE_FORMAT))
+
+def seconds_to_idx(ncfile, properties, dates : NDArray[int], ) -> NDArray[int] :
+    """Transform seconds since origin to time idx, taking into account resolution and start date"""
+    resolution_s = getTimeResolution(ncfile)
+    start_sec = datetime64_to_sec(ncfile, start_date64(properties))
+    return to_int((dates - start_sec) / resolution_s)
+
+def sec_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
     """Transform number of seconds since start time into datetime64 """
-    start_time64 = get_start_time(ncfile)
+    start_time64 = get_origin_time(ncfile)
     return start_time64 + SECOND * times_s
 
 def read_res(path, encoding="utf8") :
@@ -168,7 +184,7 @@ def date_to_timeidx(nc, date) :
     """Transform date to NetCDF index along Time dimension"""
     if isinstance(date, datetime) :
         date = datetime64(date)
-    time_int = datetime64_to_int(nc, date)
+    time_int = datetime64_to_sec(nc, date)
     return int(time_int / getTimeResolution(nc))
 
 
@@ -241,7 +257,7 @@ def __nc2df(
 
     def to_df(start_idx, end_idx) :
 
-        times = int_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx:steps])
+        times = sec_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx:steps])
 
         df = DataFrame(
             dict((var, ncfile.variables[var][start_idx:end_idx:steps]) for var in data_vars),
@@ -361,8 +377,8 @@ def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
         times_s = resolution * times_idx
         notnan_time_s = times_s[notnan_mask]
 
-        min_time = int_to_datetime64(ncfile, np.min(notnan_time_s))
-        max_time = int_to_datetime64(ncfile, np.max(notnan_time_s))
+        min_time = sec_to_datetime64(ncfile, np.min(notnan_time_s))
+        max_time = sec_to_datetime64(ncfile, np.max(notnan_time_s))
 
         return {
             FIRST_DATA_ATT : min_time,
