@@ -5,7 +5,7 @@ from libinsitu.cdl import init_nc
 from libinsitu.log import *
 import argparse
 
-def update_times(nc, ncvar, dry_run=False) :
+def update_ranges(nc, ncvar, dry_run=False) :
 
     dry_prefix = "would " if dry_run else ""
 
@@ -35,7 +35,23 @@ def update_times(nc, ncvar, dry_run=False) :
         if process_chunk(i-CHUNK_SIZE, i, LAST_DATA_ATT):
             break
 
-def update_meta(file, network, dry_run=False, delete=False, update_time=False) :
+def update_times(ncfile, start_date64, dry_run=False) :
+    time_var = ncfile.variables[TIME_VAR]
+    resolution_s = getTimeResolution(ncfile)
+    start_sec = datetime64_to_sec(ncfile, start_date64)
+
+    if time_var[0] != start_sec :
+        if dry_run :
+            info("Would have updated times values. Firs value : %d => %d" % (time_var[0], start_sec))
+        else:
+            info("Updating time values. Firs value : %d => %d" % (time_var[0], start_sec))
+            time_values = np.arange(start_sec, start_sec + resolution_s * len(time_var), resolution_s)
+            time_var[:] = time_values
+    else:
+        info("First time value was corect : no update required")
+
+
+def update_meta(file, network, dry_run=False, delete=False, update_range=False, update_time=False) :
 
     mode = "r" if dry_run else "a"
     ncfile = Dataset(file, mode=mode)
@@ -53,10 +69,13 @@ def update_meta(file, network, dry_run=False, delete=False, update_time=False) :
 
     init_nc(ncfile, properties, handler.data_vars(), dry_run, delete)
 
-    if update_time :
+    if update_range :
         for varname in handler.data_vars() :
-            update_times(ncfile, ncfile.variables[varname], dry_run)
+            update_ranges(ncfile, ncfile.variables[varname], dry_run)
 
+    if update_time :
+        start_date = str_to_date64(properties["Station_StartDate"])
+        update_times(ncfile, start_date, dry_run)
 
 def main() :
 
@@ -64,12 +83,14 @@ def main() :
     parser.add_argument('network', metavar='<NETWORK>', type=str, help='Network')
     parser.add_argument('files', metavar='<file.nc>', type=str, nargs='+', help='NetCDF files to update')
     parser.add_argument('--dry-run', '-n', help='Do not update anything. Just look what would be done', action='store_true', default=False)
-    parser.add_argument('--update-times', '-t', help='Update data time ranges for each variable', action='store_true', default=False)
+    parser.add_argument('--update-ranges', '-ur', help='Update data time ranges for each variable', action='store_true', default=False)
+    parser.add_argument('--update-time', '-ut', help='Update time variable', action='store_true',
+                        default=False)
     parser.add_argument('--delete', '-d', help='Delete extra attributes', action='store_true', default=False)
     args = parser.parse_args()
 
     for file in args.files :
-        update_meta(file, args.network, args.dry_run, args.delete, args.update_times)
+        update_meta(file, args.network, args.dry_run, args.delete, args.update_ranges, args.update_time)
 
 if __name__ == '__main__':
     main()

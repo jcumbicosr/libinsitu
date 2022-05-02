@@ -230,7 +230,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
 
     # Seconds to time index, as per start date and resolution
-    time_idx = seconds_to_idx(ncfile, properties, times_sec)
+    time_idx = seconds_to_idx(ncfile, times_sec)
 
 
     chunk_start = min(chunk_dates)
@@ -268,8 +268,8 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     end_time_sec = chunk_end_int + resolution_s
     new_times_sec = np.arange(next_time_sec, end_time_sec, resolution_s)
-    next_time_idx = seconds_to_idx(ncfile, properties, next_time_sec)
-    end_time_idx = seconds_to_idx(ncfile, properties, end_time_sec)
+    next_time_idx = seconds_to_idx(ncfile, next_time_sec)
+    end_time_idx = seconds_to_idx(ncfile, end_time_sec)
     ncfile.variables[TIME_VAR][next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values

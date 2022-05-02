@@ -123,13 +123,16 @@ def datetime64_to_sec(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
     origin = get_origin_time(ncfile)
     return to_int((dates - origin) / SECOND)
 
-def start_date64(properties) :
-    return np.datetime64(datetime.strptime(properties["Station_StartDate"], DATE_FORMAT))
+def str_to_date64(datestr) :
+    return np.datetime64(datetime.strptime(datestr, DATE_FORMAT))
 
-def seconds_to_idx(ncfile, properties, dates : NDArray[int], ) -> NDArray[int] :
+def start_date64(ncfile) :
+    return str_to_date64(ncfile.Station_DataBegin)
+
+def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
     resolution_s = getTimeResolution(ncfile)
-    start_sec = datetime64_to_sec(ncfile, start_date64(properties))
+    start_sec = datetime64_to_sec(ncfile, start_date64(ncfile))
     return to_int((dates - start_sec) / resolution_s)
 
 def sec_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
