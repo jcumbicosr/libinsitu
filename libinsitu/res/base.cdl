@@ -126,7 +126,7 @@ variables:
 		P:parameter = "Station pressure" ;
 		P:long_name = "air pressure at station height" ;
 		P:standard_name = "air_pressure" ;
-		P:abbreviation = "PoPoPoPo" ;
+
 		P:units = "Pa" ;
 		P:Range_LowerBoundary=0.0 ;
 		P:Range_UpperBoundary=120000.0;
