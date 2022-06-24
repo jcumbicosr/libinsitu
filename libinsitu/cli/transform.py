@@ -262,7 +262,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     # Fill Time variable
     if len(ncfile.variables[TIME_VAR]) == 0 :
-        next_time_sec =  datetime64_to_sec(ncfile, start_date64(properties))
+        next_time_sec =  datetime64_to_sec(ncfile, start_date64(ncfile))
     else:
         next_time_sec = ncfile.variables[TIME_VAR][-1] + resolution_s
 

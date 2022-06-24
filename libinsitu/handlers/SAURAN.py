@@ -39,6 +39,3 @@ class SAURANHandler(InSituHandler) :
     def data_vars(self):
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR]
-
-    def pattern(self):
-        return "{Station_ID}_minute_{YYYY}{MM}.csv"

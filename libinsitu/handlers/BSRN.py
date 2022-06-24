@@ -40,6 +40,3 @@ class BSRNHandler(InSituHandler) :
     def data_vars(self):
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR]
-
-    def pattern(self):
-        return "{Station_ID}{MM}{YY}*.dat.gz"

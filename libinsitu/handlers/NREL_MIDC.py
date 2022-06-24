@@ -75,8 +75,6 @@ class NRELHandler(InSituHandler) :
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
 
-    def pattern(self):
-        return "{Station_ID}-{YYYY}-{MM}.csv.gz"
 
 def parseTime(yyyyjjjhhmm) :
     """ Parse time, handling corner case of H:24 """

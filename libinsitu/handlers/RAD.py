@@ -29,6 +29,3 @@ class RADHandler(InSituHandler) :
     def data_vars(self):
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
-
-    def pattern(self):
-        return "{YYYY}/{station_id}{YY}{DDD}.dat"

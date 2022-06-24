@@ -36,7 +36,3 @@ class ABOMHandler(InSituHandler) :
     def data_vars(self):
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR]
-
-    def pattern(self):
-        #return "sl_*{UID}_{YYYY}_{M}.zip"
-        return "{Station_ID}-{YYYY}-{MM}.zip"
