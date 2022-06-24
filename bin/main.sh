@@ -5,13 +5,14 @@ PYTHON=python
 OUT_FOLDER=out/$NETWORK
 LOGDIR=log
 STATUS_FOLDER=status/$NETWORK
+STATION_INFO_DIR=libinsitu/res/station-info/
 
 if [ -z "$2" ]
 then
-	LIST=`ls -1d $INPUT_DIR/{??,???,????}`
+	LIST=`cat $STATION_INFO_DIR/${NETWORK}.csv | tail -n +2 | cut -d, -f 1`
 else
-	LIST="$INPUT_DIR/$2"
+	LIST="$2"
 fi
 
-CMD="$PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {2} $OUT_FOLDER/$NETWORK-{2}.nc {1} | tee $LOGDIR/$NETWORK-{2}.log"
-echo "$LIST" | awk '{st=$1; sub(".*/", "", st); print $1 ";" toupper(st)}' | parallel --lb -C ';' $CMD
+CMD="echo $PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {1} $OUT_FOLDER/$NETWORK-{1}.nc $INPUT_DIR | tee $LOGDIR/$NETWORK-{1}.log"
+echo "$LIST" | parallel --lb -C ';' $CMD

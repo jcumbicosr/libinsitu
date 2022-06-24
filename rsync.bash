@@ -1,6 +1,6 @@
 #!/usr/bin/bash
-NETWORKS=("BSRN" "SAURAN"  "enerMENA"  "ABOM")
-FOLDERS=("bsrn" "sauran" "enermena" "bom")
+NETWORKS=("BSRN" "SAURAN"  "enerMENA"  "ABOM" "NREL_MIDC" "SOLRAD" "SURFRAD")
+FOLDERS=("bsrn" "sauran" "enermena" "bom" "nrelmidc" "solrad" "surfrad")
 for i in ${!NETWORKS[@]}
 do
 	network=${NETWORKS[i]}
