@@ -101,9 +101,6 @@ class EnerMENAHandler(InSituHandler) :
 
         return data
 
-    def pattern(self):
-        return "*{Station_ID}*.txt"
-
     def data_vars(self):
         """ @override """
         return [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]

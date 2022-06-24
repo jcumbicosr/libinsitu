@@ -1,4 +1,9 @@
+1.1.1 :
+* Fixed bug in date filtering of nc2df with star date different from origin date
 
+1.1 :
+* Separate start date from date-origin
+* Set date origin to a fixed value : 1970-01-01 UTC
 
 1.0 :
 * First release on PyPI

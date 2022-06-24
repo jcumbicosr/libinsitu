@@ -70,7 +70,9 @@ class InSituHandler :
         - "{Station_ID}-{YY}-{MM}*.zip"
         - "???{ID}*.txt"
         """
-        pass
+
+        # Take this from the RawDataPath property of the network
+        return self.properties["Network_RawDataPath"]
 
     def glob_pattern(self) :
         """Transforms the pattern to a glob pattern"""
@@ -106,6 +108,9 @@ class InSituHandler :
 
         # First go a glob
         pattern = folder + "/" + self.glob_pattern()
+
+        debug("Pattern :", pattern)
+
         filenames = list(glob(pattern))
 
         debug(pattern, filenames)

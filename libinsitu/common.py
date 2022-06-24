@@ -187,8 +187,8 @@ def date_to_timeidx(nc, date) :
     """Transform date to NetCDF index along Time dimension"""
     if isinstance(date, datetime) :
         date = datetime64(date)
-    time_int = datetime64_to_sec(nc, date)
-    return int(time_int / getTimeResolution(nc))
+    time_sec = datetime64_to_sec(nc, date)
+    return seconds_to_idx(nc, time_sec)
 
 
 def nc2df(
