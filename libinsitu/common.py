@@ -1,3 +1,4 @@
+from concurrent.futures.thread import ThreadPoolExecutor
 from csv import DictReader
 from datetime import datetime
 from typing import Union
@@ -81,7 +82,7 @@ def touch(filename):
     if os.path.exists(filename):
         os.utime(filename)
     else:
-        with open(filename,'a') as f:
+        with open(filename,'a') :
             pass
 
 def getStationInfo(network, station_id) :
@@ -108,7 +109,8 @@ def is_uniform(vector) :
     return np.array_equal(ref, vector)
 
 def get_origin_time(ncfile) -> datetime64 :
-    start_time = num2date(0, ncfile.variables[TIME_VAR].units, ncfile.variables[TIME_VAR].calendar)
+    timeVar = getTimeVarName(ncfile)
+    start_time = num2date(0, ncfile.variables[timeVar].units, ncfile.variables[timeVar].calendar)
     return np.datetime64(start_time)
 
 def to_int(vals) :
@@ -162,13 +164,7 @@ def parse_value(val) :
                 val = val.strip('"')
             return val
 
-def getTimeResolution(ncfile) :
-    """Returns time resolution, in seconds, as saved in meta data"""
-
-    val = ncfile.variables[TIME_VAR].resolution
-    val, unit = val.split()
-    val = int(val)
-    if "min" in unit :
+def getTimeResolNS. if "min" in unit :
         return val * 60
     elif "sec" in unit:
         return val
@@ -229,6 +225,13 @@ def nc2df(
     else :
         return chunks
 
+
+def getTimeVarName(ds) :
+    for key in ds.variables.keys() :
+        if key.lower() == TIME_VAR.lower() :
+            return key
+    raise Exception("No time var found")
+
 def __nc2df(
         ncfile : Union[Dataset, str],
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
@@ -245,7 +248,9 @@ def __nc2df(
     if isinstance(ncfile, str) :
         ncfile = openNetCDF(ncfile, mode='r', user=user, password=password)
 
-    size = len(ncfile.variables[TIME_VAR])
+    timeVar = getTimeVarName(ncfile)
+
+    size = len(ncfile.variables[timeVar])
 
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
     end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size
@@ -253,18 +258,20 @@ def __nc2df(
     # List of vars (along time)
     data_vars = []
     for varname, var in ncfile.variables.items() :
-        if TIME_DIM in var.dimensions and varname != TIME_VAR :
+        if TIME_DIM in var.dimensions and varname != timeVar :
             if vars is None or varname in vars :
                 data_vars.append(varname)
 
 
     def to_df(start_idx, end_idx) :
 
-        times = sec_to_datetime64(ncfile, ncfile.variables[TIME_VAR][start_idx:end_idx:steps])
+        times = sec_to_datetime64(ncfile, ncfile.variables[timeVar][start_idx:end_idx:steps])
 
-        df = DataFrame(
-            dict((var, ncfile.variables[var][start_idx:end_idx:steps]) for var in data_vars),
-            index=times)
+        data = dict()
+        for var in data_vars :
+            data[var] = ncfile.variables[var][start_idx:end_idx:steps]
+
+        df = DataFrame(data, index=times)
 
         # Set global attributes in DataFrame
         attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
@@ -392,3 +399,12 @@ def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
 
 def parse_bool(value) :
     return value in ["true", "True", "1", "yes", "Yes"]
+
+
+def parallel_map(fn, iterable, parallel, max_workers=None) :
+    """Helper util to map either seuquentially or in parallel """
+    if parallel :
+        exec = ThreadPoolExecutor(max_workers=max_workers)
+        return exec.map(fn, iterable)
+    else:
+        return map(fn, iterable)

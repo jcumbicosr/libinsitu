@@ -1,10 +1,15 @@
 # Handling fetch and parsing of Thredds server
 
 import xml.etree.ElementTree as ET
+from concurrent.futures.thread import ThreadPoolExecutor
 from typing import Dict
 from urllib.parse import urljoin, urlsplit
+import pprint
 
-from requests import HTTPError
+from requests import HTTPError, Session
+
+from libinsitu import debug, parallel_map
+from libinsitu.log import info
 
 NS={
     "thredds" : "http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0",
@@ -13,14 +18,18 @@ NS={
 XLINK = "{http://www.w3.org/1999/xlink}"
 
 
-class Dataset :
+class AutoRepr :
+    def __repr__(self):
+        return pprint.pformat(self.__dict__)
+
+class Dataset(AutoRepr) :
     def __init__(self, id, name, size) :
         self.id = id
         self.name = name
         self.size = size
         self.services = dict() # Dict of service type => URL
 
-class Catalog :
+class Catalog(AutoRepr) :
     def __init__(self, id, name, description, url, link) :
         self.id = id
         self.name = name
@@ -42,7 +51,7 @@ def parse_services(catalog, base):
             res[name] = base + url
     return res
 
-def parseCatalog(el, url, id=None, name=None) :
+def parse_catalog(el, url, id=None, name=None) :
     """Parse catalog from 'Dataset' element of root catalog or datasetREf/metadata element """
 
     if id is None :
@@ -65,7 +74,18 @@ def parseCatalog(el, url, id=None, name=None) :
                 link = link_
     return Catalog(id, name, description, url, link)
 
-def fetch_catalog(url, session, recursive=True) :
+def extract_sub(url, subCatEl) :
+    id = subCatEl.attrib[XLINK + "title"]
+    href = subCatEl.attrib[XLINK + "href"]
+    sub_url = urljoin(url, href)
+    return (id, sub_url)
+
+def fetch_catalog(url, session=None, recursive=True, parallel=True) :
+
+    info("Fetching : %s" % url)
+
+    if session is None :
+        session = Session()
 
     base = base_url(url)
     xml = http_get(url, session)
@@ -73,27 +93,33 @@ def fetch_catalog(url, session, recursive=True) :
     catalogEl = ET.fromstring(xml)
     datasetEl = catalogEl.find('thredds:dataset', NS)
 
-    catalog = parseCatalog(datasetEl, url)
+    catalog = parse_catalog(datasetEl, url)
     catalog.services = parse_services(catalogEl, base)
 
-    # Sub catalogs
-    for subCatEl in datasetEl.findall("thredds:catalogRef", NS):
-        id = subCatEl.attrib[XLINK + "title"]
-        href = subCatEl.attrib[XLINK + "href"]
-        sub_url = urljoin(url, href)
+    # Parse or fetch sub catalogs
 
-        if recursive :
-            try:
-                sub_catalog = fetch_catalog(sub_url, session)
-                catalog.catalogs[id] = sub_catalog
-            except HTTPError as e:
-                if e.response.status_code == 401:
-                    print("URL %s not authorized." % e.request.url)
-                else:
-                    raise e
-        else :
-            sub_catalog = parseCatalog(subCatEl, sub_url, id, id)
+    sub_elements = list(datasetEl.findall("thredds:catalogRef", NS))
+
+    def fetch_rec(subCatEl) :
+        id, sub_url = extract_sub(url, subCatEl)
+
+        try:
+            sub_catalog = fetch_catalog(sub_url, session, parallel=parallel)
+            return (id, sub_catalog)
+        except HTTPError as e:
+            if e.response.status_code == 401:
+                print("URL %s not authorized." % e.request.url)
+            else:
+                raise e
+
+    if recursive :
+        # Common loop for sequential of parallel fetch
+        for id, sub_catalog in parallel_map(fetch_rec, sub_elements, parallel):
             catalog.catalogs[id] = sub_catalog
+    else :
+        for subCatEl in sub_elements :
+            id, sub_url = extract_sub(url, subCatEl)
+            catalog.catalogs[id] = parse_catalog(subCatEl, sub_url, id, id)
 
     # Datasets
     datasets = datasetEl.findall("thredds:dataset", NS)
