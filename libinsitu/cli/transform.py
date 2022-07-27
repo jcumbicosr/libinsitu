@@ -15,7 +15,7 @@ ERR_SUFFIX = '.err'
 
 def check_boundaries(var, data) :
     """Check boundaries of a variable"""
-    for bound_name, sense in dict(Range_LowerBoundary=-1, Range_UpperBoundary=1).items() :
+    for bound_name, sense in dict(valid_min=-1, valid_max=1).items() :
         if bound_name in var.ncattrs():
             bound = parse_value(var.__dict__[bound_name])
             idx = data < bound if sense == -1 else data > bound

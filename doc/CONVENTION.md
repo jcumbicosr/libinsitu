@@ -35,10 +35,8 @@ Providers can split the data into yearly or monthly subsets but should also prov
 
 # Dimensions
 
-Each file should have only two dimensions :
+Each file should have only one dimension  :
 - Unlimited dimension for time, named **time**
-- A fixed dimension of 20 or more, for the station name, named freely.
-
 
 # Variables
 
@@ -75,7 +73,7 @@ int Time(time) ;
 ## Station name and coordinates
 
 Following the CF conventions, some station metadata are stored as separate variables :
-* The name of the station, as a string of chars, along its dedicated dimension (number of characters) 
+* The name of the station, as a string
 * The coordinates of the station should be provided as three separate float variables with no dimensions (single point)
 
 | Name         | Standard name | Unit |
@@ -88,7 +86,7 @@ Following the CF conventions, some station metadata are stored as separate varia
 Here is the corresponding CDL :
 
 ```
-char station_name(station_name) ;
+string station_name ;
         station_name:standard_name = "platform_name"
 		station_name:long_name = "station name" ;
 		station_name:cf_role = "timeseries_id" ;
@@ -154,7 +152,7 @@ The variable names is a suggestion. The standard name and units should be respec
 | WS   | wind_speed                         | m s-1            |
 | WD   | wind_direction                     | degrees                 |
 
-This translates into the following DSL :
+This translates into the following CDL :
 
 ```
 float GHI(time) ;
@@ -165,8 +163,6 @@ float GHI(time) ;
     GHI:valid_min=0.0 ;
     GHI:valid_max=3000 ;
     GHI:grid_mapping = "crs" ;
-    // GHI:least_significant_digit=1;
-    // GHI:significant_digits=4;
 
 float DHI(time) ;
     DHI:long_name = "Diffuse horizontal radiation" ;
@@ -176,8 +172,6 @@ float DHI(time) ;
     DHI:valid_min=0.0 ;
     DHI:valid_max=3000 ;
     DHI:grid_mapping = "crs" ;
-    // DHI:least_significant_digit=1;
-    // DHI:significant_digits=4;
 
 float BNI(time) ;
     BNI:long_name = "Beam (or direct) normal radiation" ;
@@ -243,7 +237,116 @@ float P(time) ;
 
 Here, we propose a list of recommended global metadata providing additional information of the data and the station.
 
-TODO
+We try to stick as much as possible to the existing CF and ACDD conventions.
+
+Some of those attributes may seem redondant with the contents of some variables. 
+They are useful anyway as it is simpler to fetch all global attributes than to dig into the values of the variables, espcecially for remote access (ODAP) 
+
+## Main info
+
+| Name                | Content                 | Example                                                                                                                                                                                                                                                                           |
+|---------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| id                  | {NetWorkId}-{StationID} | "BSRN-CAP"                                                                                                                                                                                                                                                                        |
+| title               | Title of the timeseries | "Timeseries of Baseline Surface Radiation Network (BSRN). Station : Cape Baranova"                                                                                                                                                                                                |
+| summary             | Short description       | "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server"                                                                     |
+| keywords            | List of keywords        | "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure" |
+| keywords_vocabulary | "GCMD Science Keywords" |  "GCMD Science Keywords"                                                                                                                                                                                                                                                                     |
+| featureType         | "timeSeries"            | "timeSeries"                                                                                                                                                                                                                                                                              |
+| Conventions         | List of conventions     | "CF-1.9,ACDD-1.3"                                                                                                                                                                                                                                                                         |
+
+## Publisher info
+
+| Name                  |          Name of the publisher                     | Example                                                                                                                                    |
+|-----------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| publisher_name        | Content                       |   "Lionel MENARD, Raphael JOLIVET, Yves-Marie SAINT-DRENAN, Philippe BLANC"                                               |
+| publisher_email       | Email of publisher            | "lionel.menard@mines-paristech.fr, raphael.jolivet@mines-paristech.fr, saint-drenan@mines-paristech.fr, philippe.blanc@mines-paristech.fr" |
+| publisher_url         | URL of institution            | "https://www.oie.minesparis.psl.eu/"                                                                                                       |
+| publisher_institution | Name of publisher institution | "Mines Paristech - PSL"                                                                                                                    |
+
+
+## Creator info
+
+Info on the creator of data.
+It may or may not be the same as publisher
+
+| Name        | Content                      | Example                                              |
+|-------------|------------------------------|------------------------------------------------------|
+| creator_name | Name of maintener of data / station | "Olga Sidorova (olsid@aari.ru)"                      |
+| institution | Instituton of creator        | NOAA                                                 |
+| creator_url | URL of Creator / Network     | https://bsrn.awi.de/                                 |
+| references  | Academic references for data | "https://doi.org/10.5194/essd-10-1491-2018."         |
+| license     | Link to license of data      | "https://bsrn.awi.de/data/conditions-of-data-release/" |
+
+
+### Station info
+
+The station info are mappend into ACDD attributes.
+
+| Name                  | Content                                       | Example                              |
+|-----------------------|-----------------------------------------------|--------------------------------------|
+| project               | Full Name of Network                          | "Baseline Surface Radiation Network" |
+| platform              | Full Name of station                          | "Cape Baranova"                      |
+| geospatial_lat_min    | latitude (float , not str)                    | 79.27                                |
+| geospatial_lon_min    | longtitude (float , not str)                  | 101.75                               |
+| geospatial_lat_max    | latitude (float , not str)                    | 79.27                                |
+| geospatial_lon_max    | longtitude (float , not str)                  | 101.75                               |
+| geospatial_bounds     | POINT({Station_Latitude} {Station_Longitude}) | "POINT(79.27 101.75)"                |
+| geospatial_bounds_crs | Projection                                    | "EPSG:4326"                          |
+
+## Time information
+
+| Name                     | Content                                                     | Example               |
+|--------------------------|-------------------------------------------------------------|-----------------------|
+| time_coverage_start      | First timestamp of data (in ISO 8601 format)                | "2016-01-01T00:00:00" |
+| time_coverage_end        | Last timestamp of data (in ISO 8601 format)                 | "2016-12-31T23:59:00" |
+| time_coverage_resolution | Resolution in ISO 8601:2004 duration format : "P{minutes}M" | "P1M"                 |
+| local_time_zone          | Local time zone offset                                      | "UTC+07:00"           |
+| date_created             | Creation time                                               | "2021-01-01T00:00:00" |
+| date_modified            | Modification time                                           | "2021-01-01T00:00:00" |
+
+## Custom IN Situ metadata
+
+The followig attributes are not part of CF or ACDD conventions. 
+
+They are additional metadata recommended for this specific use case.
+
+### IDs
+
+Unique Ids usefull for identifying network and station.
+
+
+| Name           | Content                                                                | Example |
+|----------------|------------------------------------------------------------------------|---------|
+| network_id     | Short Id for network                                                   | BSRN    |
+| station_id     | Short Id for station. Same as the content of **station_name** variable | CAP     |
+| station_uid    | Numeric ID of the station, if any                                      | 102     |
+| station_wmo_id | WMO ID of the station, if any                                          |         |
+
+### Surface 
+
+Description of the surface around the station
+
+| Name            | Content                                        | Example    |
+|-----------------|------------------------------------------------|------------|
+| surface_type    | rock, gress, concrete, cultivated, ...         | "concrete" |
+| topography_type | flat, hilly, moutain valley, mountain top, ... |            |
+| rural_urban     | "rural" or "urban"                             | "rural"    |
+
+### Station location
+
+| Name            | Content                 | Example                  |
+|-----------------|-------------------------|--------------------------|
+| network_region  | Region of the network   | "Global"                 |
+| station_country | Country of the station  | "France"                 |
+| station_address | Address of the station  | "100, Erfurterweg (123)" |
+| station_city    | City of the station     | "Carpentras"             |
+
+### Misc
+
+| Name             | Content                                | Example  |
+|------------------|----------------------------------------|----------|
+| climate          | Climate at the station (KeoppenGeiger) | "EF"     |
+| operation_status | Country of the station                 | "France" |
 
 # Distribution of files
 

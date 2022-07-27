@@ -5,6 +5,7 @@ from typing import Union
 from urllib.parse import urlsplit, quote_plus
 
 import numpy as np
+from dateutil.relativedelta import relativedelta
 from netCDF4 import *
 from numpy import timedelta64, datetime64
 from numpy.ma import is_masked
@@ -13,6 +14,7 @@ from pandas import DataFrame
 import pandas as pd
 from pkgutil import get_data
 import os
+import re
 
 
 TIME_DIM = 'time'
@@ -32,8 +34,6 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
-STATION_NAME_DIM = "ncshort"
-
 STATION_PREFIX = "Station_"
 NETWORK_PREFIX = "Network_"
 
@@ -41,6 +41,10 @@ NA_VALUES=[-999.0, -99.9, -10.0, -9999.0, -99999.0]
 
 CHUNK_SIZE=5000
 
+
+# List of attributes to search station ID for
+STATION_ID_ATTRS = ["Station_ID", "StationInfo_Abbreviation", "station_id"]
+NETWORK_ID_ATTRS = ["network_id", "Network_ShortName"]
 
 DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
 
@@ -54,8 +58,7 @@ SECOND = timedelta64(1, 's')
 
 CDL_PATH = "base.cdl"
 
-FIRST_DATA_ATT = "FirstData"
-LAST_DATA_ATT = "LastData"
+
 
 def parseCSV(res_path, key = "ID") :
     """Generic parser """
@@ -109,8 +112,8 @@ def is_uniform(vector) :
     return np.array_equal(ref, vector)
 
 def get_origin_time(ncfile) -> datetime64 :
-    timeVar = getTimeVarName(ncfile)
-    start_time = num2date(0, ncfile.variables[timeVar].units, ncfile.variables[timeVar].calendar)
+    timeVar = getTimeVar(ncfile)
+    start_time = num2date(0, timeVar.units, timeVar.calendar)
     return np.datetime64(start_time)
 
 def to_int(vals) :
@@ -164,7 +167,13 @@ def parse_value(val) :
                 val = val.strip('"')
             return val
 
-def getTimeResolNS. if "min" in unit :
+def getTimeResolution(ncfile) :
+    """Returns time resolution, in seconds, as saved in meta data"""
+
+    val = ncfile.variables[TIME_VAR].resolution
+    val, unit = val.split()
+    val = int(val)
+    if "min" in unit :
         return val * 60
     elif "sec" in unit:
         return val
@@ -185,6 +194,74 @@ def date_to_timeidx(nc, date) :
         date = datetime64(date)
     time_sec = datetime64_to_sec(nc, date)
     return seconds_to_idx(nc, time_sec)
+
+
+def re_pattern(pattern, properties=dict()) :
+    """ Transform pattern to regexp matching groups for replacement """
+    def subf(match):
+        key = match.group(1)
+        if key in properties:
+            return str(properties[key])
+        else:
+            if key in ["M", "MM", "YY", "YYYY", "DDD"] :
+                pattern = r'\d+' if key == "M" else r'\d' * len(key)
+            else:
+                pattern = "[A-Z_]+"
+            return r'(?P<%s>%s)' % (key, pattern)
+
+    # Transforms pattern to regular expression for matching
+    re_pattern = pattern.replace("?", ".").replace("*", ".*")
+    return re.sub(r'\{(\w+)\}', subf, re_pattern)
+
+def to_range(year, month=0, day=1) :
+    """ Transform a year or month inot a range of datatime """
+    yearly=False
+    if not month :
+        month = 1
+        yearly = True
+
+    first = datetime(year, month, day)
+    if yearly :
+        last = first + relativedelta(years=1)
+    else:
+        last  = first + relativedelta(months=1)
+
+    return (first, last)
+
+
+def match_pattern(pattern, value, properties=dict()) :
+    """Transforms pattern expression into regexp and extracts the keys """
+
+    reg = re_pattern(pattern, properties)
+    match = re.match(reg, value, flags=re.IGNORECASE)
+
+    if not match :
+        return False
+
+    res = match.groupdict()
+
+    if "M" in res:
+        res["month"] = int(res["M"])
+        del res["M"]
+
+    if "MM" in res:
+        res["month"]  = int(res["MM"])
+        del res["MM"]
+
+    if "DDD" in res:
+        res["days"] = int(res["DDD"])
+        del res["DDD"]
+
+    if "YYYY" in res:
+        res["year"] = int(res["YYYY"])
+        del res["YYYY"]
+
+    if "YY" in res:
+        year = int(res["YY"])
+        res["year"] = year + (2000 if year < 70 else 1900)
+        del res["YY"]
+
+    return res
 
 
 def nc2df(
@@ -226,10 +303,10 @@ def nc2df(
         return chunks
 
 
-def getTimeVarName(ds) :
+def getTimeVar(ds) :
     for key in ds.variables.keys() :
         if key.lower() == TIME_VAR.lower() :
-            return key
+            return ds.variables[key]
     raise Exception("No time var found")
 
 def __nc2df(
@@ -248,9 +325,9 @@ def __nc2df(
     if isinstance(ncfile, str) :
         ncfile = openNetCDF(ncfile, mode='r', user=user, password=password)
 
-    timeVar = getTimeVarName(ncfile)
+    timeVar = getTimeVar(ncfile)
 
-    size = len(ncfile.variables[timeVar])
+    size = len(timeVar)
 
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
     end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size
@@ -258,14 +335,14 @@ def __nc2df(
     # List of vars (along time)
     data_vars = []
     for varname, var in ncfile.variables.items() :
-        if TIME_DIM in var.dimensions and varname != timeVar :
+        if TIME_DIM in var.dimensions and var != timeVar :
             if vars is None or varname in vars :
                 data_vars.append(varname)
 
 
     def to_df(start_idx, end_idx) :
 
-        times = sec_to_datetime64(ncfile, ncfile.variables[timeVar][start_idx:end_idx:steps])
+        times = sec_to_datetime64(ncfile, timeVar[start_idx:end_idx:steps])
 
         data = dict()
         for var in data_vars :
@@ -293,16 +370,17 @@ def __nc2df(
     else :
         yield to_df(start_idx, end_idx)
 
-def time2str(val) :
+def time2str(val, seconds=False) :
     """Format date to the minute """
     if val is None :
         return ""
     if isinstance(val, datetime64) :
-        return np.datetime_as_string(val, unit='m')
+        return np.datetime_as_string(val, unit='s' if seconds else 'm')
     elif isinstance(val, datetime) :
-        return val.strftime(TIME_FORMAT_MIN)
 
-    raise Exception("Unknown date type : " + type(val))
+        return val.strftime(TIME_FORMAT_SEC if seconds else TIME_FORMAT_MIN)
+
+    raise Exception("Unknown date type : %s" % type(val))
 
 def str2time64(val) :
     if val is None or val == "":
@@ -344,20 +422,53 @@ def with_auth(url, user, password) :
     return "%s://%s:%s@%s/%s" % (parts.scheme, quote_plus(user), quote_plus(password), parts.netloc, parts.path)
 
 
-def fillShortName(nc, shortname) :
-    size = nc.dimensions[STATION_NAME_DIM].size
+def fill_str(nc, varname, shortname) :
 
-    # Transform to null terminated fixed length array of chars
-    shortname_ = stringtochar(np.array(shortname, 'S%d' % size))
-    nc.variables[STATION_NAME_VAR][:] = shortname_
+    var = nc.variables[varname]
 
-def readShortname(nc) :
-    char_array = nc.variables[STATION_NAME_VAR][:]
+    if var.dtype == str :
+
+        # Variable length string
+        var[0] = shortname
+    else:
+
+        dim = var.dimensions[0]
+        size = nc.dimensions[dim].size
+
+        # Transform to null terminated fixed length array of chars
+        shortname_ = stringtochar(np.array(shortname, 'S%d' % size))
+        var[:] = shortname_
+
+def read_str(var) :
+
+    if var.dtype == str :
+        # Var length string
+        return var[0]
+
+    # Fixed char array
+    char_array = var[:]
 
     # This is a 0D (no dimension) array !
     string_array = chartostring(char_array)
 
     return string_array[()]
+
+
+def getStationId(attributes) :
+    # First try standard attributes
+    for name in STATION_ID_ATTRS :
+        if name in attributes :
+            return attributes[name]
+
+    # Then read the content of the dedicated var
+    return read_str(STATION_NAME_VAR)
+
+def getNetworkId(attributes) :
+    # First try standard attributes
+    for name in NETWORK_ID_ATTRS :
+        if name in attributes :
+            return attributes[name]
+    raise Exception("Network name not found. Tried the following attributes : %s" % str(NETWORK_ID_ATTRS))
 
 
 
@@ -374,27 +485,7 @@ def getProperties(network_id, station_id) :
 
     return properties
 
-def getMinMaxTimes(ncfile, data, times_idx, varname=None) :
 
-    # For masked array => replace with nan
-    if is_masked(data) :
-        data = data.filled(np.nan)
-
-    notnan_mask = ~np.isnan(data)
-    if np.any(notnan_mask):
-
-        resolution = getTimeResolution(ncfile)
-        times_s = resolution * times_idx
-        notnan_time_s = times_s[notnan_mask]
-
-        min_time = sec_to_datetime64(ncfile, np.min(notnan_time_s))
-        max_time = sec_to_datetime64(ncfile, np.max(notnan_time_s))
-
-        return {
-            FIRST_DATA_ATT : min_time,
-            LAST_DATA_ATT : max_time}
-    else :
-        return {FIRST_DATA_ATT: None, LAST_DATA_ATT: None}
 
 
 def parse_bool(value) :

@@ -1,6 +1,8 @@
 # Performs various checks on NetCDF files
 import argparse
 from netCDF4 import Dataset
+
+from libinsitu import getStationId, getNetworkId
 from libinsitu.common import nc2df, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
     HUMIDITY_VAR, TEMP_VAR
 from libinsitu.log import *
@@ -135,8 +137,8 @@ def main() :
         idx = np.isclose(vals, na_val)
         df2[col][idx] = np.nan
 
-    station_id = df1.attrs["StationInfo_Abbreviation"]
-    network = df1.attrs["source"]
+    station_id = getStationId(df1.attrs)
+    network = getNetworkId(df1.attrs)
 
     with LogContext(network=network, station_id=station_id, file="%s:%s" % (args.file1, args.file2)):
 

@@ -1,9 +1,9 @@
 import re
 from copy import deepcopy
 from typing import Dict
-
+from libinsitu import STATION_NAME_VAR
 from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
-    fillShortName, TIME_VAR
+    fill_str, TIME_VAR
 from libinsitu.log import info, warning
 
 
@@ -45,8 +45,12 @@ def parse_cdl(lines, attributes) :
         line = line.strip()
 
         # Skip comments
-        if line.startswith("//") or len(line) == 0:
+        if line.startswith("#") or len(line) == 0:
             continue
+
+        if "#" in line :
+            line = line.split("#")[0]
+            line = line.strip()
 
         # key = value
         if "=" in line :
@@ -89,6 +93,8 @@ def parse_cdl(lines, attributes) :
 
             if type == "char" :
                 type ="c"
+            elif type == "string" :
+                type = str
             elif type == "float" :
                 type="f4"
             elif type == "int" :
@@ -132,20 +138,43 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
             if not dry_run:
                 dest.setncattr(key, val)
+def cmp_var(var,  vardef:Variable) :
+    return var.dtype == vardef.type and var.dimensions == tuple(vardef.dimensions)
+
+def create_or_replace_var(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
+
+    if vardef.name in ncfile.variables:
+
+        var = ncfile.variables[vardef.name]
+
+        if cmp_var(var, vardef):
+            # Same var -> skipping
+            return
+
+        # Different vars
+        if dry_run:
+            info("Would replace var : %s" % vardef.name)
+        else:
+            info("Replacing var : %s" % vardef.name)
+            del ncfile.variables[vardef.name]
+
+    if dry_run :
+        info("Would add variable : %s" % vardef.name)
+        return
+
+    info("Adding variable '%s'", vardef.name)
+
+    least_significant_digit = vardef.attributes.get("least_significant_digit", None)
+
+    ncfile.createVariable(
+        vardef.name, vardef.type, vardef.dimensions,
+        zlib=True,
+        complevel=9,
+        least_significant_digit=least_significant_digit)
 
 def initVar(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
 
-    # Already there, skipping
-    if not vardef.name in ncfile.variables and not dry_run:
-        info("Adding variable '%s'", vardef.name)
-
-        least_significant_digit = vardef.attributes.get("least_significant_digit", None)
-
-        ncfile.createVariable(
-            vardef.name, vardef.type, vardef.dimensions,
-            zlib=True,
-            complevel=9,
-            least_significant_digit=least_significant_digit)
+    create_or_replace_var(ncfile, vardef, dry_run, delete_attrs)
 
     var = ncfile.variables[vardef.name]
 
@@ -184,12 +213,13 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
     cdl2netcdf(netcdf, filtered_cdl, dry_run, delete_attrs)
 
     if not dry_run :
+
         # Init scalar vars
         netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
         netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
         netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
 
-        fillShortName(netcdf, properties["Station_ID"])
+        fill_str(netcdf, STATION_NAME_VAR, properties["Station_ID"])
 
     return cdl
 

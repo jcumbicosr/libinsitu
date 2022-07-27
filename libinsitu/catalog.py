@@ -1,14 +1,14 @@
 # Handling fetch and parsing of Thredds server
 
 import xml.etree.ElementTree as ET
-from concurrent.futures.thread import ThreadPoolExecutor
+
 from typing import Dict
 from urllib.parse import urljoin, urlsplit
 import pprint
 
 from requests import HTTPError, Session
 
-from libinsitu import debug, parallel_map
+from libinsitu import parallel_map
 from libinsitu.log import info
 
 NS={

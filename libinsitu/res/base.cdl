@@ -1,13 +1,12 @@
 netcdf base {
 
 dimensions:
-	time = UNLIMITED ; // Main dimension
-	station_name = 20; // Station name
+	time = UNLIMITED ; # Main dimension
 
 variables:
 
-	char station_name(station_name) ;
-	    station_name:standard_name = "platform_name"
+	string station_name;
+	    station_name:standard_name = "platform_name" ;
 		station_name:long_name = "station_name" ;
 		station_name:cf_role = "timeseries_id" ;
 
@@ -53,8 +52,6 @@ variables:
 		GHI:valid_min=0.0 ;
 		GHI:valid_max=3000 ;
 		GHI:grid_mapping = "crs" ;
-        // GHI:least_significant_digit=1;
-        // GHI:significant_digits=4;
 
 	float DHI(time) ;
 		DHI:long_name = "Diffuse horizontal radiation" ;
@@ -64,8 +61,6 @@ variables:
 		DHI:valid_min=0.0 ;
 		DHI:valid_max=3000 ;
 		DHI:grid_mapping = "crs" ;
-		// DHI:least_significant_digit=1;
-		// DHI:significant_digits=4;
 
 	float BNI(time) ;
 		BNI:long_name = "Beam (or direct) normal radiation" ;
@@ -75,8 +70,6 @@ variables:
 		BNI:valid_min=0.0 ;
 		BNI:valid_max=3000 ;
 		BNI:grid_mapping = "crs" ;
-		// BNI:least_significant_digit=1;
-		// BNI:significant_digits=4;
 
 	float T2(time) ;
 		T2:long_name = "Air temperature at 2 m height" ;
@@ -86,8 +79,6 @@ variables:
 		T2:valid_min=123.0 ;
 		T2:valid_max=372.9 ;
 		T2:grid_mapping = "crs" ;
-		// T2:least_significant_digit=1;
-		// T2:significant_digits=4;
 
 	float RH(time) ;
 
@@ -98,8 +89,6 @@ variables:
 		RH:valid_min=0.0 ;
 		RH:valid_max=1.0 ;
 		RH:grid_mapping = "crs" ;
-		// RH:least_significant_digit=3;
-        // RH:significant_digits=4;
 
 	float WS(time) ;
 
@@ -108,9 +97,8 @@ variables:
 		WS:abbreviation = "windspd" ;
 		WS:units = "m s-1" ;
 		WS:valid_min=0.0;
+		WS:valid_max=100.0;
 		WS:grid_mapping = "crs" ;
-		// WS:least_significant_digit=2;
-		// WS:significant_digits=4;
 
 	float WD(time) ;
 
@@ -121,74 +109,98 @@ variables:
 		WD:valid_min=0.0;
 		WD:valid_max=360.0;
 		WD:grid_mapping = "crs" ;
-        // WD:least_significant_digit=1;
-        // WD:significant_digits=4;
 
 	float P(time) ;
 		P:parameter = "Station pressure" ;
-		P:long_name = "air pressure at station height" ;
+		P:long_name = "Air pressure at station height" ;
 		P:standard_name = "air_pressure" ;
 
 		P:units = "Pa" ;
 		P:valid_min=0.0 ;
 		P:valid_max=120000.0;
 		P:grid_mapping = "crs" ;
-		// P:least_significant_digit=0;
 
-// Global attributes
+# Global attributes
 
-    :description = "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server." ;
+    # Main info
+    :id = "{Network_ID}-{Station_ID}";
     :title = "Timeseries of {Network_LongName} ({Network_ID}). Station : {Station_Name}" ;
+    :summary = "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server." ;
     :keywords = "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure"
     :keywords_vocabulary = "GCMD Science Keywords" ;
     :keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
-    :contact = "Lionel MENARD, Raphael JOLIVET, Yves-Marie SAINT-DRENAN, Philippe BLANC";
-    :institution = "MINES Paris PSL" ;
     :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
-    :network_id = "{Network_ID}";
-    :project = "{Network_LongName}"; //
-    :Network_Region = "{Network_Region}";
-    :Network_Description = "{Network_DescriptionURL}" ;
-    :Network_References = "{Network_References}" ;
-    :Network_License = "{Network_LicenseInfoURL}" ;
-    :Network_Contact = "{Network_ContactPersonMail}" ;
-    :Station_WMO_ID =  "{Station_WMOID}";
-    :Station_UID = "{Station_UID}" ;
-    :Station_ID = "{Station_ID}" ;
-    :Station_Name = "{Station_Name}" ;
-    :Station_Latitude = "{Station_Latitude}" ;
-    :Station_Longitude = "{Station_Longitude}" ;
-    :Station_Elevation = "{Station_Elevation}" ;
-    :local_time_zone = "{Station_Timezone}" ;
-    :Station_Address =  "{Station_Address}" ;
-    :Station_City =  "{Station_City}" ;
-    :Station_Country =  "{Station_Country}" ;
-    :Station_SurfaceType = "{Station_SurfaceType}" ;
-    :Station_TopographyType = "{Station_TopographyType}" ;
-    :Station_Rural_Urban = "{Station_RuralUrban}" ;
-    :Station_KoeppenGeigerClimate = "{Station_Climate}" ;
-    :Station_OperationStatus =  "{Station_OperationStatus}";
-
-    // Time information
-    :time_coverage_start = "{Station_StartDate}" ;  // First data [Dataset Discovery v1.0]
-    :time_coverage_end = "{Station_EndDate}";  // Last data [Dataset Discovery v1.0]
-    :time_coverage_resolution = "P{Station_TimeResolution}S"; // Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
-
-    // Custom global attributes
-    :station_contact_person =  "{Station_ContactName}" ;
-    :station_institute =  "{Station_Institute}" ;
-    :station_url =  "{Station_Url}";
-    :station_commision_date  =  "{Station_CommissionDate}";
-    :station_decommision_date =  "{Station_DecommissionDate}";
-    :station_comment = "{Station_Comment}" ;
     :featureType = "timeSeries" ;
     :cdm_data_type = "timeSeries";
 
-    // Conventions
-    :Conventions = "CF-1.9" ;
-    :Metadata_Conventions = "Unidata Dataset Discovery v1.0" ;
+    # Conventions
+    :Conventions = "CF-1.9,ACDD-1.3";
 
-    :cdm_timeseries_variables = "station_name,latitude,longitude,elevation" ;
-    :creation_time = "{CreationTime}";
-    :update_time = "{UpdateTime}";
+    # Publisher [ACDD1.3]
+    :publisher_name = "Lionel MENARD, Raphael JOLIVET, Yves-Marie SAINT-DRENAN, Philippe BLANC";
+    :publisher_email = "lionel.menard@mines-paristech.fr, raphael.jolivet@mines-paristech.fr, saint-drenan@mines-paristech.fr, philippe.blanc@mines-paristech.fr";
+    :publisher_url = "https://www.oie.minesparis.psl.eu/" ;
+    :publisher_institution = "Mines Paristech - PSL"
+
+    # Creator info [ACDD1.3]
+    :creator_name =  "{Station_ContactName}" ;
+    :institution =  "{Station_Institute}" ;
+    :metadata_link =  "{Station_Url}";
+    :creator_url = "{Network_DescriptionURL}" ;
+    :references = "{Network_References}" ;
+    :license = "{Network_LicenseInfoURL}" ;
+
+    :comment = "{Station_Comment}" ;
+
+    # Station info & coordinates [ACDD1.3]
+    :project = "{Network_LongName}"; # Network long name
+    :platform = "{Station_Name}" ; # Should be a long / full name
+    :geospatial_lat_min = {Station_Latitude} ;
+    :geospatial_lon_min = {Station_Longitude} ;
+    :geospatial_lat_max = {Station_Latitude} ;
+    :geospatial_lon_max = {Station_Longitude} ;
+    :geospatial_vertical_min = {Station_Elevation};
+    :geospatial_vertical_max = {Station_Elevation};
+    :geospatial_bounds = "POINT({Station_Latitude} {Station_Longitude})";
+    :geospatial_bounds_crs = "EPSG:4326";
+
+    # Time information
+    :time_coverage_start = "{FirstData}" ;  # First data [Dataset Discovery v1.0]
+    :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
+    :time_coverage_resolution = "P{Station_TimeResolution}M"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
+    :local_time_zone = "{Station_Timezone}" ;
+    :date_created = "{CreationTime}";
+    :date_modified = "{UpdateTime}";
+
+    #
+    # -- Additional metadata (custom to insitu)
+    #
+
+    # IDs
+    :network_id = "{Network_ID}"; # Short ID
+    :station_id = "{Station_ID}"; # Short ID
+    :station_uid = "{Station_UID}" ; # Numeric ID, if any
+    :station_wmo_id =  "{Station_WMOID}"; # WMO ID, if any
+
+    # Surface
+    :surface_type = "{Station_SurfaceType}" ; # rock, gress, concrete, cultivated, ...
+    :topography_type = "{Station_TopographyType}" ; # flat, hilly, moutain valley, mountain top, ...
+    :rural_urban = "{Station_RuralUrban}" ; # "rural" or "urban"
+
+    # Location of station
+    :network_region = "{Network_Region}";
+    :station_address =  "{Station_Address}" ;
+    :station_city =  "{Station_City}" ;
+    :station_country =  "{Station_Country}" ;
+
+    # Commission / decommission dates
+    :station_commision_date  =  "{Station_CommissionDate}";
+    :station_decommision_date =  "{Station_DecommissionDate}";
+
+    # Misc
+    :climate = "{Station_Climate}" ; # KoeppenGeiger climate at location of the station
+    :operation_status =  "{Station_OperationStatus}";
+
+
+
 }

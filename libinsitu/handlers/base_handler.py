@@ -9,6 +9,7 @@ from zipfile import ZipFile
 
 from pandas import DataFrame
 
+from libinsitu import match_pattern
 from libinsitu.log import warning, debug
 
 ZERO_DEG_K = 273.15
@@ -85,23 +86,7 @@ class InSituHandler :
 
         return re.sub(r'\{\w+\}', subf, self.pattern())
 
-    def re_pattern(self) :
-        """ Transform pattern to regexp matching groups for replacement """
-        def subf(match):
-            key = match.group(1)
-            if key in ["M", "MM", "YY", "YYYY", "DDD"] :
-                pattern = r'\d+' if key == "M" else r'\d' * len(key)
-                return r'(?P<%s>%s)' % (key,pattern)
-            else :
-                if key in self.properties :
-                    return str(self.properties[key])
-                else:
-                    raise Exception("Key '%s' in file pattern '%s' not found in station info" % (key, self.pattern()))
 
-        # Transforms pattern to regular expression for matching
-        pattern = os.path.basename(self.pattern())
-        re_pattern = pattern.replace("?", ".").replace("*", ".*")
-        return re.sub(r'\{(\w+)\}', subf, re_pattern)
 
     def list_files(self, folder):
         """List files from folder matching the pattern """
@@ -126,14 +111,17 @@ class InSituHandler :
 
         return list(filename for filename in filenames if filter_f(filename))
 
-    def sort_files(self, filenames):
+    def match_pattern(self, value):
+        pattern = os.path.basename(self.pattern())
+        return match_pattern(pattern, value, self.properties)
 
-        re_pattern = self.re_pattern()
+    def sort_files(self, filenames):
 
         def sort_key(filename) :
             basename = os.path.basename(filename)
-            match = re.match(re_pattern, basename, flags=re.IGNORECASE)
-            if not match :
+
+            match_groups = self.match_pattern(basename)
+            if not match_groups :
                 warning("File %s does not match pattern %s. It may not not be included in correct order" % (basename, self.pattern()))
                 return basename
 
@@ -142,18 +130,17 @@ class InSituHandler :
             year = mtime.year
             month_or_days = mtime.month
 
-            groups = match.groupdict()
 
-            if "M" in groups :
-                month_or_days = int(groups["M"])
-            if "MM" in groups:
-                month_or_days = int(groups["MM"])
-            if "DDD" in groups:
-                month_or_days = int(groups["DDD"])
-            if "YYYY" in groups :
-                year = int(groups["YYYY"])
-            if "YY" in groups :
-                year = int(groups["YY"])
+            if "M" in match_groups :
+                month_or_days = int(match_groups["M"])
+            if "MM" in match_groups:
+                month_or_days = int(match_groups["MM"])
+            if "DDD" in match_groups:
+                month_or_days = int(match_groups["DDD"])
+            if "YYYY" in match_groups :
+                year = int(match_groups["YYYY"])
+            if "YY" in match_groups :
+                year = int(match_groups["YY"])
                 year = year + (2000 if year < 70 else 1900)
 
             return (year, month_or_days, basename)

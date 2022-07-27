@@ -5,40 +5,11 @@ from libinsitu.cdl import init_nc
 from libinsitu.log import *
 import argparse
 
-def update_ranges(nc, ncvar, dry_run=False) :
 
-    dry_prefix = "would " if dry_run else ""
-
-    def process_chunk(start, stop, key) :
-        data = ncvar[start:stop]
-        if np.any(~np.isnan(data)):
-            times_idx = np.arange(start, stop, 1, dtype=int)
-            time_limit = getMinMaxTimes(nc, data, times_idx, ncvar.name)[key]
-
-            if time_limit is not None :
-                new_val = time2str(time_limit)
-                old_val = None if not key in ncvar.ncattrs() else ncvar.getncattr(key)
-                if old_val != new_val:
-                    info(dry_prefix + "update %s:%s %s -> %s" % (ncvar.name, key, old_val, new_val))
-                if not dry_run:
-                    ncvar.setncattr(key, time2str(time_limit))
-                return True # should break loop
-        return False # continue loop
-
-    # Search start
-    for i in range(0, ncvar.size, CHUNK_SIZE) :
-        if process_chunk(i, i+CHUNK_SIZE, FIRST_DATA_ATT) :
-            break
-
-    # Search end
-    for i in range(ncvar.size, 0, -CHUNK_SIZE) :
-        if process_chunk(i-CHUNK_SIZE, i, LAST_DATA_ATT):
-            break
-
-def update_times(ncfile, start_date64, dry_run=False) :
-    time_var = ncfile.variables[TIME_VAR]
-    resolution_s = getTimeResolution(ncfile)
-    start_sec = datetime64_to_sec(ncfile, start_date64)
+def update_times(outds, start_date64, dry_run=False) :
+    time_var = getTimeVar(outds)
+    resolution_s = getTimeResolution(outds)
+    start_sec = datetime64_to_sec(outds, start_date64)
 
     if time_var[0] != start_sec :
         if dry_run :
@@ -51,37 +22,58 @@ def update_times(ncfile, start_date64, dry_run=False) :
         info("First time value was corect : no update required")
 
 
-def update_meta(file, network, dry_run=False, delete=False, update_range=False, update_time=False) :
+def update_meta(input, output, network, dry_run=False, delete=False, update_range=False, update_time=False) :
 
-    mode = "r" if dry_run else "a"
-    ncfile = Dataset(file, mode=mode)
+    if output is None :
+        output = input
 
-    station_id = readShortname(ncfile)
+    # Output
+    new = not os.path.exists(output)
+    outds = Dataset(output, mode="w" if new else "a")
+
+    # Input
+    if input == output :
+        inds = outds
+    else:
+        inds = Dataset(input, mode="r")
+
+
+    station_id = read_str(inds.variables[STATION_NAME_VAR])
     properties = getProperties(network, station_id)
 
+    timeVar = getTimeVar(inds)
+    first_time = sec_to_datetime64(inds, timeVar[0]).data[()]
+    last_time = sec_to_datetime64(inds, timeVar[-1]).data[()]
+
     # Attribute with null values are ignored : previous value is kept
-    properties["FirstData"] = None
-    properties["LastData"] = None
+    properties["FirstData"] = time2str(first_time, seconds=True)
+    properties["LastData"] = time2str(last_time, seconds=True)
     properties["UpdateTime"] = None
     properties["CreationTime"] = None
 
     handler = HANDLERS[network](properties)
 
-    init_nc(ncfile, properties, handler.data_vars(), dry_run, delete)
+    init_nc(outds, properties, handler.data_vars(), dry_run, delete)
 
-    if update_range :
-        for varname in handler.data_vars() :
-            update_ranges(ncfile, ncfile.variables[varname], dry_run)
+    if inds != outds :
+
+        # copy all file data except for the excluded
+        for vname, variable in inds.variables.items():
+            if vname in outds.variables and "time" in variable.dimensions :
+                info("Copying data of var '%s' from '%s' to '%s'" % (vname, input, output))
+
+                outds.variables[vname][:] = variable[:]
 
     if update_time :
         start_date = str_to_date64(properties["Station_StartDate"])
-        update_times(ncfile, start_date, dry_run)
+        update_times(outds, start_date, dry_run)
 
 def main() :
 
     parser = argparse.ArgumentParser(description='Update meta attributes in NetCDF file')
     parser.add_argument('network', metavar='<NETWORK>', type=str, help='Network')
-    parser.add_argument('files', metavar='<file.nc>', type=str, nargs='+', help='NetCDF files to update')
+    parser.add_argument('input', metavar='<input.nc>', type=str, help='NetCDF files to update')
+    parser.add_argument('output', metavar='<output.nc>', type=str, help='NetCDF files to update', default=None)
     parser.add_argument('--dry-run', '-n', help='Do not update anything. Just look what would be done', action='store_true', default=False)
     parser.add_argument('--update-ranges', '-ur', help='Update data time ranges for each variable', action='store_true', default=False)
     parser.add_argument('--update-time', '-ut', help='Update time variable', action='store_true',
@@ -89,8 +81,7 @@ def main() :
     parser.add_argument('--delete', '-d', help='Delete extra attributes', action='store_true', default=False)
     args = parser.parse_args()
 
-    for file in args.files :
-        update_meta(file, args.network, args.dry_run, args.delete, args.update_ranges, args.update_time)
+    update_meta(args.input, args.output, args.network, args.dry_run, args.delete, args.update_ranges, args.update_time)
 
 if __name__ == '__main__':
     main()
