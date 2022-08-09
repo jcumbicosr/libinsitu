@@ -4,7 +4,9 @@ This document is a proposed convention for the formatting and distribution of in
 The goal is to apply best practices for standardizing data and improve interoperability. 
 This allows to develop generic tools such as vizualization, QC, statistics, ... 
 
-This convention is implemented in the python library [**libinsitu**](../README.md), which provides : 
+It should be considered as a **DRAFT**, open for discussions.
+
+This convention is implemented by the python library [**libinsitu**](../README.md), which provides : 
 * A workflow for transforming in situ measurements from various networks into standardized datasets
 * Python functions and command line (CLI) tools to explore and extract data from files following this convention
 
@@ -346,7 +348,7 @@ Description of the surface around the station
 | Name             | Content                                | Example  |
 |------------------|----------------------------------------|----------|
 | climate          | Climate at the station (KeoppenGeiger) | "EF"     |
-| operation_status | Country of the station                 | "France" |
+| operation_status | 'active', 'inactive' or 'closed'         | "closed" |
 
 # Distribution of files
 
