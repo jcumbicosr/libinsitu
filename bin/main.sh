@@ -14,5 +14,5 @@ else
 	LIST="$2"
 fi
 
-CMD="echo $PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {1} $OUT_FOLDER/$NETWORK-{1}.nc $INPUT_DIR | tee $LOGDIR/$NETWORK-{1}.log"
+CMD="$PYTHON bin/transform.py -i -sr -f $STATUS_FOLDER -n $NETWORK -s {1} $OUT_FOLDER/$NETWORK-{1}.nc $INPUT_DIR | tee $LOGDIR/$NETWORK-{1}.log"
 echo "$LIST" | parallel --lb -C ';' $CMD
