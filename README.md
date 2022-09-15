@@ -15,7 +15,7 @@ The pip setup provides access to each script in `./bin/` as a `ins-<script>`  co
 
 * **bin** : This folder contain CLI utils. The main ones are : 
   * **transform.py** (ins-transform): Transform raw in situ data files to NetCDF
-  * **dump.py** (ins-dump) : Extract / filter data from NetCDF (local or OpenDAP) to CSV
+  * **cat.py** (ins-cat) : Extract / filter data from NetCDF (local or OpenDAP) to CSV
   * **ls.py** (ins-ls): Explore the content of a TDS (Thredds) catalog.
   * ...
   
@@ -70,13 +70,13 @@ The Network and station ID should be described in [networks.csv](./libinsitu/res
 and the corresponding [station-info/{network}.csv](libinsitu/res/station-info).
 
 
-### dump.py [ins-dump]
+### cat.py [ins-cat]
 
 Query / filter in-situ data from local or remote (over OpenDap) NetCDF files.
 
 #### Usage
 
-    ins-dump [-h] [--type {csv,text}] [--skip-na]
+    ins-cat [-h] [--type {csv,text}] [--skip-na]
                    [--filter '<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS']
                    [--cols <col1>,<col2> ..] [--user USER] [--password PASSWORD] [--steps STEPS]
                    [--chunk_size CHUNK_SIZE]
@@ -108,7 +108,7 @@ Extract GHI data from XIA station, for january 2005, over OpenDAP :
 
     > export TDS_USER=<user> 
     > export TDS_PASS=<pass>
-    > ins-dump http://tds.webservice-energy.org/thredds/dodsC/bsrn-stations/BSRN-XIA.nc -c GHI -s --filter 2005-01 -t csv
+    > ins-cat http://tds.webservice-energy.org/thredds/dodsC/bsrn-stations/BSRN-XIA.nc -c GHI -s --filter 2005-01 -t csv
 
 
 ### ls.py [ins-ls]
@@ -204,7 +204,8 @@ catalog = fetch_catalog(args.url, session, recursive=False)
 ## Adding  a new Network
 
 To support a new Network, one should :
-- Add a station info CSV file in [res/station-info/{network}.csv](./libinsitu/res/station-info) 
+- Add one line of meta data for the netwotk in [res/{networks}.csv](./libinsitu/res/networks.csv)
+- Add a CSV file of meta data for the stations in [res/station-info/{network}.csv](./libinsitu/res/station-info) 
 - Add an implementation in [libinsitu/handlers/<network>.py](./libinsitu/handlers) and register it in `libinsitu/handlers/__init_.py`
   
 The handler should extend the method `read_chunk(filename)` from the abstract class [InSituHandler](./libinsitu/handlers/base_handler.py) : 

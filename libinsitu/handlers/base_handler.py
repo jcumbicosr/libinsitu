@@ -42,7 +42,11 @@ class InSituHandler :
         elif filename.endswith('.zip'):  # check if file is a zipped (.zip) file
 
             with ZipFile(filename) as thezip :
-                archive = [tmp for tmp in thezip.namelist() if '.txt' in tmp][0]
+                if len(thezip.namelist()) == 1 :
+                    archive = thezip.namelist()[0]
+                else:
+                    archive = [tmp for tmp in thezip.namelist() if '.txt' in tmp][0]
+
                 stream = thezip.open(archive, mode="r")
                 return self._read_chunk(stream)
 

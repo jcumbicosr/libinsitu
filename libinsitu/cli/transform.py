@@ -314,7 +314,7 @@ def main():
     args = parser.parse_args()
 
     network = args.network
-    station_id  = args.station_id.upper()
+    station_id  = args.station_id
 
     with LogContext(network=network, station_id=station_id):
         process_network(network, station_id, args.out, args)
