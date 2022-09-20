@@ -66,6 +66,8 @@ CDL_PATH = "base.cdl"
 FIRST_DATA_ATT = "FirstData"
 LAST_DATA_ATT = "LastData"
 
+STATION_START_DATA_ATTR= "Station_DataBegin"
+
 def parseCSV(res_path, key = "ID") :
     """Generic parser """
     res = dict()
@@ -137,7 +139,9 @@ def str_to_date64(datestr) :
     return np.datetime64(datetime.strptime(datestr, DATE_FORMAT))
 
 def start_date64(ncfile) :
-    return str_to_date64(ncfile.Station_DataBegin)
+    if not hasattr(ncfile, STATION_START_DATA_ATTR) :
+        raise Exception("Missing start data attribute for this station")
+    return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
 
 def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
