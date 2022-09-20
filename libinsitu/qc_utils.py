@@ -5,12 +5,13 @@ Created on Thu Jun 23 10:09:54 2022
 @author: y-m.saint-drenan
 """
 import hashlib
+from logging import warn
 from urllib.request import urlopen
 
 import sg2
 from appdirs import user_cache_dir
 
-from libinsitu.log import info
+from libinsitu.log import info, warning
 import os
 
 from matplotlib.gridspec import GridSpec
@@ -25,7 +26,7 @@ import pvlib
 from matplotlib import cm
 
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, CLIMATE_ATTR, STATION_NAME_VAR, \
-    STATION_ID_ATTR, NETWORK_NAME_ATTR, STATION_COUNTRY_ATTR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR
+    STATION_ID_ATTR, NETWORK_NAME_ATTR, STATION_COUNTRY_ATTR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TIME_RESOLUTION_ATTR
 from diskcache import Cache
 
 cachedir = user_cache_dir("libinsitu")
@@ -63,6 +64,7 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     station_id = QC_df.attrs[STATION_ID_ATTR]
     station = QC_df.attrs[STATION_NAME_VAR]
     horizons = QC_df.attrs[HORIZON_ATTR]
+    #resolution_min = QC_df.attrs[TIME_RESOLUTION_ATTR] // 60
 
     def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
         import numpy as np
@@ -850,6 +852,12 @@ def enrich_data(df, includeCAMS=True):
         BNI='DNI'))
 
 
+    # Resample ?
+    resolution_min = df.attrs[TIME_RESOLUTION_ATTR] // 60
+    if resolution_min != 1 :
+        warning("Input resolution is %d minutes, resampling to 1 min" % resolution_min)
+        df = df.resample("1Min").ffill()
+
     sr, sp = sun_position(lat, lon, alt, df.index)
 
     SR = np.squeeze(sr[:, 0, 0])
@@ -890,10 +898,10 @@ def enrich_data(df, includeCAMS=True):
             'CLEAR_SKY_DNI': CAMS_DF.dni_clear.values,
             'CLEAR_SKY_DIF': CAMS_DF.dhi_clear.values}, index=CAMS_DF.index.values)
 
-        df2 = CAMS_DF2.merge(df, how='left', left_index=True, right_index=True)
-        # Forward meta data
-        df2.attrs.update(df.attrs)
-        df = df2
+        attrs = df.attrs
+        # df = df.merge(CAMS_DF2, how='left', left_index=True, right_index=True)
+        df = CAMS_DF2.merge(df, how='left', left_index=True, right_index=True)
+        df.attrs.update(attrs)
 
     return df
 
@@ -917,7 +925,7 @@ def sun_position(lat, lon, alt, times) :
     return sun_rise, sun_pos
 
 @cache.memoize()
-def get_cams(start_date, end_date, lat, lon, cams_email, altitude) :
+def get_cams(start_date, end_date, lat, lon, cams_email, altitude, time_step="1min") :
     info("Calling CAMS")
     res =  pvlib.iotools.get_cams(
                 start=start_date,
@@ -925,7 +933,7 @@ def get_cams(start_date, end_date, lat, lon, cams_email, altitude) :
                 latitude=lat, longitude=lon,
                 email=cams_email,
                 identifier='mcclear',
-                altitude=altitude, time_step='1min', time_ref='UT', verbose=False,
+                altitude=altitude, time_step=time_step, time_ref='UT', verbose=False,
                 integrated=False, label='right', map_variables=True,
                 server='www.soda-is.com', timeout=180)
     info("End calling CAMS")

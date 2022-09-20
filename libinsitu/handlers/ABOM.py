@@ -29,7 +29,7 @@ class ABOMHandler(InSituHandler) :
         data = data.rename(columns=mapping)
 
         # Apply timezone
-        data.index -= parseTimezone(self.properties["Timezone"])
+        data.index -= parseTimezone(self.properties["Station_Timezone"])
 
         return data
 

@@ -1,5 +1,5 @@
 from csv import DictReader
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union
 from urllib.parse import urlsplit, quote_plus
 
@@ -31,7 +31,9 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+
 # Global attrs
+TIME_RESOLUTION_ATTR = "time_resolution"
 CLIMATE_ATTR = "Station_KoeppenGeigerClimate"
 STATION_NAME_ATTR = "Station_Name"
 STATION_ID_ATTR = "Station_ID"
@@ -173,7 +175,8 @@ def parse_value(val) :
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
 
-    val = ncfile.variables[TIME_VAR].resolution
+    time_var = ncfile.variables[TIME_VAR]
+    val = time_var.resolution
     val, unit = val.split()
     val = int(val)
     if "min" in unit :
@@ -182,6 +185,7 @@ def getTimeResolution(ncfile) :
         return val
     else:
         raise Exception("Unknown unit for time resolution : '%s'" % unit)
+
 
 def openNetCDF(filename, mode='r', user=None, password=None) :
     """ Open either a filename or OpenDAP URL with user /password"""
@@ -282,6 +286,7 @@ def __nc2df(
         attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
         attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
         attrs[STATION_NAME_VAR] = readShortname(ncfile)
+        attrs[TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
 
         # Move it in Dataframe meta attributes
         df.attrs.update(attrs)

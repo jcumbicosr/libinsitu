@@ -4,7 +4,7 @@ from datetime import timedelta
 import pandas as pd
 
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
-    WIND_DIRECTION_VAR, NA_VALUES
+    WIND_DIRECTION_VAR, NA_VALUES, parseTimezone
 from libinsitu.handlers.base_handler import InSituHandler, ZERO_DEG_K
 from libinsitu.log import info, warning
 
@@ -89,17 +89,14 @@ class EnerMENAHandler(InSituHandler) :
         data = data[keys]
         data = data.rename(columns=mapping)
 
-        tz = 0
+        tz = timedelta(hours=0)
         if 'timezone' in metadata :
-            utc, tz = metadata['timezone'].split("+")
-            tz = int(tz)
 
-            if not utc == "UTC" :
-                raise Exception('Unknown timezone : %s' %  metadata['timezone'])
+            tz = parseTimezone(metadata['timezone'])
 
-        if tz != 0 :
+        if tz != timedelta(hours=0) :
             info("Applying timezone : %d", tz)
-            data.index = data.index - timedelta(hours=tz)
+            data.index = data.index - tz
 
         # Convertions
         if TEMP_VAR in data :
