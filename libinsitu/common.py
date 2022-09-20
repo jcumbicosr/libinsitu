@@ -31,6 +31,14 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+# Global attrs
+CLIMATE_ATTR = "Station_KoeppenGeigerClimate"
+STATION_NAME_ATTR = "Station_Name"
+STATION_ID_ATTR = "Station_ID"
+STATION_COUNTRY_ATTR = "Station_Country"
+NETWORK_NAME_ATTR = "Network_Name"
+
+
 STATION_NAME_DIM = "ncshort"
 
 STATION_PREFIX = "Station_"
@@ -222,7 +230,7 @@ def nc2df(
         ncfile, start_time, end_time,
         drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps)
 
-    # Hadling either single result or chunked generator
+    # Handling either single result or chunked generator
     if not chunked :
         for result in chunks:
             return result
@@ -268,6 +276,14 @@ def __nc2df(
 
         # Set global attributes in DataFrame
         attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
+
+        # Put single var meta data in attributes
+        attrs[LATITUDE_VAR] = readSingleVar(ncfile, LATITUDE_VAR)
+        attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
+        attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
+        attrs[STATION_NAME_VAR] = readShortname(ncfile)
+
+        # Move it in Dataframe meta attributes
         df.attrs.update(attrs)
 
         # Drop duplicated : only keep last
@@ -352,6 +368,13 @@ def readShortname(nc) :
 
     return string_array[()]
 
+def readSingleVar(nc, var) :
+    """Read a meta variable encoded as a single value variable """
+    arr = nc.variables[var][:].flatten()
+    if len(arr) == 0 :
+        return None
+    else:
+        return arr[0]
 
 
 
