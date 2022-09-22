@@ -205,9 +205,26 @@ catalog = fetch_catalog(args.url, session, recursive=False)
 
 To support a new Network, one should :
 - Add one line of meta data for the netwotk in [res/{networks}.csv](./libinsitu/res/networks.csv)
-- Add a CSV file of meta data for the stations in [res/station-info/{network}.csv](./libinsitu/res/station-info) 
+- Add a CSV file of meta data for each station in [res/station-info/{network}.csv](./libinsitu/res/station-info) 
 - Add an implementation in [libinsitu/handlers/<network>.py](./libinsitu/handlers) and register it in `libinsitu/handlers/__init_.py`
-  
+
+**Input files pattern**
+
+In particular, one should fill the column `RawDataPath` of `networks.csv`. 
+This column contains a file pattern used to find the proper input files for a given station. 
+
+The pattern supports :
+* Placeholders for station meta-data (with `{Station_<Attribute>}`) 
+* Date ranges (`{YYYY}`, `{MM}`, ...). 
+* Looking within zip files (after the `!` separator)
+* Wildcards : `*`
+
+Here are some examples of patterns :
+* `pvlive_{YYYY}-{MM}.zip!{YYYY}-{MM}/{Station_UID}_{YYYY}-{MM}.tsv`
+* `{station_id}/{station_id}{MM}{YY}*.dat.gz`
+
+**Main method**
+
 The handler should extend the method `read_chunk(filename)` from the abstract class [InSituHandler](./libinsitu/handlers/base_handler.py) : 
 It should take a filename as input and return a *panda* Dataframe with the following (optional) columns :
 
