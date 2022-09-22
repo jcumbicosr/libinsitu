@@ -58,11 +58,12 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     latitude = QC_df.attrs[LATITUDE_VAR]
     longitude = QC_df.attrs[LONGITUDE_VAR]
     elevation = QC_df.attrs[ELEVATION_VAR]
-    climate = QC_df.attrs[CLIMATE_ATTR]
-    country = QC_df.attrs[STATION_COUNTRY_ATTR]
-    source = QC_df.attrs[NETWORK_NAME_ATTR]
-    station_id = QC_df.attrs[STATION_ID_ATTR]
-    station = QC_df.attrs[STATION_NAME_VAR]
+    climate = QC_df.attrs.get(CLIMATE_ATTR, "-")
+    country = QC_df.attrs.get(STATION_COUNTRY_ATTR, "-")
+    source = QC_df.attrs.get(NETWORK_NAME_ATTR, "-")
+    station_id = QC_df.attrs.get(STATION_ID_ATTR, "-")
+    station = QC_df.attrs.get(STATION_NAME_VAR, "-")
+
     horizons = QC_df.attrs[HORIZON_ATTR]
     #resolution_min = QC_df.attrs[TIME_RESOLUTION_ATTR] // 60
 

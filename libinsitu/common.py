@@ -13,6 +13,7 @@ import pandas as pd
 from pkgutil import get_data
 import os
 
+from libinsitu.log import warning
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -22,6 +23,11 @@ DIRECT_VAR = "BNI"
 TEMP_VAR = "T2"
 HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
+
+ALTERNATE_NAMES = {
+    DIFFUSE_VAR : ["DIF"],
+    DIRECT_VAR : ["DNI"]
+}
 
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
@@ -139,9 +145,13 @@ def str_to_date64(datestr) :
     return np.datetime64(datetime.strptime(datestr, DATE_FORMAT))
 
 def start_date64(ncfile) :
-    if not hasattr(ncfile, STATION_START_DATA_ATTR) :
-        raise Exception("Missing start data attribute for this station")
-    return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
+    if  hasattr(ncfile, STATION_START_DATA_ATTR) :
+        return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
+    else:
+        res = sec_to_datetime64(ncfile, ncfile[TIME_VAR][0])
+        warning("No start date set in meta data : taking the first value of ncfile : %s" % res)
+        return res
+
 
 def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
@@ -180,6 +190,12 @@ def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
 
     time_var = ncfile.variables[TIME_VAR]
+
+    if not hasattr(time_var, "resolution") :
+        res= int(time_var[1] - time_var[0])
+        warning("No resolution set. Guessing :%d" % res)
+        return res
+
     val = time_var.resolution
     val, unit = val.split()
     val = int(val)
@@ -217,10 +233,12 @@ def nc2df(
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
-        steps=1) :
+        steps=1,
+        rename=True) :
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
+        :param rename: If True (default) rename solar irradiance columns to proper names
         :param ncfile: NetCDF Dataset or filename, or URL
         :param drop_duplicates: If true (default), duplicate rows with same time are droppped
         :param skip_na : If True, drop rows containing only nan values
@@ -236,7 +254,7 @@ def nc2df(
 
     chunks = __nc2df(
         ncfile, start_time, end_time,
-        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps)
+        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename)
 
     # Handling either single result or chunked generator
     if not chunked :
@@ -255,7 +273,7 @@ def __nc2df(
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
-        steps=1) :
+        steps=1, rename=True) :
     """Private generator use by nc2df """
 
     if isinstance(ncfile, str) :
@@ -301,6 +319,14 @@ def __nc2df(
 
         if skip_na :
             df = df.dropna(axis=0, how='all')
+
+        if rename :
+            for dest, sources in  ALTERNATE_NAMES.items():
+                for source in sources :
+                    if source in df.columns :
+                        warning("Renaming %s -> %s" % (source, dest))
+                        df = df.rename(columns={source:dest})
+
 
         return df
 
