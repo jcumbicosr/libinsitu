@@ -29,12 +29,13 @@ class SkyNetHandler(InSituHandler) :
         df = pd.read_csv(stream, sep=" ")
 
         # SKYNET data are every 10 seconds
-        # We downscale to the minute
+        # They are offset by 2 seconds to "round" seconds
+        # We offset them to round seconds
         df["time"] = pd.to_datetime(dict(
             year=year,
             month=df['Month'],
             day=df['Day']
-        )) + pd.to_timedelta((df["Hour"] * 3600).round(), unit="seconds")
+        )) + pd.to_timedelta((df["Hour"] * 360).round() * 10, unit="seconds")
 
         df = df.rename(columns={IRRADIANCE_COL: out_col})
         df = df.set_index("time")

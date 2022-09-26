@@ -38,7 +38,7 @@ variables:
 		Time:abbreviation = "Date/Time" ;
 		Time:units = "seconds since 1970-01-01 00:00:00" ;
 		Time:time_origin = "1970-01-01 00:00:00" ;
-		Time:resolution = "{Station_TimeResolution} min"
+		Time:resolution = "{Station_TimeResolution}"
 		Time:time_zone= "UTC"
 		Time:axis = "T" ;
 		Time:calendar = "gregorian" ;
