@@ -241,7 +241,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     # Error if chunk starts before start time
     if sum(time_idx < 0) > 0 :
-        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (time2str(chunk_start)))
+        raise Exception("Chunk start (%s) is before output start time. Skipping" % (time2str(chunk_start)))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
@@ -314,7 +314,7 @@ def main():
     args = parser.parse_args()
 
     network = args.network
-    station_id  = args.station_id.upper()
+    station_id  = args.station_id
 
     with LogContext(network=network, station_id=station_id):
         process_network(network, station_id, args.out, args)

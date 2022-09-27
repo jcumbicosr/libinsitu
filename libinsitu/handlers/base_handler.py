@@ -5,6 +5,7 @@ from datetime import datetime
 from glob import glob
 from gzip import GzipFile
 from io import TextIOWrapper
+from pathlib import PurePath
 from zipfile import ZipFile
 
 from pandas import DataFrame
@@ -33,7 +34,11 @@ class InSituHandler :
 
     # final
     def read_chunk(self, filename:str, encoding='latin1'):
-        """ Handle opening of gz / zip files """
+        """ Handle opening of gz / zip files. Filename can contain a zip entry name after '!' """
+
+        zip_entry= None
+        if '!' in filename :
+            filename, zip_entry = filename.split('!')
 
         if filename.endswith(".gz") :
             with open(filename, "rb") as f:
@@ -43,8 +48,20 @@ class InSituHandler :
         elif filename.endswith('.zip'):  # check if file is a zipped (.zip) file
 
             with ZipFile(filename) as thezip :
-                archive = [tmp for tmp in thezip.namelist() if '.txt' in tmp][0]
-                stream = thezip.open(archive, mode="r")
+
+                names = thezip.namelist()
+
+                if len(names) == 1 :
+                    entry = names[0]
+                elif zip_entry is not None: # Explicit zip entry request after !
+                    if not zip_entry in names :
+                        raise Exception("Missing zip entry '%s' in '%s'" % (zip_entry, filename))
+                    entry = zip_entry
+                else:
+                    # TODO : This was a default harcoded : should be better to set it in each subclass
+                    entry = [tmp for tmp in thezip.namelist() if '.txt' in tmp][0]
+
+                stream = thezip.open(entry, mode="r")
                 return self._read_chunk(stream)
 
         else :
@@ -96,7 +113,7 @@ class InSituHandler :
 
         debug("Pattern :", pattern)
 
-        filenames = list(glob(pattern))
+        filenames = list(_zip_glob(pattern))
 
         debug(pattern, filenames)
 
@@ -126,7 +143,10 @@ class InSituHandler :
                 return basename
 
             # By default, use year and month of modification time
-            mtime = datetime.fromtimestamp(os.path.getmtime(filename))
+            realfilename = filename
+            if '!' in filename :
+                realfilename, zip_entry = filename.split("!")
+            mtime = datetime.fromtimestamp(os.path.getmtime(realfilename))
             year = mtime.year
             month_or_days = mtime.month
 
@@ -162,3 +182,23 @@ class InSituHandler :
         """
         pass
 
+def _zip_entries(zip_file) :
+    with ZipFile(zip_file) as thezip:
+        return thezip.namelist()
+
+def _zip_glob(pattern) :
+    """Extension of 'glob' that supports looking into ZIP file entries (after '!')"""
+    entries_pattern = None
+    if '!' in pattern :
+        pattern, entries_pattern = pattern.split("!")
+
+    files = glob(pattern)
+    if entries_pattern is None :
+        return files
+
+    res = []
+    for zipfile in files :
+        for entry in  _zip_entries(zipfile) :
+            if PurePath(entry).match(entries_pattern) :
+                res.append(zipfile + '!' + entry)
+    return res

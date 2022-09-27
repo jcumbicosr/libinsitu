@@ -12,9 +12,9 @@ class SAURANHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
 
-        GHI_Col = self.properties["GHI_Col"]
-        DHI_Col = self.properties["DHI_Col"]
-        DNI_Col = self.properties["DNI_Col"]
+        GHI_Col = self.properties["Station_GHI_Col"]
+        DHI_Col = self.properties["Station_DHI_Col"]
+        DNI_Col = self.properties["Station_DNI_Col"]
 
         mapping = {
            DHI_Col: DIFFUSE_VAR,

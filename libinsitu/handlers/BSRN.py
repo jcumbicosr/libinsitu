@@ -6,21 +6,21 @@ from libinsitu.handlers.base_handler import InSituHandler, map_cols, ZERO_DEG_K
 from libinsitu.log import error
 import pandas as pd
 
+MAPPING = dict(
+    ghi=GLOBAL_VAR,
+    dni=DIRECT_VAR,
+    dhi=DIFFUSE_VAR,
+    temp_air=TEMP_VAR,
+    relative_humidity=HUMIDITY_VAR,
+    pressure=PRESSURE_VAR)
+
 class BSRNHandler(InSituHandler) :
 
     def _read_chunk(self, stream) :
 
         data, metadata = parse_bsrn(stream)
 
-        mapping = dict(
-            ghi=GLOBAL_VAR,
-            dni=DIRECT_VAR,
-            dhi=DIFFUSE_VAR,
-            temp_air=TEMP_VAR,
-            relative_humidity=HUMIDITY_VAR,
-            pressure=PRESSURE_VAR)
-
-        data = map_cols(data, mapping)
+        data = map_cols(data, MAPPING)
 
         # Check type of column
         for col in self.data_vars() :

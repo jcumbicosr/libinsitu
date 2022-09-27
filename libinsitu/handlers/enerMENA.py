@@ -4,10 +4,24 @@ from datetime import timedelta
 import pandas as pd
 
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
-    WIND_DIRECTION_VAR, NA_VALUES
+    WIND_DIRECTION_VAR, NA_VALUES, parseTimezone
 from libinsitu.handlers.base_handler import InSituHandler, ZERO_DEG_K
 from libinsitu.log import info, warning
 
+
+# Possible mapping
+MAPPING = dict(
+            ghi=GLOBAL_VAR,
+            dni=DIRECT_VAR,
+            dhi=DIFFUSE_VAR,
+            GHI=GLOBAL_VAR,
+            DNI=DIRECT_VAR,
+            DHI=DIFFUSE_VAR,
+            t_air=TEMP_VAR,
+            rh=HUMIDITY_VAR,
+            bp=PRESSURE_VAR,
+            ws=WIND_SPEED_VAR,
+            wd=WIND_DIRECTION_VAR)
 
 def read_mesor(stream, na_values=NA_VALUES):
 
@@ -69,35 +83,28 @@ class EnerMENAHandler(InSituHandler) :
 
         metadata, data = read_mesor(stream)
 
-        mapping = dict(
-            ghi=GLOBAL_VAR,
-            dni=DIRECT_VAR,
-            dhi=DIFFUSE_VAR,
-            t_air=TEMP_VAR,
-            rh=HUMIDITY_VAR,
-            bp=PRESSURE_VAR,
-            ws=WIND_SPEED_VAR,
-            wd=WIND_DIRECTION_VAR)
+        keys = list(key for key in data.columns if key in MAPPING)
+        mapping = {key: MAPPING[key] for key in keys}
 
-        data = data[list(mapping.keys())]
+        data = data[keys]
         data = data.rename(columns=mapping)
 
-        tz = 0
+        tz = timedelta(hours=0)
         if 'timezone' in metadata :
-            utc, tz = metadata['timezone'].split("+")
-            tz = int(tz)
 
-            if not utc == "UTC" :
-                raise Exception('Unknown timezone : %s' %  metadata['timezone'])
+            tz = parseTimezone(metadata['timezone'])
 
-        if tz != 0 :
+        if tz != timedelta(hours=0) :
             info("Applying timezone : %d", tz)
-            data.index = data.index - timedelta(hours=tz)
+            data.index = data.index - tz
 
         # Convertions
-        data[TEMP_VAR] = data[TEMP_VAR] + ZERO_DEG_K  # T2: °C -> K
-        data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1
-        data[PRESSURE_VAR] = data[PRESSURE_VAR] * 100  # Pressure hPa->Pa
+        if TEMP_VAR in data :
+            data[TEMP_VAR] = data[TEMP_VAR] + ZERO_DEG_K  # T2: °C -> K
+        if HUMIDITY_VAR in data:
+            data[HUMIDITY_VAR] = data[HUMIDITY_VAR] / 100  # percent -> 1
+        if PRESSURE_VAR in data:
+            data[PRESSURE_VAR] = data[PRESSURE_VAR] * 100  # Pressure hPa->Pa
 
         return data
 

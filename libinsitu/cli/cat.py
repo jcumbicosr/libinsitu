@@ -1,8 +1,12 @@
 import os, sys
+from collections import defaultdict
+
 from dateutil.relativedelta import relativedelta
 import argparse
 import numpy as np
 from numpy import datetime64
+from rich.console import Console
+from rich.table import Table
 from six import StringIO
 from datetime import datetime
 
@@ -39,6 +43,26 @@ def parse_date_filter(strval) -> (datetime64, datetime64):
 
     return np.datetime64(start), np.datetime64(end)
 
+class Stat() :
+    def __init__(self):
+        self.min = np.nan
+        self.max = np.nan
+        self.sum = 0.0
+        self.count = 0
+
+    def accumulate(self, series):
+        minval = series.min()
+        if minval is not np.nan :
+            self.min = np.nanmin([self.min, minval])
+
+        maxval = series.max()
+        if maxval is not np.nan:
+            self.max = np.nanmax([self.max, maxval])
+
+
+        self.sum += series.sum()
+        self.count += series.count()
+
 def main() :
 
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
@@ -46,6 +70,7 @@ def main() :
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
+    parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--cols', '-c', metavar="<col1>,<col2> ..", help="Selection of columns. All by default")
     parser.add_argument('--user', '-u', help='User login (or TDS_USER env var), for URL',
                         default=os.environ.get("TDS_USER", None))
@@ -66,7 +91,7 @@ def main() :
         else :
             fromTime, toTime = parse_date_filter(args.filter)
 
-    header = True
+
 
     chunks = nc2df(
         args.filename,
@@ -75,21 +100,46 @@ def main() :
         drop_duplicates=True, skip_na=args.skip_na, vars=cols, chunked=True,
         steps=args.steps, chunk_size=args.chunk_size)
 
-    for chunk in chunks :
+    if args.stats :
 
-        if len(chunk) == 0 :
-            continue
+        stats = defaultdict(lambda : Stat())
+        for chunk in chunks :
+            for col in chunk.columns :
+                series = chunk[col]
+                stats[col].accumulate(series)
 
-        if args.type == "text" :
-            chunk.to_string(sys.stdout, justify="left", header=header)
-            print("")
-        elif args.type == "csv" :
-            output = StringIO()
-            chunk.to_csv(output, index_label="time", header=header)
-            output.seek(0)
-            sys.stdout.write(output.read())
+        table = Table()
+        for name in ["column", "count", "min", "max", "mean"] :
+            table.add_column(name)
 
-        header = False
+        for colname, stat in stats.items() :
+            table.add_row(
+                colname,
+                "%d" % stat.count,
+                "%.05g" % stat.min,
+                "%.05g" % stat.max,
+                "%.05g" % (stat.sum / stat.count))
+
+        console = Console()
+        console.print(table)
+
+    else:
+        header = True
+        for chunk in chunks :
+
+            if len(chunk) == 0 :
+                continue
+
+            if args.type == "text" :
+                chunk.to_string(sys.stdout, justify="left", header=header)
+                print("")
+            elif args.type == "csv" :
+                output = StringIO()
+                chunk.to_csv(output, index_label="time", header=header)
+                output.seek(0)
+                sys.stdout.write(output.read())
+
+            header = False
 
 if __name__ == '__main__':
     main()

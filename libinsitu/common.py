@@ -1,6 +1,6 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 from csv import DictReader
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Union
 from urllib.parse import urlsplit, quote_plus
 
@@ -16,6 +16,7 @@ from pkgutil import get_data
 import os
 import re
 
+from libinsitu.log import warning
 
 TIME_DIM = 'time'
 TIME_VAR = "Time"
@@ -26,6 +27,11 @@ TEMP_VAR = "T2"
 HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 
+ALTERNATE_NAMES = {
+    DIFFUSE_VAR : ["DIF"],
+    DIRECT_VAR : ["DNI"]
+}
+
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
 
@@ -33,6 +39,17 @@ LATITUDE_VAR = "latitude"
 LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
+
+# Global attrs
+TIME_RESOLUTION_ATTR = "time_resolution"
+CLIMATE_ATTR = "Station_KoeppenGeigerClimate"
+STATION_NAME_ATTR = "Station_Name"
+STATION_ID_ATTR = "Station_ID"
+STATION_COUNTRY_ATTR = "Station_Country"
+NETWORK_NAME_ATTR = "Network_Name"
+
+
+STATION_NAME_DIM = "ncshort"
 
 STATION_PREFIX = "Station_"
 NETWORK_PREFIX = "Network_"
@@ -43,7 +60,7 @@ CHUNK_SIZE=5000
 
 
 # List of attributes to search station ID for
-STATION_ID_ATTRS = ["Station_ID", "StationInfo_Abbreviation", "station_id"]
+STATION_ID_ATTRS = ["Station_ID", "StationInfo_Abbreviation", "station_id", STATION_NAME_VAR]
 NETWORK_ID_ATTRS = ["network_id", "Network_ShortName"]
 
 DATA_VARS = [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, WIND_DIRECTION_VAR]
@@ -59,6 +76,8 @@ SECOND = timedelta64(1, 's')
 CDL_PATH = "base.cdl"
 
 
+
+STATION_START_DATA_ATTR= "Station_DataBegin"
 
 def parseCSV(res_path, key = "ID") :
     """Generic parser """
@@ -132,7 +151,13 @@ def str_to_date64(datestr) :
     return np.datetime64(datetime.strptime(datestr, DATE_FORMAT))
 
 def start_date64(ncfile) :
-    return str_to_date64(ncfile.Station_DataBegin)
+    if  hasattr(ncfile, STATION_START_DATA_ATTR) :
+        return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
+    else:
+        res = sec_to_datetime64(ncfile, ncfile[TIME_VAR][0])
+        warning("No start date set in meta data : taking the first value of ncfile : %s" % res)
+        return res
+
 
 def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
@@ -170,7 +195,14 @@ def parse_value(val) :
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
 
-    val = ncfile.variables[TIME_VAR].resolution
+    time_var = ncfile.variables[TIME_VAR]
+
+    if not hasattr(time_var, "resolution") :
+        res= int(time_var[1] - time_var[0])
+        warning("No resolution set. Guessing :%d" % res)
+        return res
+
+    val = time_var.resolution
     val, unit = val.split()
     val = int(val)
     if "min" in unit :
@@ -179,6 +211,7 @@ def getTimeResolution(ncfile) :
         return val
     else:
         raise Exception("Unknown unit for time resolution : '%s'" % unit)
+
 
 def openNetCDF(filename, mode='r', user=None, password=None) :
     """ Open either a filename or OpenDAP URL with user /password"""
@@ -274,10 +307,12 @@ def nc2df(
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
-        steps=1) :
+        steps=1,
+        rename=True) :
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
+        :param rename: If True (default) rename solar irradiance columns to proper names
         :param ncfile: NetCDF Dataset or filename, or URL
         :param drop_duplicates: If true (default), duplicate rows with same time are droppped
         :param skip_na : If True, drop rows containing only nan values
@@ -293,9 +328,9 @@ def nc2df(
 
     chunks = __nc2df(
         ncfile, start_time, end_time,
-        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps)
+        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename)
 
-    # Hadling either single result or chunked generator
+    # Handling either single result or chunked generator
     if not chunked :
         for result in chunks:
             return result
@@ -319,7 +354,7 @@ def __nc2df(
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
-        steps=1) :
+        steps=1, rename=True) :
     """Private generator use by nc2df """
 
     if isinstance(ncfile, str) :
@@ -352,6 +387,15 @@ def __nc2df(
 
         # Set global attributes in DataFrame
         attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
+
+        # Put single var meta data in attributes
+        attrs[LATITUDE_VAR] = readSingleVar(ncfile, LATITUDE_VAR)
+        attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
+        attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
+        attrs[STATION_NAME_VAR] = readShortname(ncfile)
+        attrs[TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
+
+        # Move it in Dataframe meta attributes
         df.attrs.update(attrs)
 
         # Drop duplicated : only keep last
@@ -360,6 +404,14 @@ def __nc2df(
 
         if skip_na :
             df = df.dropna(axis=0, how='all')
+
+        if rename :
+            for dest, sources in  ALTERNATE_NAMES.items():
+                for source in sources :
+                    if source in df.columns :
+                        warning("Renaming %s -> %s" % (source, dest))
+                        df = df.rename(columns={source:dest})
+
 
         return df
 
@@ -453,15 +505,26 @@ def read_str(var) :
 
     return string_array[()]
 
+def readSingleVar(nc, var) :
+    """Read a meta variable encoded as a single value variable """
+    arr = nc.variables[var][:].flatten()
+    if len(arr) == 0 :
+        return None
+    else:
+        return arr[0]
 
-def getStationId(attributes) :
-    # First try standard attributes
-    for name in STATION_ID_ATTRS :
-        if name in attributes :
-            return attributes[name]
-
+def readShortname(ncfile) :
     # Then read the content of the dedicated var
-    return read_str(STATION_NAME_VAR)
+    return read_str(ncfile.variables[STATION_NAME_VAR])
+
+def getStationId(attrs) :
+    # First try standard attributes
+    for key in STATION_ID_ATTRS :
+        if key in attrs :
+            return attrs[key]
+
+    return None
+
 
 def getNetworkId(attributes) :
     # First try standard attributes
