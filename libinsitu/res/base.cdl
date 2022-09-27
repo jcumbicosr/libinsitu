@@ -52,8 +52,8 @@ variables:
 		GHI:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
 		GHI:abbreviation = "SWD" ;
 		GHI:units = "W m-2" ;
-		GHI:valid_min=0.0 ;
-		GHI:valid_max=3000 ;
+		GHI:_valid_min=0.0 ;
+		GHI:_valid_max=3000 ;
 		GHI:grid_mapping = "crs" ;
 
 	float DHI(time) ;
@@ -61,8 +61,8 @@ variables:
 		DHI:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
 		DHI:abbreviation = "DHI" ;
 		DHI:units = "W m-2" ;
-		DHI:valid_min=0.0 ;
-		DHI:valid_max=3000 ;
+		DHI:_valid_min=0.0 ;
+		DHI:_valid_max=3000 ;
 		DHI:grid_mapping = "crs" ;
 
 	float BNI(time) ;
@@ -70,8 +70,8 @@ variables:
 		BNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
 		BNI:abbreviation = "BNI" ;
 		BNI:units = "W m-2" ;
-		BNI:valid_min=0.0 ;
-		BNI:valid_max=3000 ;
+		BNI:_valid_min=0.0 ;
+		BNI:_valid_max=3000 ;
 		BNI:grid_mapping = "crs" ;
 
 	float T2(time) ;
@@ -79,8 +79,8 @@ variables:
 		T2:standard_name = "air_temperature" ;
 		T2:abbreviation = "T2" ;
 		T2:units = "K" ;
-		T2:valid_min=123.0 ;
-		T2:valid_max=372.9 ;
+		T2:_valid_min=123.0 ;
+		T2:_valid_max=372.9 ;
 		T2:grid_mapping = "crs" ;
 
 	float RH(time) ;
@@ -89,8 +89,8 @@ variables:
 		RH:standard_name = "relative_humidity" ;
 		RH:abbreviation = "RH" ;
 		RH:units = "1" ;
-		RH:valid_min=0.0 ;
-		RH:valid_max=1.0 ;
+		RH:_valid_min=0.0 ;
+		RH:_valid_max=1.0 ;
 		RH:grid_mapping = "crs" ;
 
 	float WS(time) ;
@@ -99,8 +99,8 @@ variables:
 		WS:standard_name = "wind_speed" ;
 		WS:abbreviation = "windspd" ;
 		WS:units = "m s-1" ;
-		WS:valid_min=0.0;
-		WS:valid_max=100.0;
+		WS:_valid_min=0.0;
+		WS:_valid_max=100.0;
 		WS:grid_mapping = "crs" ;
 
 	float WD(time) ;
@@ -109,8 +109,8 @@ variables:
 		WD:standard_name = "wind_direction" ;
 		WD:abbreviation = "winddir" ;
 		WD:units = "degrees";
-		WD:valid_min=0.0;
-		WD:valid_max=360.0;
+		WD:_valid_min=0.0;
+		WD:_valid_max=360.0;
 		WD:grid_mapping = "crs" ;
 
 	float P(time) ;
@@ -119,8 +119,8 @@ variables:
 		P:standard_name = "air_pressure" ;
 
 		P:units = "Pa" ;
-		P:valid_min=0.0 ;
-		P:valid_max=120000.0;
+		P:_valid_min=0.0 ;
+		P:_valid_max=120000.0;
 		P:grid_mapping = "crs" ;
 
 # Global attributes
@@ -168,8 +168,8 @@ variables:
     :geospatial_bounds_crs = "EPSG:4326";
 
     # Time information
-    :time_coverage_start = "{FirstData}" ;  # First data [Dataset Discovery v1.0]
-    :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
+    :time_coverage_start = "{Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
+    :time_coverage_end = "{Station_EndDate}T00:00:00";  # Last data [Dataset Discovery v1.0]
     :time_coverage_resolution = "P{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
     :local_time_zone = "{Station_Timezone}" ;
     :date_created = "{CreationTime}";

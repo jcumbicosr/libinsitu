@@ -11,6 +11,7 @@ from urllib.request import urlopen
 import sg2
 from appdirs import user_cache_dir
 
+from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS
 from libinsitu.log import info, warning
 import os
 
@@ -25,8 +26,7 @@ import matplotlib as mpl
 import pvlib
 from matplotlib import cm
 
-from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, CLIMATE_ATTR, STATION_NAME_VAR, \
-    STATION_ID_ATTR, NETWORK_NAME_ATTR, STATION_COUNTRY_ATTR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, TIME_RESOLUTION_ATTR
+from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
 from diskcache import Cache
 
 cachedir = user_cache_dir("libinsitu")
@@ -40,6 +40,12 @@ MAX_VAL = 5000.0
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
 
 
+def _get_meta(df, keys) :
+    """Try several keys to get Meta data"""
+    for key in keys :
+        if key in df.attrs :
+            return df.attrs[key]
+    return "-"
 
 def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=False):
     """
@@ -58,10 +64,10 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     latitude = QC_df.attrs[LATITUDE_VAR]
     longitude = QC_df.attrs[LONGITUDE_VAR]
     elevation = QC_df.attrs[ELEVATION_VAR]
-    climate = QC_df.attrs.get(CLIMATE_ATTR, "-")
-    country = QC_df.attrs.get(STATION_COUNTRY_ATTR, "-")
-    source = QC_df.attrs.get(NETWORK_NAME_ATTR, "-")
-    station_id = QC_df.attrs.get(STATION_ID_ATTR, "-")
+    climate = _get_meta(QC_df, CLIMATE_ATTRS)
+    country = _get_meta(QC_df, STATION_COUNTRY_ATTRS)
+    source = _get_meta(QC_df, NETWORK_NAME_ATTRS)
+    station_id = _get_meta(QC_df, STATION_ID_ATTRS)
     station = QC_df.attrs.get(STATION_NAME_VAR, "-")
 
     horizons = QC_df.attrs[HORIZON_ATTR]
@@ -854,7 +860,7 @@ def enrich_data(df, includeCAMS=True):
 
 
     # Resample ?
-    resolution_min = df.attrs[TIME_RESOLUTION_ATTR] // 60
+    resolution_min = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR] // 60
     if resolution_min != 1 :
         warning("Input resolution is %d minutes, resampling to 1 min" % resolution_min)
         df = df.resample("1Min").ffill()

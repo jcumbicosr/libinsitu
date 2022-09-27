@@ -135,13 +135,17 @@ They should declare the following CF attributes :
 * **units** (mandatory)  : Unit
 * **grid_mapping**  (mandatory)  : Set to "crs" defined above
 * **long name** (optional) : for display
-* **valid_min** (optional): Float attribute value for expected minimum (used for QC)
-* **valid_max** (optional): Float attribute value for expected maximum (used for QC)
+* **_valid_min, _valid_max** (optional): Float attribute value for expected minimum and maximum (used for QC). 
+  Note that we don't use the CF convention **valid_min, valid_max** here, since some drivers remove values not fitting in this range.
+  We want to keep full control upon data here, and only use this meta data for flagging some values. 
+
 
 We propose to include the following subset of [CF data variables](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html), 
 depending of their availability.
 
-The variable names is a suggestion. The standard name and units should be respected.
+The variable names is a suggestion.
+The standard name and units should be respected.
+We propose to use SI units when possible.
 
 | Name | standard_name                      | unit        |
 |------|------------------------------------|-------------|

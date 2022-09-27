@@ -10,23 +10,43 @@ from libinsitu.handlers import HANDLERS, InSituHandler
 from libinsitu.log import debug, info, warning, logger, LogContext, error
 import argparse
 
+# FIXME Don't push this
+from line_profiler_pycharm import profile
+
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
 
+BOUNDARY_TOLERANCE_PCT = 5
+
 def check_boundaries(var, data) :
     """Check boundaries of a variable"""
-    for bound_name, sense in dict(valid_min=-1, valid_max=1).items() :
-        if bound_name in var.ncattrs():
-            bound = parse_value(var.__dict__[bound_name])
-            idx = data < bound if sense == -1 else data > bound
-            if np.any(idx) :
-                warning("Boundary check : %d items of %s are %s %f: [%f:%f]",
+    if not hasattr(var, VALID_MIN_ATTR) :
+        return
+
+    debug("Checking boundaries for %s" % var)
+
+    minv = parse_value(getattr(var, VALID_MIN_ATTR))
+    maxv = parse_value(getattr(var, VALID_MAX_ATTR))
+
+    range = maxv - minv
+
+    # Add tolerance
+    minv = minv - range * BOUNDARY_TOLERANCE_PCT / 100
+    maxv = maxv + range * BOUNDARY_TOLERANCE_PCT / 100
+
+    def warn_boundary(idx, sign, bound) :
+        if np.any(idx):
+            warning("Boundary check : %d items of %s are %s %f: [%f:%f]",
                     np.sum(idx),
                     var.name,
-                    "<" if sense == -1 else ">",
+                    sign,
                     bound,
                     np.min(data[idx]),
                     np.max(data[idx]))
+
+    warn_boundary(data < minv, "<", minv)
+    warn_boundary(data > maxv, ">", maxv)
+
 
 def list_files(in_files, handler) :
 
@@ -111,6 +131,23 @@ def process_network(network, station_id, out_filename, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
+
+# FIXME : Rarely helps, we should write some clever system to split indices into list of slices
+def idx2slice(idx) :
+    """If indices are regular, transform it into a slice : much faster for writing"""
+
+    if len(idx) < 2 :
+        return idx
+
+    step = idx[1] - idx[0]
+
+    if np.all(np.diff(idx) == step) :
+        debug("Idx was slice")
+        return slice(idx[0], idx[1] + step, step)
+
+    return idx
+
+@profile
 def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
     # Check once for all if new chunk overlaps
@@ -129,7 +166,7 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
         if not np.any(overlapping_mask) or not args.check:
             # No overlap with previous data ? no need for check
-            write_mask = np.ones(new_values.shape, dtype=bool)
+            var[idx2slice(times_idx)] = new_values
 
         else :
             debug("Possible overlap, checking ...")
@@ -164,28 +201,9 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
                 # Write NaN if they do not overlap with existing data (this extends the dimension)
                 write_mask = nan_mask | ~overlapping_mask
 
-        # Update time range in var attributes
-        update_time_range(ncfile, var, new_values, times_idx)
+            var[idx2slice(times_idx[write_mask])] = new_values[write_mask]
 
-        var[times_idx[write_mask]] = new_values[write_mask]
 
-def update_time_range(ncfile, var, new_values, times_idx):
-    """Update FirstData / LastData attribute of a variable """
-
-    minMaxTime = getMinMaxTimes(ncfile, new_values, times_idx, var.name)
-
-    for key in [FIRST_DATA_ATT, LAST_DATA_ATT]:
-
-        inverse = key == LAST_DATA_ATT
-        currTime = minMaxTime[key]
-
-        if currTime is None :
-            continue
-
-        currentLimit = None if not key in var.ncattrs() else str2time64(var.getncattr(key))
-
-        if currentLimit is None or (inverse ^ (currTime < currentLimit)):
-            var.setncattr(key, time2str(currTime))
 
 def process_chunck(handler, infile, ncfile, args, properties):
 

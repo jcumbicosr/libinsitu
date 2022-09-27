@@ -18,6 +18,7 @@ import re
 
 from libinsitu.log import warning
 
+# Name of dimensions and variables
 TIME_DIM = 'time'
 TIME_VAR = "Time"
 GLOBAL_VAR = "GHI"
@@ -26,31 +27,47 @@ DIRECT_VAR = "BNI"
 TEMP_VAR = "T2"
 HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
+WIND_SPEED_VAR = "WS"
+WIND_DIRECTION_VAR = "WD"
 
+# Variable attributes
+VALID_MIN_ATTR = "_valid_min"
+VALID_MAX_ATTR = "_valid_max"
+
+# Alternate names often found for variables
 ALTERNATE_NAMES = {
     DIFFUSE_VAR : ["DIF"],
     DIRECT_VAR : ["DNI"]
 }
 
-WIND_SPEED_VAR = "WS"
-WIND_DIRECTION_VAR = "WD"
-
+# Meta data variables
 LATITUDE_VAR = "latitude"
 LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+
 # Global attrs
-TIME_RESOLUTION_ATTR = "time_resolution"
-CLIMATE_ATTR = "Station_KoeppenGeigerClimate"
-STATION_NAME_ATTR = "Station_Name"
-STATION_ID_ATTR = "Station_ID"
-STATION_COUNTRY_ATTR = "Station_Country"
-NETWORK_NAME_ATTR = "Network_Name"
+GLOBAL_TIME_RESOLUTION_ATTR = "time_coverage_resolution"
 
+CLIMATE_ATTRS = [
+    "climate",
+    "Station_KoeppenGeigerClimate"] # XXX Old convention
 
-STATION_NAME_DIM = "ncshort"
+STATION_ID_ATTRS = [
+    "station_id",
+    "Station_Id",  # XXX Old convention
+    "id"]
 
+STATION_COUNTRY_ATTRS = [
+    "station_country",
+    "Station_Country"] # XXX Old conventions
+
+NETWORK_NAME_ATTRS = [
+    "Network_Name", # XXX Old convention
+    "project"]
+
+# Prefix for global properties
 STATION_PREFIX = "Station_"
 NETWORK_PREFIX = "Network_"
 
@@ -71,13 +88,11 @@ NETWORK_INFO_FILE = "networks.csv"
 DATE_FORMAT = '%Y-%m-%d'
 TIME_FORMAT_MIN= '%Y-%m-%dT%H:%M'
 TIME_FORMAT_SEC= '%Y-%m-%dT%H:%M:%S'
+
+STATION_START_DATA_ATTR = "time_coverage_start"
+
 SECOND = timedelta64(1, 's')
-
 CDL_PATH = "base.cdl"
-
-
-
-STATION_START_DATA_ATTR= "Station_DataBegin"
 
 def parseCSV(res_path, key = "ID") :
     """Generic parser """
@@ -148,7 +163,14 @@ def datetime64_to_sec(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
     return to_int((dates - origin) / SECOND)
 
 def str_to_date64(datestr) :
-    return np.datetime64(datetime.strptime(datestr, DATE_FORMAT))
+    for format in [TIME_FORMAT_SEC, TIME_FORMAT_MIN, DATE_FORMAT] :
+        try :
+            return np.datetime64(datetime.strptime(datestr, format))
+        except:
+            pass
+
+    raise Exception("Unable to parse : " + datestr)
+
 
 def start_date64(ncfile) :
     if  hasattr(ncfile, STATION_START_DATA_ATTR) :
@@ -195,22 +217,29 @@ def parse_value(val) :
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
 
-    time_var = ncfile.variables[TIME_VAR]
+    time_var = getTimeVar(ncfile)
 
-    if not hasattr(time_var, "resolution") :
-        res= int(time_var[1] - time_var[0])
-        warning("No resolution set. Guessing :%d" % res)
-        return res
+    # Formatted as ISO8601 : P10M, P30S, ...
+    if hasattr(ncfile, GLOBAL_TIME_RESOLUTION_ATTR) :
+        dt = pd.Timedelta(getattr(ncfile, GLOBAL_TIME_RESOLUTION_ATTR))
+        return dt.seconds
 
-    val = time_var.resolution
-    val, unit = val.split()
-    val = int(val)
-    if "min" in unit :
-        return val * 60
-    elif "sec" in unit:
-        return val
-    else:
-        raise Exception("Unknown unit for time resolution : '%s'" % unit)
+    if hasattr(time_var, "resolution") :
+        # XXX - Support for old versions of NetCDF
+        val = time_var.resolution
+        val, unit = val.split()
+        val = int(val)
+        if "min" in unit :
+            return val * 60
+        elif "sec" in unit:
+            return val
+        else:
+            raise Exception("Unknown unit for time resolution : '%s'" % unit)
+
+    # Guessing from actual first values
+    res = int(time_var[1] - time_var[0])
+    warning("No resolution set. Guessing :%d seconds" % res)
+    return res
 
 
 def openNetCDF(filename, mode='r', user=None, password=None) :
@@ -338,10 +367,10 @@ def nc2df(
         return chunks
 
 
-def getTimeVar(ds) :
-    for key in ds.variables.keys() :
+def getTimeVar(nc) :
+    for key in nc.variables.keys() :
         if key.lower() == TIME_VAR.lower() :
-            return ds.variables[key]
+            return nc.variables[key]
     raise Exception("No time var found")
 
 def __nc2df(
@@ -393,7 +422,9 @@ def __nc2df(
         attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
         attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
         attrs[STATION_NAME_VAR] = readShortname(ncfile)
-        attrs[TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
+
+        # Put time resolution in seconds in global var
+        attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
 
         # Move it in Dataframe meta attributes
         df.attrs.update(attrs)
