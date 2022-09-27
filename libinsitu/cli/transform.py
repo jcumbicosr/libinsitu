@@ -10,8 +10,6 @@ from libinsitu.handlers import HANDLERS, InSituHandler
 from libinsitu.log import debug, info, warning, logger, LogContext, error
 import argparse
 
-# FIXME Don't push this
-from line_profiler_pycharm import profile
 
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
@@ -147,7 +145,6 @@ def idx2slice(idx) :
 
     return idx
 
-@profile
 def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
     # Check once for all if new chunk overlaps

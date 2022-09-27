@@ -55,6 +55,7 @@ variables:
 		GHI:_valid_min=0.0 ;
 		GHI:_valid_max=3000 ;
 		GHI:grid_mapping = "crs" ;
+		GHI:least_significant_digit=1;
 
 	float DHI(time) ;
 		DHI:long_name = "Diffuse horizontal radiation" ;
@@ -64,6 +65,7 @@ variables:
 		DHI:_valid_min=0.0 ;
 		DHI:_valid_max=3000 ;
 		DHI:grid_mapping = "crs" ;
+		DHI:least_significant_digit=1;
 
 	float BNI(time) ;
 		BNI:long_name = "Beam (or direct) normal radiation" ;
@@ -73,6 +75,7 @@ variables:
 		BNI:_valid_min=0.0 ;
 		BNI:_valid_max=3000 ;
 		BNI:grid_mapping = "crs" ;
+		BNI:least_significant_digit=1;
 
 	float T2(time) ;
 		T2:long_name = "Air temperature at 2 m height" ;
@@ -82,6 +85,7 @@ variables:
 		T2:_valid_min=123.0 ;
 		T2:_valid_max=372.9 ;
 		T2:grid_mapping = "crs" ;
+		T2:least_significant_digit=1;
 
 	float RH(time) ;
 
@@ -92,6 +96,7 @@ variables:
 		RH:_valid_min=0.0 ;
 		RH:_valid_max=1.0 ;
 		RH:grid_mapping = "crs" ;
+		RH:least_significant_digit=3;
 
 	float WS(time) ;
 
@@ -102,6 +107,7 @@ variables:
 		WS:_valid_min=0.0;
 		WS:_valid_max=100.0;
 		WS:grid_mapping = "crs" ;
+		WS:least_significant_digit=1;
 
 	float WD(time) ;
 
@@ -112,6 +118,7 @@ variables:
 		WD:_valid_min=0.0;
 		WD:_valid_max=360.0;
 		WD:grid_mapping = "crs" ;
+		WD:least_significant_digit=1;
 
 	float P(time) ;
 		P:parameter = "Station pressure" ;
@@ -122,6 +129,7 @@ variables:
 		P:_valid_min=0.0 ;
 		P:_valid_max=120000.0;
 		P:grid_mapping = "crs" ;
+		P:least_significant_digit=0;
 
 # Global attributes
 

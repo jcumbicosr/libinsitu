@@ -162,9 +162,11 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False, delete_attrs=F
         info("Would add variable : %s" % vardef.name)
         return
 
-    info("Adding variable '%s'", vardef.name)
+
 
     least_significant_digit = vardef.attributes.get("least_significant_digit", None)
+
+    info("Adding variable '%s'. Precision:%s" %  (vardef.name, least_significant_digit))
 
     ncfile.createVariable(
         vardef.name, vardef.type, vardef.dimensions,

@@ -23,7 +23,8 @@ def main() :
     df = nc2df(
         args.input,
         start_time=args.from_date,
-        end_time=args.to_date)
+        end_time=args.to_date,
+        rename=True)
 
     # Add SG2 , Cams and horizon data
     df = enrich_data(df, includeCAMS=True)

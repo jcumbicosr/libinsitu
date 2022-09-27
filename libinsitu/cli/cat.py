@@ -63,6 +63,35 @@ class Stat() :
         self.sum += series.sum()
         self.count += series.count()
 
+def print_meta(df) :
+
+    def print_dict(dic, indent=0) :
+        for key, val in dic.items() :
+            if isinstance(val, dict) :
+                print("#%s %s:" % (" " * indent, key))
+                print_dict(val, indent+2)
+            else:
+                print("#%s %s = %s" % (" " * indent, key, str(val)))
+
+    print_dict(df.attrs)
+
+
+def float_to_str(nb_digits) :
+    format = "%." + str(nb_digits) + "f"
+
+    def format_f(floatval) :
+        return format % floatval
+
+    return format_f
+
+def build_formatters(df) :
+    res = dict()
+    for varname in df.columns :
+        var_attrs = df.attrs["variables"][varname]
+        if "least_significant_digit" in var_attrs :
+            res[varname] = float_to_str(var_attrs["least_significant_digit"])
+    return res
+
 def main() :
 
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
@@ -71,6 +100,8 @@ def main() :
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
+    parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
+    parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")
     parser.add_argument('--cols', '-c', metavar="<col1>,<col2> ..", help="Selection of columns. All by default")
     parser.add_argument('--user', '-u', help='User login (or TDS_USER env var), for URL',
                         default=os.environ.get("TDS_USER", None))
@@ -90,7 +121,6 @@ def main() :
             _, toTime = parse_date_filter(filter2)
         else :
             fromTime, toTime = parse_date_filter(args.filter)
-
 
 
     chunks = nc2df(
@@ -125,13 +155,23 @@ def main() :
 
     else:
         header = True
+        formatters = None
         for chunk in chunks :
 
             if len(chunk) == 0 :
                 continue
 
+            if header and args.header :
+                print_meta(chunk)
+
+            if formatters is None :
+                formatters = build_formatters(chunk)
+
+            if args.no_data :
+                break
+
             if args.type == "text" :
-                chunk.to_string(sys.stdout, justify="left", header=header)
+                chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
                 print("")
             elif args.type == "csv" :
                 output = StringIO()

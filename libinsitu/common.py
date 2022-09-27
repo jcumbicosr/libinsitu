@@ -337,7 +337,7 @@ def nc2df(
         chunked=False,
         chunk_size=CHUNK_SIZE,
         steps=1,
-        rename=True) :
+        rename=False) :
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
@@ -373,6 +373,28 @@ def getTimeVar(nc) :
             return nc.variables[key]
     raise Exception("No time var found")
 
+def __get_attributes(ncfile_or_var) :
+    return dict((key, getattr(ncfile_or_var, key)) for key in ncfile_or_var.ncattrs())
+
+def __all_attributes(ncfile) :
+
+    # Global attributes
+    attrs = __get_attributes(ncfile)
+
+    # Put single var meta data in global attributes
+    attrs[LATITUDE_VAR] = readSingleVar(ncfile, LATITUDE_VAR)
+    attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
+    attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
+    attrs[STATION_NAME_VAR] = readShortname(ncfile)
+
+    # Add meta data of variables
+    attrs["variables"] = dict((varname, __get_attributes(var)) for varname, var in ncfile.variables.items())
+
+    # Put time resolution in seconds in global var
+    attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
+
+    return attrs
+
 def __nc2df(
         ncfile : Union[Dataset, str],
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
@@ -396,7 +418,7 @@ def __nc2df(
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
     end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size
 
-    # List of vars (along time)
+    # List of data vars (along time)
     data_vars = []
     for varname, var in ncfile.variables.items() :
         if TIME_DIM in var.dimensions and var != timeVar :
@@ -408,34 +430,32 @@ def __nc2df(
 
         times = sec_to_datetime64(ncfile, timeVar[start_idx:end_idx:steps])
 
+        # Loop on data variables
         data = dict()
-        for var in data_vars :
-            data[var] = ncfile.variables[var][start_idx:end_idx:steps]
+        for varname in data_vars :
+            var = ncfile.variables[varname]
+            floats = var[start_idx:end_idx:steps]
+
+            #if hasattr(var, "least_significant_digit") :
+            #    digits = var.least_significant_digit
+            #    floats = np.around(floats, decimals=digits)
+
+            data[varname] = floats
 
         df = DataFrame(data, index=times)
 
-        # Set global attributes in DataFrame
-        attrs = dict((key, getattr(ncfile, key)) for key in ncfile.ncattrs())
-
-        # Put single var meta data in attributes
-        attrs[LATITUDE_VAR] = readSingleVar(ncfile, LATITUDE_VAR)
-        attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
-        attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
-        attrs[STATION_NAME_VAR] = readShortname(ncfile)
-
-        # Put time resolution in seconds in global var
-        attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
-
-        # Move it in Dataframe meta attributes
-        df.attrs.update(attrs)
+        # Add meta data to attributes of the Dataframe
+        df.attrs.update(__all_attributes(ncfile))
 
         # Drop duplicated : only keep last
         if drop_duplicates :
             df = df[~df.index.duplicated(keep="last")]
 
+        # Drop NA ?
         if skip_na :
             df = df.dropna(axis=0, how='all')
 
+        # Rename variables
         if rename :
             for dest, sources in  ALTERNATE_NAMES.items():
                 for source in sources :
