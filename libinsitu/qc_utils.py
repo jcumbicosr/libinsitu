@@ -11,8 +11,11 @@ from urllib.request import urlopen
 import sg2
 from appdirs import user_cache_dir
 from pandas import DataFrame
+from pandas._libs.internals import defaultdict
 
-from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS
+from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
+    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar
+from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning, LogContext
 import os
 
@@ -31,13 +34,15 @@ from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION
 from diskcache import Cache
 
 cachedir = user_cache_dir("libinsitu")
-info("Cache folder : %s", cachedir)
 cache = Cache(cachedir)
 
 MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
+
+QC_FLAGS_VAR = "QC"
+#QC_RUN_VAR = "qc_run"
 
 
 def _get_meta(df, keys) :
@@ -82,8 +87,8 @@ def SolarRadVisualControl(
     shape = meas_df.shape
     index = meas_df.index
     GHI = meas_df.GHI
-    DIF = meas_df.DIF
-    DNI = meas_df.DNI
+    DIF = meas_df.DHI
+    DNI = meas_df.BNI
 
     TOA = sp_df.TOA
     TOANI = sp_df.TOANI
@@ -771,8 +776,8 @@ def flagData(meas_df, sp_df):
 
     # Aliases
     GHI = meas_df.GHI
-    DIF = meas_df.DIF
-    DNI = meas_df.DNI
+    DIF = meas_df.DHI
+    DNI = meas_df.BNI
 
     TOA = sp_df.TOA
     TOANI = sp_df.TOANI
@@ -780,18 +785,18 @@ def flagData(meas_df, sp_df):
     #CLEAR_SKY_GHI = sp_df.CLEAR_SKY_GHI
     #CLEAR_SKY_DNI = sp_df.CLEAR_SKY_DNI
 
-    GHI_est = meas_df.DIF + meas_df.DNI * np.cos(sp_df.THETA_Z)
+    GHI_est = DIF + DNI * np.cos(sp_df.THETA_Z)
     SZA = sp_df.THETA_Z * 180 / np.pi
 
-    shape = meas_df.GHI.shape
+    size = len(meas_df.GHI)
 
-    KT = np.zeros(shape)
+    KT = np.zeros(size)
     KT[TOA >= 1] = GHI[TOA >= 1] / TOA[TOA >= 1]
 
-    Kn = np.zeros(shape)
+    Kn = np.zeros(size)
     Kn[TOANI >= 1] = DNI[TOANI >= 1] / TOANI[TOANI >= 1]
 
-    K = np.zeros(shape)
+    K = np.zeros(size)
     K[GHI >= 1] = DIF[GHI >= 1] / GHI[GHI >= 1]
 
     #kc = np.zeros(shape)
@@ -865,8 +870,8 @@ def flagData(meas_df, sp_df):
 def qc_stats(meas_df, sp_df, flag_df) :
 
     GHI = meas_df.GHI
-    DIF = meas_df.DIF
-    DNI = meas_df.DNI
+    DIF = meas_df.DHI
+    DNI = meas_df.BNI
 
     TOA = sp_df.TOA
 
@@ -897,45 +902,36 @@ def qc_stats(meas_df, sp_df, flag_df) :
             (TOA > 0) & (GHI > -2) & (DIF > -2) & (DNI > -2)) * 100}
 
 
-def prepare_data(df):
+def cleanup_data(df, freq):
     """Adds sg2, cams and horizon data"""
 
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
     for varname in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
         var = df[varname]
-        var[var > MAX_VAL] = np.nan
-        var[var < MIN_VAL] = np.nan
+        df.loc[var > MAX_VAL, varname] = np.nan
+        df.loc[var < MIN_VAL, varname] = np.nan
 
-    # Rename
-    df = df.rename(columns=dict(
-        DHI='DIF',
-        BNI='DNI'))
+    freq_min = freq // 60
 
-    # Resample ?
-    resolution_min = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR] // 60
-    if resolution_min != 1 :
-        warning("Input resolution is %d minutes, resampling to 1 min" % resolution_min)
-        df = df.resample("1Min").ffill()
-
-    df = df.asfreq("1Min")
+    df = df.resample(str(freq_min) + "Min").ffill()
+    df = df.asfreq(str(freq_min) + "Min")
 
     start_date = df.index.min().normalize()
     end_date = df.index.max().normalize() + np.timedelta64(24 * 60 - 1, "m")
 
-    df = df.reindex(pd.date_range(start_date, end_date, freq="60S"))
-
-    info("Start time : %s", df.index.min())
-    info("End time : %s", df.index.max())
+    df = df.reindex(pd.date_range(start_date, end_date, freq=str(freq_min) + "min"))
 
     return df
 
 @cache.memoize()
-def sun_position(lat, lon, alt, start_time, end_time, freq='60S') :
+def sun_position(lat, lon, alt, start_time, end_time, freq_sec=60) :
 
     info("Computing sun position")
     if alt == np.nan:
         alt = 0
+
+    freq=str(freq_sec) + "S"
 
     times = pd.date_range(start_time, end_time, freq=freq)
 
@@ -1024,4 +1020,48 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 
 
 
+def write_flags(ncfile, flags_df) :
+
+    # Parse CDL : use defaultdict to avoid warning
+    cdl = parse_cdl(read_res(CDL_PATH), attributes=DefaultDict(lambda : "-"))
+
+    # Create var if not present yet
+    if not QC_FLAGS_VAR in ncfile.variables :
+        initVar(ncfile, cdl.variables[QC_FLAGS_VAR])
+
+    qc_var = ncfile.variables[QC_FLAGS_VAR]
+
+    # Build a dictionary of masks
+    flag_masks = dict((flag, mask) for flag, mask in zip(qc_var.flag_meanings.split(), qc_var.flag_masks))
+
+    info("Flag masks  : %s" % flag_masks)
+
+    # Output
+    out_masks = np.zeros(len(flags_df))
+
+    for colname in flags_df.columns :
+        if not colname in flag_masks :
+            warning("Flag %s not found in QC flags DSL. Skipping" % colname)
+            continue
+
+        colvalues = flags_df[colname]
+
+        out_masks += colvalues.values * flag_masks[colname]
+
+    # Compute IDX
+    dates = flags_df.index.values
+    times_sec = datetime64_to_sec(ncfile, dates)
+    time_idx = seconds_to_idx(ncfile, times_sec)
+
+    # Assign flags
+    time_var = getTimeVar(ncfile)
+    max_time = len(time_var)
+
+    out_idx = time_idx > max_time -1
+    if np.any(out_idx) :
+        warning("Index of of time range. Truncating %d values" % np.sum(out_idx))
+        time_idx = time_idx[~out_idx]
+        out_masks = out_masks[~out_idx]
+
+    qc_var[time_idx] = out_masks
 

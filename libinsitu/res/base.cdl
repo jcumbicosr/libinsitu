@@ -131,6 +131,12 @@ variables:
 		P:grid_mapping = "crs" ;
 		P:least_significant_digit=0;
 
+	uint QC(time) ;
+	    QC:long_name = "QC flag status";
+	    QC:comment = "Flag=1 means QC test failed";
+	    QC:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
+	    QC:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+
 # Global attributes
 
     # Main info

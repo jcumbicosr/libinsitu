@@ -34,7 +34,7 @@ def replace_placeholders(strval, attributes) :
 
     return re.sub(r'{\w+}', repl, strval)
 
-def parse_cdl(lines, attributes) :
+def parse_cdl(lines, attributes=dict()) :
 
     res = CDL()
 
@@ -55,7 +55,7 @@ def parse_cdl(lines, attributes) :
         # key = value
         if "=" in line :
             line = line.strip(";")
-            key, val = line.split("=")
+            key, val = line.split("=", 1)
             key = key.strip()
             val = parse_value(val.strip())
 
@@ -162,8 +162,8 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False) :
         info("Would add variable : %s" % vardef.name)
         return
 
-
     least_significant_digit = vardef.attributes.get("least_significant_digit", None)
+    fill_value = vardef.attributes.get("_FillValue", None)
 
     info("Adding variable '%s'. Precision:%s" %  (vardef.name, least_significant_digit))
 
@@ -171,7 +171,8 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False) :
         vardef.name, vardef.type, vardef.dimensions,
         zlib=True,
         complevel=9,
-        least_significant_digit=least_significant_digit)
+        least_significant_digit=least_significant_digit,
+        fill_value=fill_value)
 
 def initVar(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
 

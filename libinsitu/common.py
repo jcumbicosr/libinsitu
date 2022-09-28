@@ -1,3 +1,4 @@
+from collections import defaultdict
 from concurrent.futures.thread import ThreadPoolExecutor
 from csv import DictReader
 from datetime import datetime, timedelta
@@ -46,6 +47,8 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+# Columns no included in Skip_na
+COL_NOSKIP=["QC"]
 
 # Global attrs
 GLOBAL_TIME_RESOLUTION_ATTR = "time_coverage_resolution"
@@ -202,17 +205,28 @@ def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
     if not isinstance(val, str) :
         return val
-    elif val is None or val == "":
+
+    if val is None or val == "":
         return None
+
+    val = val.strip()
+
+    # String
+    if val.startswith('"'):
+        return val.strip('"')
+
+    # List of things
+    if "," in val :
+        return list(parse_value(item) for item in val.split(","))
+
     try :
         return int(val)
     except:
         try:
             return float(val)
         except:
-            if val.startswith('"') :
-                val = val.strip('"')
             return val
+
 
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
@@ -453,11 +467,12 @@ def __nc2df(
 
         # Drop NA ?
         if skip_na :
-            df = df.dropna(axis=0, how='all')
+            subset = list(col for col in df.columns if col not in COL_NOSKIP)
+            df = df.dropna(axis=0, how='all', subset=subset)
 
         # Rename variables
         if rename :
-            for dest, sources in  ALTERNATE_NAMES.items():
+            for dest, sources in ALTERNATE_NAMES.items():
                 for source in sources :
                     if source in df.columns :
                         warning("Renaming %s -> %s" % (source, dest))
@@ -613,3 +628,10 @@ def parallel_map(fn, iterable, parallel, max_workers=None) :
         return exec.map(fn, iterable)
     else:
         return map(fn, iterable)
+
+
+class DefaultDict(defaultdict) :
+    """Default awnsering 'True' to X in dict """
+
+    def __contains__(self, item):
+        return True
