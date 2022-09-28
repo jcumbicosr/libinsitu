@@ -30,6 +30,7 @@ HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
+QC_FLAGS_VAR = "QC"
 
 # Variable attributes
 VALID_MIN_ATTR = "_valid_min"
@@ -345,6 +346,7 @@ def nc2df(
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
         drop_duplicates=True,
         skip_na=False,
+        skip_qc=False,
         vars=None,
         user=None,
         password=None,
@@ -355,6 +357,7 @@ def nc2df(
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
+        :param skip_qc: If True, skip lines with bad QC (at least one failing)
         :param rename_cols: If True (default) rename solar irradiance columns to proper names
         :param ncfile: NetCDF Dataset or filename, or URL
         :param drop_duplicates: If true (default), duplicate rows with same time are droppped
@@ -370,8 +373,19 @@ def nc2df(
         """
 
     chunks = __nc2df(
-        ncfile, start_time, end_time,
-        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename_cols)
+        ncfile=ncfile,
+        start_time=start_time,
+        end_time=end_time,
+        drop_duplicates=drop_duplicates,
+        skip_na=skip_na,
+        vars=vars,
+        user=user,
+        password=password,
+        chunked=chunked,
+        chunk_size=chunk_size,
+        steps=steps,
+        rename=rename_cols,
+        skip_qc=skip_qc)
 
     # Handling either single result or chunked generator
     if not chunked :
@@ -414,6 +428,7 @@ def __nc2df(
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
         drop_duplicates=True,
         skip_na=False,
+        skip_qc=False,
         vars=None,
         user=None,
         password=None,
@@ -469,6 +484,9 @@ def __nc2df(
         if skip_na :
             subset = list(col for col in df.columns if col not in COL_NOSKIP)
             df = df.dropna(axis=0, how='all', subset=subset)
+
+        if skip_qc and QC_FLAGS_VAR in df.columns :
+            df = df[df[QC_FLAGS_VAR] == 0]
 
         # Rename variables
         if rename :

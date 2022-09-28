@@ -14,7 +14,7 @@ from pandas import DataFrame
 from pandas._libs.internals import defaultdict
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
-    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar
+    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning, LogContext
 import os
@@ -41,8 +41,6 @@ MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
 
-QC_FLAGS_VAR = "QC"
-#QC_RUN_VAR = "qc_run"
 
 
 def _get_meta(df, keys) :
@@ -150,21 +148,22 @@ def SolarRadVisualControl(
     nb_min = 24 * 60
     nb_days = np.int64(shape[0] / nb_min)
     PrmCell = ['GHI', 'DNI', 'DIF']
+    PrmData = [GHI, DNI, DIF]
 
     # =====================================================================
     # plot of the times series of GHI, DNI and DIF
     # =====================================================================
 
     YlimMax = [1400, 1400, 1000]
-    for ii, Prm in enumerate(PrmCell):
+    for ii, (Prm, data) in enumerate(zip(PrmCell, PrmData)):
         # ax_2Di = plt.subplot(gs1a[2*ii, 0:2])
         ax_2Di = plt.subplot(gs1a[ii, 0:2])
         if ShowFlag == -1:
-            idxPlot = (TOA > 0) & (meas_df[Prm].values > -50 & (flag_df.QCfinal == 0))
+            idxPlot = (TOA > 0) & (data.values > -50 & (flag_df.QCfinal == 0))
         else:
-            idxPlot = (TOA > 0) & (meas_df[Prm].values > -50)
+            idxPlot = (TOA > 0) & (data.values > -50)
 
-        ax_2Di.plot(meas_df[Prm].index[idxPlot], meas_df[Prm].values[idxPlot], color='b', alpha=0.8, label='meas.', lw=0.2)
+        ax_2Di.plot(data.index[idxPlot], data.values[idxPlot], color='b', alpha=0.8, label='meas.', lw=0.2)
 
         plt.ylim((0, YlimMax[ii]))
         plt.xlim((index.values[0], index.values[-1]))
@@ -183,7 +182,7 @@ def SolarRadVisualControl(
 
     # plot of the 2D heatmaps of GHI, DNI and DIF
     ClimMax = [700, 900, 700]
-    for ii, Prm in enumerate(PrmCell):
+    for ii, (Prm, data) in enumerate(zip(PrmCell, PrmData)):
 
         print(str(dt.datetime.now()) + ": --> QC: 2D plot" + Prm)
         # ax_2Di = plt.subplot(gs1a[2*ii+1, 0:2])
@@ -194,7 +193,7 @@ def SolarRadVisualControl(
         else:
             idxPlot = (TOA > 0)
 
-        Val4Plot = copy.deepcopy(meas_df[Prm].values)
+        Val4Plot = copy.deepcopy(data.values)
         # Val4Plot[idxPlot==0]=np.nan
         M2D = np.reshape(Val4Plot, (nb_days, nb_min)).T
         deltaT = int(np.round(longitude / 360 * 24 * 60))
@@ -260,7 +259,9 @@ def SolarRadVisualControl(
         yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
         im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
         im00.set_clim(0, Ratio4C * max(hist.flatten()))
-        plt.plot(meas_df[Prm].index, np.ones(meas_df[Prm].values.shape), 'r--', alpha=0.5)
+
+ 
+        plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
 
         plt.ylim((1 - dYL, 1 + dYL))
         graph.set_ylabel(y_label, fontsize=FSZ)
@@ -366,9 +367,10 @@ def SolarRadVisualControl(
 
     Stat_Test = qc_stats(meas_df, sp_df, flag_df)
 
-    PrmXi = ['TOA', 'TOA', 'TOA']
+    PrmXi = [TOA, TOA, TOA]
     PrmXilbl = ['Top of atmosphere (TOA)', 'Top of atmosphere (TOA)', 'Top of atmosphere (TOA)']
-    PrmYi = ['GHI', 'DNI', 'DIF']
+    Prm_Vars = [GHI, DNI, DIF]
+    PrmYi = ["GHI", "DNI", "DIF"]
     BSRN_PPL_Ks = [[1.5, 1.2, 100], [1, 0, 0], [0.95, 1.2, 50]]
     BSRN_ERL_Ks = [[1.2, 1.2, 50], [0.95, 0.2, 10], [0.75, 1.2, 30]]
     for jj in range(3):
@@ -378,9 +380,9 @@ def SolarRadVisualControl(
         ax21 = plt.subplot(gs2[jj, 2])
         plt.text(30, 1475, 'BSRN 1C ' + PrmYi[jj] + ": {:.2f}% / {:.2f}%".format(Stat_Test['T1C_ppl_' + PrmYi[jj]],
                                                                                  Stat_Test['T1C_erl_' + PrmYi[jj]]))
+        x = PrmXi[jj].values
+        y = Prm_Vars[jj].values
 
-        x = sp_df[PrmXi[jj]].values
-        y = meas_df[PrmYi[jj]].values
         if ShowFlag == -1:
             Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000) & (flag_df.QCfinal == 0)
         else:

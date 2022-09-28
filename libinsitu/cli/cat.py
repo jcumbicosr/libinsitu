@@ -107,8 +107,9 @@ def main() :
     parser.add_argument('filename', metavar='<file.nc> or <http://opendap-url/.nc>', type=str, help='Input file or URL')
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
+    parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
-    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=QC_MASK)
+    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=None)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
     parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")
@@ -124,6 +125,7 @@ def main() :
 
     fromTime=None
     toTime=None
+
     if args.filter :
         if "~" in args.filter :
             filter1, filter2 = args.filter.split("~")
@@ -132,12 +134,21 @@ def main() :
         else :
             fromTime, toTime = parse_date_filter(args.filter)
 
+    if args.qc_format is None :
+        if args.type == "csv" :
+            args.qc_format = QC_EXPAND
+        else :
+            args.qc_format = QC_NAMES
 
     chunks = nc2df(
         args.filename,
         fromTime, toTime,
         user=args.user, password=args.password,
-        drop_duplicates=True, skip_na=args.skip_na, vars=cols, chunked=True,
+        drop_duplicates=True,
+        skip_na=args.skip_na,
+        skip_qc=args.skip_qc,
+        vars=cols,
+        chunked=True,
         steps=args.steps, chunk_size=args.chunk_size)
 
     if args.stats :
@@ -222,6 +233,21 @@ def format_QC(df, qc_format) :
         for flag, mask in zip(flags, masks):
             colname = "%s.%s" % (QC_FLAGS_VAR, flag)
             df[colname] = np.where(qc_col & mask == 0, 0, 1)
+        del df[QC_FLAGS_VAR]
+
+    elif qc_format == QC_NAMES :
+        res = Series(data="", index=df.index, dtype=np.object)
+        for flag, mask in zip(flags, masks):
+            res += np.where(
+                qc_col & mask == 0,
+                "",
+                np.where(
+                    res == "",
+                    flag ,
+                    ";" + flag))
+        df[QC_FLAGS_VAR] = res
+
+    elif qc_format == QC_NONE :
         del df[QC_FLAGS_VAR]
 
     else:
