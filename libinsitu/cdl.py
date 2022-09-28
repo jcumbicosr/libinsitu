@@ -141,7 +141,7 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 def cmp_var(var,  vardef:Variable) :
     return var.dtype == vardef.type and var.dimensions == tuple(vardef.dimensions)
 
-def create_or_replace_var(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
+def create_or_replace_var(ncfile, vardef:Variable, dry_run=False) :
 
     if vardef.name in ncfile.variables:
 
@@ -163,7 +163,6 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False, delete_attrs=F
         return
 
 
-
     least_significant_digit = vardef.attributes.get("least_significant_digit", None)
 
     info("Adding variable '%s'. Precision:%s" %  (vardef.name, least_significant_digit))
@@ -176,7 +175,7 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False, delete_attrs=F
 
 def initVar(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
 
-    create_or_replace_var(ncfile, vardef, dry_run, delete_attrs)
+    create_or_replace_var(ncfile, vardef, dry_run)
 
     var = ncfile.variables[vardef.name]
 

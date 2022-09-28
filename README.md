@@ -204,7 +204,7 @@ catalog = fetch_catalog(args.url, session, recursive=False)
 ## Adding  a new Network
 
 To support a new Network, one should :
-- Add one line of meta data for the netwotk in [res/{networks}.csv](./libinsitu/res/networks.csv)
+- Add one line of meta data for the network in [res/{networks}.csv](./libinsitu/res/networks.csv)
 - Add a CSV file of meta data for each station in [res/station-info/{network}.csv](./libinsitu/res/station-info) 
 - Add an implementation in [libinsitu/handlers/<network>.py](./libinsitu/handlers) and register it in `libinsitu/handlers/__init_.py`
 

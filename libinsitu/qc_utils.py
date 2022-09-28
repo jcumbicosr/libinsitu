@@ -716,8 +716,6 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
 
 
 def flagData(QC_df):
-    import numpy as np
-    import copy
 
     MinDailyShareFlag = 0.2
 

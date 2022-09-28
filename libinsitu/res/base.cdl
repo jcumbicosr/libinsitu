@@ -107,7 +107,7 @@ variables:
 		WS:_valid_min=0.0;
 		WS:_valid_max=100.0;
 		WS:grid_mapping = "crs" ;
-		WS:least_significant_digit=1;
+		WS:least_significant_digit=2;
 
 	float WD(time) ;
 

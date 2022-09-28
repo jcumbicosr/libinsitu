@@ -27,13 +27,20 @@ The present convention is based on two other conventions :
 * [CF conventions](https://cfconventions.org/) & [Standard names](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html): Convention of meta data from Climate and Forecast community.
 * [Attribute Convention for Data Discovery](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3)
 
-We advise to use version 4 of NetCDF and to activate compression. 
+We advise to use version 4 or above of NetCDF. 
 
 # Data granularity 
 
 We recommend to distribute one file per station of measurements. 
 
 Providers can split the data into yearly or monthly subsets but should also provide aggregated datasets for easier requesting / subsetting. 
+
+# Compression  
+
+We recommend to activate lossless [zlib compression](https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables).
+
+Optionally we recommend of use lossly compression by truncating data values to proper significant digits. 
+For this purpose we use the attribute **least_significant_digit** supported by the Python driver of **NetCDF**.  
 
 # Dimensions
 
@@ -89,9 +96,9 @@ Here is the corresponding CDL :
 
 ```
 string station_name ;
-        station_name:standard_name = "platform_name"
-		station_name:long_name = "station name" ;
-		station_name:cf_role = "timeseries_id" ;
+      station_name:standard_name = "platform_name"
+      station_name:long_name = "station name" ;
+      station_name:cf_role = "timeseries_id" ;
 
 float latitude ;
     latitude:long_name = "station latitude" ;
@@ -131,13 +138,14 @@ double crs ;
 Data variables should be one dimensional along the **time** axis. Their type should be *float* or *double*.
 
 They should declare the following CF attributes :
-* **standard_name** (mandatory) : Used to identify them
-* **units** (mandatory)  : Unit
-* **grid_mapping**  (mandatory)  : Set to "crs" defined above
-* **long name** (optional) : for display
-* **_valid_min, _valid_max** (optional): Float attribute value for expected minimum and maximum (used for QC). 
-  Note that we don't use the CF convention **valid_min, valid_max** here, since some drivers remove values not fitting in this range.
+* **standard_name** (mandatory) : Used to identify them.
+* **units** (mandatory) : Unit. SI unit is preferred.
+* **grid_mapping**  (mandatory) : Set to "crs" defined above.
+* **long name** (optional) : Name used for display.
+* **_valid_min, _valid_max** (optional) : Float attribute value for expected minimum and maximum (used for QC). 
+  Note that we don't use directly the CF convention **valid_min, valid_max** here, since some drivers remove values outside of this range.
   We want to keep full control upon data here, and only use this meta data for flagging some values. 
+* **least_significant_digit** (optional) : Number of significant digits. Used by *Python* driver at creation time for lossy compression.
 
 
 We propose to include the following subset of [CF data variables](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html), 
@@ -169,6 +177,7 @@ float GHI(time) ;
     GHI:valid_min=0.0 ;
     GHI:valid_max=3000 ;
     GHI:grid_mapping = "crs" ;
+    GHI:least_significant_digit = 1;
 
 float DHI(time) ;
     DHI:long_name = "Diffuse horizontal radiation" ;
@@ -178,6 +187,7 @@ float DHI(time) ;
     DHI:valid_min=0.0 ;
     DHI:valid_max=3000 ;
     DHI:grid_mapping = "crs" ;
+    DHI:least_significant_digit = 1;
 
 float BNI(time) ;
     BNI:long_name = "Beam (or direct) normal radiation" ;
@@ -187,6 +197,7 @@ float BNI(time) ;
     BNI:valid_min=0.0 ;
     BNI:valid_max=3000 ;
     BNI:grid_mapping = "crs" ;
+    BNI:least_significant_digit = 1;
 
 float T2(time) ;
     T2:long_name = "Air temperature at 2 m height" ;
@@ -196,6 +207,7 @@ float T2(time) ;
     T2:valid_min=123.0 ;
     T2:valid_max=372.9 ;
     T2:grid_mapping = "crs" ;
+    T2:least_significant_digit = 1;
 
 float RH(time) ;
 
@@ -206,6 +218,7 @@ float RH(time) ;
     RH:valid_min=0.0 ;
     RH:valid_max=1.0 ;
     RH:grid_mapping = "crs" ;
+    RH:least_significant_digit = 3;
 
 float WS(time) ;
 
@@ -213,8 +226,10 @@ float WS(time) ;
     WS:standard_name = "wind_speed" ;
     WS:abbreviation = "windspd" ;
     WS:units = "m s-1" ;
-    WS:valid_min=0.0;
+    WS:_valid_min=0.0;
+    WS:_valid_max=100.0;
     WS:grid_mapping = "crs" ;
+    WS:least_significant_digit = 2;
 
 float WD(time) ;
 
@@ -222,9 +237,10 @@ float WD(time) ;
     WD:standard_name = "wind_direction" ;
     WD:abbreviation = "winddir" ;
     WD:units = "degrees";
-    WD:valid_min=0.0;
-    WD:valid_max=360.0;
+    WD:_valid_min=0.0;
+    WD:_valid_max=360.0;
     WD:grid_mapping = "crs" ;
+    WD:least_significant_digit = 1;
 
 float P(time) ;
     P:parameter = "Station pressure" ;
@@ -235,6 +251,7 @@ float P(time) ;
     P:valid_min=0.0 ;
     P:valid_max=120000.0;
     P:grid_mapping = "crs";
+    WD:least_significant_digit = 0;
 
 ```
 
