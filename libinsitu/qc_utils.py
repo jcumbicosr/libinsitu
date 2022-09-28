@@ -10,9 +10,10 @@ from urllib.request import urlopen
 
 import sg2
 from appdirs import user_cache_dir
+from pandas import DataFrame
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS
-from libinsitu.log import info, warning
+from libinsitu.log import info, warning, LogContext
 import os
 
 from matplotlib.gridspec import GridSpec
@@ -33,7 +34,6 @@ cachedir = user_cache_dir("libinsitu")
 info("Cache folder : %s", cachedir)
 cache = Cache(cachedir)
 
-HORIZON_ATTR = "HZ"
 MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
@@ -47,7 +47,15 @@ def _get_meta(df, keys) :
             return df.attrs[key]
     return "-"
 
-def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=False):
+
+
+def SolarRadVisualControl(
+        meas_df,
+        sp_df,
+        flag_df,
+        cams_df,
+        horizons,
+        ShowFlag=-1) :
     """
      ShowFlag=-1     : only show non-flagged data
      ShowFlag=0      : show all data without filtering nor tagging flagged data
@@ -61,17 +69,33 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         "vers": 'v0.5 (2022-08-05)'}
 
     # Get meta data
-    latitude = QC_df.attrs[LATITUDE_VAR]
-    longitude = QC_df.attrs[LONGITUDE_VAR]
-    elevation = QC_df.attrs[ELEVATION_VAR]
-    climate = _get_meta(QC_df, CLIMATE_ATTRS)
-    country = _get_meta(QC_df, STATION_COUNTRY_ATTRS)
-    source = _get_meta(QC_df, NETWORK_NAME_ATTRS)
-    station_id = _get_meta(QC_df, STATION_ID_ATTRS)
-    station = QC_df.attrs.get(STATION_NAME_VAR, "-")
+    latitude = meas_df.attrs[LATITUDE_VAR]
+    longitude = meas_df.attrs[LONGITUDE_VAR]
+    elevation = meas_df.attrs[ELEVATION_VAR]
+    climate = _get_meta(meas_df, CLIMATE_ATTRS)
+    country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
+    source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
+    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
+    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
-    horizons = QC_df.attrs[HORIZON_ATTR]
-    #resolution_min = QC_df.attrs[TIME_RESOLUTION_ATTR] // 60
+    # Aliases
+    shape = meas_df.shape
+    index = meas_df.index
+    GHI = meas_df.GHI
+    DIF = meas_df.DIF
+    DNI = meas_df.DNI
+
+    TOA = sp_df.TOA
+    TOANI = sp_df.TOANI
+    GAMMA_S0 = sp_df.GAMMA_S0
+    THETA_Z = sp_df.THETA_Z
+    ALPHA_S = sp_df.ALPHA_S
+    SZA = sp_df.SZA
+    SR_h = sp_df.SR_h
+    SS_h = sp_df.SS_h
+
+    GHI_est = DIF + DNI * np.cos(THETA_Z)
+
 
     def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
         import numpy as np
@@ -95,32 +119,31 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     cmShading = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
 
     print(str(dt.datetime.now()) + ": --> QC: visual plot preparation")
-    NbDays = len(QC_df.index[QC_df.GHI > 0].normalize().unique())
-    AvgGHI = sum(QC_df.GHI[QC_df.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvgDHI = sum(QC_df.DIF[QC_df.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvgDNI = sum(QC_df.DNI[QC_df.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvailGHI = sum((QC_df.GHI > -2) & (QC_df.TOA > 0)) / sum((QC_df.TOA > 0)) * 100
-    AvailDHI = sum((QC_df.DIF > -2) & (QC_df.TOA > 0)) / sum(QC_df.TOA > 0) * 100
-    AvailDNI = sum((QC_df.DNI > -2) & (QC_df.TOA > 0)) / sum(QC_df.TOA > 0) * 100
-    DateStrStart = QC_df.index[QC_df.GHI > 0][0].strftime("%Y-%m-%d")
-    DateStrEnd = QC_df.index[QC_df.GHI > 0][-1].strftime("%Y-%m-%d")
+    NbDays = len(index[GHI > 0].normalize().unique())
+    AvgGHI = sum(GHI[GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvgDHI = sum(DIF[DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvgDNI = sum(DNI[DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvailGHI = sum((GHI > -2) & (TOA > 0)) / sum((TOA > 0)) * 100
+    AvailDHI = sum((DIF > -2) & (TOA > 0)) / sum(TOA > 0) * 100
+    AvailDNI = sum((DNI > -2) & (TOA > 0)) / sum(TOA > 0) * 100
+    DateStrStart = index[GHI > 0][0].strftime("%Y-%m-%d")
+    DateStrEnd = index[GHI > 0][-1].strftime("%Y-%m-%d")
 
-    QC_df["GHI_est"] = QC_df.DIF + QC_df.DNI * np.cos(QC_df.THETA_Z)
 
     fig = plt.figure(figsize=(19.2, 9.93))
 
     # % % Part 1 (column 1): time series and 2D plots of the three different components
-    if ShowMcClear:
+    if cams_df is not None:
         gs1a = GridSpec(9, 6)
     else:
         gs1a = GridSpec(8, 6)
 
     gs1a.update(left=0.035, right=0.97, bottom=0.03, top=0.98, hspace=0.02, wspace=0.05)
 
-    x_lims = mdates.date2num([QC_df.index[0].date(), QC_df.index[-1].date()])
+    x_lims = mdates.date2num([index[0].date(), index[-1].date()])
     y_lims = [0, 24]
     nb_min = 24 * 60
-    nb_days = np.int64(QC_df.shape[0] / nb_min)
+    nb_days = np.int64(shape[0] / nb_min)
     PrmCell = ['GHI', 'DNI', 'DIF']
 
     # =====================================================================
@@ -132,20 +155,20 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         # ax_2Di = plt.subplot(gs1a[2*ii, 0:2])
         ax_2Di = plt.subplot(gs1a[ii, 0:2])
         if ShowFlag == -1:
-            idxPlot = (QC_df.TOA > 0) & (QC_df[Prm].values > -50 & (flag_df.QCfinal == 0))
+            idxPlot = (TOA > 0) & (meas_df[Prm].values > -50 & (flag_df.QCfinal == 0))
         else:
-            idxPlot = (QC_df.TOA > 0) & (QC_df[Prm].values > -50)
+            idxPlot = (TOA > 0) & (meas_df[Prm].values > -50)
 
-        ax_2Di.plot(QC_df[Prm].index[idxPlot], QC_df[Prm].values[idxPlot], color='b', alpha=0.8, label='meas.', lw=0.2)
+        ax_2Di.plot(meas_df[Prm].index[idxPlot], meas_df[Prm].values[idxPlot], color='b', alpha=0.8, label='meas.', lw=0.2)
 
         plt.ylim((0, YlimMax[ii]))
-        plt.xlim((QC_df.index.values[0], QC_df.index.values[-1]))
+        plt.xlim((index.values[0], index.values[-1]))
         ax_2Di.set_ylabel(Prm + " (W/m2)", size=8)
         plt.setp(ax_2Di.get_xticklabels(), visible=False)
 
         if ShowFlag == 1:
-            timeLMT = QC_df.index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
-            day = timeLMT.astype('datetime64[D]').astype(QC_df.index.values.dtype)
+            timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
+            day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
             TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
 
             plt.plot(day[flag_df['QCfinal']], TOD[flag_df['QCfinal']], 'rs', markersize=1, alpha=0.8, label='flag')
@@ -162,11 +185,11 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         ax_2Di = plt.subplot(gs1a[3 + ii, 0:2])
 
         if ShowFlag == -1:
-            idxPlot = (QC_df.TOA > 0) & (flag_df.QCfinal == 0)
+            idxPlot = (TOA > 0) & (flag_df.QCfinal == 0)
         else:
-            idxPlot = (QC_df.TOA > 0)
+            idxPlot = (TOA > 0)
 
-        Val4Plot = copy.deepcopy(QC_df[Prm].values)
+        Val4Plot = copy.deepcopy(meas_df[Prm].values)
         # Val4Plot[idxPlot==0]=np.nan
         M2D = np.reshape(Val4Plot, (nb_days, nb_min)).T
         deltaT = int(np.round(longitude / 360 * 24 * 60))
@@ -180,26 +203,26 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         plt.setp(ax_2Di.get_xticklabels(), visible=False)
         ax_2Di.set_yticks(np.arange(0, 23, 6))
         ax_2Di.set_ylabel('Time of the day', fontsize=FSZ)
-        SR_h_lt = QC_df.SR_h + float(deltaT) / 60
+        SR_h_lt = SR_h + float(deltaT) / 60
         SR_h_lt[SR_h_lt > 24] = SR_h_lt[SR_h_lt > 24] - 24
         SR_h_lt[SR_h_lt < 0] = SR_h_lt[SR_h_lt < 0] + 24
-        SS_h_lt = QC_df.SS_h + float(deltaT) / 60
+        SS_h_lt = SS_h + float(deltaT) / 60
         SS_h_lt[SS_h_lt > 24] = SS_h_lt[SS_h_lt > 24] - 24
         SS_h_lt[SS_h_lt < 0] = SS_h_lt[SS_h_lt < 0] + 24
 
-        ax_2Di.plot(mdates.date2num(QC_df.index), SR_h_lt, 'k--', linewidth=0.75, alpha=0.8)
-        ax_2Di.plot(mdates.date2num(QC_df.index), SS_h_lt, 'k--', linewidth=0.75, alpha=0.8)
+        ax_2Di.plot(mdates.date2num(index), SR_h_lt, 'k--', linewidth=0.75, alpha=0.8)
+        ax_2Di.plot(mdates.date2num(index), SS_h_lt, 'k--', linewidth=0.75, alpha=0.8)
         im00.set_clim(0, ClimMax[ii])
-        ax_2Di.text(mdates.date2num(QC_df.index)[0] + 5, 21, Prm, size=10)
+        ax_2Di.text(mdates.date2num(index)[0] + 5, 21, Prm, size=10)
 
         mpl.rcParams['ytick.labelsize'] = FSZ
-        plt.xlim((QC_df.index.values[0], QC_df.index.values[-1]))
+        plt.xlim((index.values[0], index.values[-1]))
         plt.ylim((0, 24))
         # plt.gca().invert_yaxis()
 
         if ShowFlag == 1:
-            timeLMT = QC_df.index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
-            day = timeLMT.astype('datetime64[D]').astype(QC_df.index.values.dtype)
+            timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
+            day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
             TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
 
             plt.plot(day[flag_df['QCfinal']], TOD[flag_df['QCfinal']], 'rs', markersize=1, alpha=0.8, label='flag')
@@ -208,6 +231,73 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     # =====================================================================
     # % % Part3 (column 1): time series of ratios for verifying sensors' calibration
     # =====================================================================
+
+    McClearcolor = 'mediumseagreen'
+
+    def ratio_graph(pos, ratios, filter, dYL, title, y_label, ChangeBackground, Ratio4C=0.5):
+
+        graph = plt.subplot(gs1a[6 + pos, 0:2])
+
+        graph.set_yticks(np.arange(0.2, 2, 0.1))
+
+        if ShowFlag == -1:
+            Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0) & (
+                    flag_df.QCfinal == 0)
+        else:
+            Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
+
+        x = mdates.date2num(ratios.index[Filteridx])
+        y = ratios.values[Filteridx]
+        hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
+                                              range=[[x[0], x[-1]], [0.25, 1.75]])
+        if int((x[-1] - x[0])) > 10 * len(h2):
+            hist = conv2(h1, h2, hist)
+        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
+        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
+        im00.set_clim(0, Ratio4C * max(hist.flatten()))
+        plt.plot(meas_df[Prm].index, np.ones(meas_df[Prm].values.shape), 'r--', alpha=0.5)
+
+        plt.ylim((1 - dYL, 1 + dYL))
+        graph.set_ylabel(y_label, fontsize=FSZ)
+        plt.xlim((index.values[0], index.values[-1]))
+        mpl.rcParams['xtick.labelsize'] = FSZ
+        mpl.rcParams['ytick.labelsize'] = FSZ
+        graph.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        graph.xaxis_date()
+
+        if pos == 1:
+            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 - 0.15), [1, 1]), 'k-.', alpha=0.4,
+                     linewidth=1.0)
+            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 - 0.08), [1, 1]), 'k--', alpha=0.4,
+                     linewidth=0.8)
+            plt.plot([ratios.index[0], ratios.index[-1]], [1, 1], 'k--', alpha=0.4, linewidth=0.8)
+            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 + 0.08), [1, 1]), 'k--', alpha=0.4,
+                     linewidth=0.8)
+            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 + 0.15), [1, 1]), 'k-.', alpha=0.4,
+                     linewidth=1.0)
+        if (ii == 1) & (ShowFlag == 1):
+            plt.plot(mdates.date2num(ratios.index[flag_df.QCfinal]),
+                     ratios.values[flag_df.QCfinal], 'rs', markersize=1, alpha=0.8, label='flag')
+            graph.legend(loc='lower right')
+
+        if ChangeBackground:
+
+            graph.xaxis.label.set_color(McClearcolor)  # setting up X-axis label color to yellow
+            graph.yaxis.label.set_color(McClearcolor)  # setting up Y-axis label color to blue
+
+            graph.tick_params(axis='y', colors=McClearcolor)  # setting up Y-axis tick color to black
+
+            graph.spines['left'].set_color(McClearcolor)  # setting up Y-axis tick color to red
+            graph.spines['right'].set_color(McClearcolor)
+            graph.spines['top'].set_color(McClearcolor)  # setting up above X-axis tick color to red
+            graph.spines['bottom'].set_color(McClearcolor)
+            graph.text(mdates.date2num(index.values[0]) + 10, 1 + dYL * 0.75, title, color=McClearcolor)
+
+        else:
+            graph.text(mdates.date2num(index.values[0]) + 10, 1 + dYL * 0.75, title)
+
+        return graph
+
     Smth = [1, 1]
     if Smth[0] < 1:
         xx = 0
@@ -224,98 +314,41 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         h2 = np.exp(-0.5 * (xx / Smth[1]) ** 2)
         h2 = h2 / sum(h2)
 
-    MVal = [QC_df.DIF / QC_df.GHI, \
-            QC_df.GHI / QC_df.GHI_est, \
-            QC_df.GHI / QC_df.CLEAR_SKY_GHI]
-    MIX = [(QC_df.DIF > 0) & (QC_df.DNI > 0) & (QC_df.GHI > 0), \
-           (QC_df.DNI > 0) & (QC_df.GHI > 0) & (QC_df.DNI < 5), \
-           (QC_df.DNI > 0) & (QC_df.GHI > 0)]
-    TitleCell = ['Comparison of DIF and GHI for DNI<10W/m2. Should be close to 1.', \
-                 'Ratio of global to the sum of its components. Should be close to 1.', \
-                 'Evaluation of McClear(*): Ratio of GHI to clear-sky GHI (GHIcs).']
-    YLBLCell = ['DIF/GHI (-)', \
-                'GHI/(DNI*cSZA+DIF) (-)', \
-                'GHI/GHIcs (-)']
-    Ratio4C = [0.5, 0.5, 0.5]  # [0.7,0.7,0.7]
-    dYL = [0.25, 0.25, 0.75]
-    ChangeBackground = [False, False, True]
+    # DIF vs GHI
+    ratio_graph(
+        pos=0,
+        ratios=DIF / GHI,
+        filter=(DIF > 0) & (DNI > 0) & (GHI > 0),
+        y_label='DIF/GHI (-)',
+        title='Comparison of DIF and GHI for DNI<10W/m2. Should be close to 1.',
+        dYL=0.25,
+        ChangeBackground=False)
 
-    if ShowMcClear == False:
-        TitleCell = TitleCell[:-1]
+    # GHI vs GHI est
+    ratio_graph(
+        pos=1,
+        ratios=GHI / GHI_est,
+        filter=(DNI > 0) & (GHI > 0) & (DNI < 5),
+        y_label='GHI/(DNI*cSZA+DIF) (-)',
+        title='Ratio of global to the sum of its components. Should be close to 1.',
+        dYL=0.25,
+        ChangeBackground=False)
 
-    for ii, ttl in enumerate(TitleCell):
+    if cams_df is not None:
 
-        print(str(dt.datetime.now()) + ": --> QC: TS calibration check - " + ttl)
+        ratio_graph(
+            pos=2,
+            ratios=GHI / cams_df.CLEAR_SKY_GHI,
+            filter=(DNI > 0) & (GHI > 0),
+            y_label='GHI/GHIcs (-)',
+            title='Evaluation of McClear(*): Ratio of GHI to clear-sky GHI (GHIcs).',
+            dYL=0.75,
+            ChangeBackground=True)
 
-        axClbi = plt.subplot(gs1a[6 + ii, 0:2])
-
-        axClbi.set_yticks(np.arange(0.2, 2, 0.1))
-
-        if ShowFlag == -1:
-            Filteridx = MIX[ii] & (MVal[ii].values > 0) & (MVal[ii].values < 100) & (QC_df.TOA > 0) & (
-                        flag_df.QCfinal == 0)
-        else:
-            Filteridx = MIX[ii] & (MVal[ii].values > 0) & (MVal[ii].values < 100) & (QC_df.TOA > 0)
-
-        x = mdates.date2num(MVal[ii].index[Filteridx])
-        y = MVal[ii].values[Filteridx]
-        hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
-                                              range=[[x[0], x[-1]], [0.25, 1.75]])
-        if int((x[-1] - x[0])) > 10 * len(h2):
-            hist = conv2(h1, h2, hist)
-        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
-        im00.set_clim(0, Ratio4C[ii] * max(hist.flatten()))
-        plt.plot(QC_df[Prm].index, np.ones(QC_df[Prm].values.shape), 'r--', alpha=0.5)
-
-        plt.ylim((1 - dYL[ii], 1 + dYL[ii]))
-        axClbi.set_ylabel(YLBLCell[ii], fontsize=FSZ)
-        plt.xlim((QC_df.index.values[0], QC_df.index.values[-1]))
-        mpl.rcParams['xtick.labelsize'] = FSZ
-        mpl.rcParams['ytick.labelsize'] = FSZ
-        axClbi.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        axClbi.xaxis_date()
-
-        if (ii < len(TitleCell) - 1):
-            plt.setp(axClbi.get_xticklabels(), visible=False)
-        if ii == 1:
-            plt.plot([MVal[ii].index[0], MVal[ii].index[-1]], np.dot((1 - 0.15), [1, 1]), 'k-.', alpha=0.4,
-                     linewidth=1.0)
-            plt.plot([MVal[ii].index[0], MVal[ii].index[-1]], np.dot((1 - 0.08), [1, 1]), 'k--', alpha=0.4,
-                     linewidth=0.8)
-            plt.plot([MVal[ii].index[0], MVal[ii].index[-1]], [1, 1], 'k--', alpha=0.4, linewidth=0.8)
-            plt.plot([MVal[ii].index[0], MVal[ii].index[-1]], np.dot((1 + 0.08), [1, 1]), 'k--', alpha=0.4,
-                     linewidth=0.8)
-            plt.plot([MVal[ii].index[0], MVal[ii].index[-1]], np.dot((1 + 0.15), [1, 1]), 'k-.', alpha=0.4,
-                     linewidth=1.0)
-        if (ii == 1) & (ShowFlag == 1):
-            plt.plot(mdates.date2num(MVal[ii].index[flag_df.QCfinal]), \
-                     MVal[ii].values[flag_df.QCfinal], 'rs', markersize=1, alpha=0.8, label='flag')
-            axClbi.legend(loc='lower right')
-
-        if ChangeBackground[ii]:
-            McClearcolor = 'mediumblue'
-            McClearcolor = 'mediumseagreen'
-            axClbi.xaxis.label.set_color(McClearcolor)  # setting up X-axis label color to yellow
-            axClbi.yaxis.label.set_color(McClearcolor)  # setting up Y-axis label color to blue
-
-            axClbi.tick_params(axis='y', colors=McClearcolor)  # setting up Y-axis tick color to black
-
-            axClbi.spines['left'].set_color(McClearcolor)  # setting up Y-axis tick color to red
-            axClbi.spines['right'].set_color(McClearcolor)
-            axClbi.spines['top'].set_color(McClearcolor)  # setting up above X-axis tick color to red
-            axClbi.spines['bottom'].set_color(McClearcolor)
-            axClbi.text(mdates.date2num(QC_df.index.values[0]) + 10, 1 + dYL[ii] * 0.75, ttl, color=McClearcolor)
-
-        else:
-            axClbi.text(mdates.date2num(QC_df.index.values[0]) + 10, 1 + dYL[ii] * 0.75, ttl)
-
-    if ShowMcClear:
         plt.annotate(
-            '(*) not a plausibility control: the scatter points represent the joint effect of McClear and measurement errors.', \
-            (5, 2), xycoords='figure pixels', \
+            '(*) not a plausibility control: the scatter points represent the joint effect of McClear and measurement errors.',
+            (5, 2), xycoords='figure pixels',
             fontsize=6, fontstyle='italic', color=McClearcolor)
-        axClbi.set_facecolor((0.90, 0.95, 0.95))
 
     # ********************** Second column ***********************************
 
@@ -325,6 +358,8 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     # =====================================================================
     # % % Part4: ERL& PPL tests
     # =====================================================================
+
+    Stat_Test = qc_stats(meas_df, sp_df, flag_df)
 
     PrmXi = ['TOA', 'TOA', 'TOA']
     PrmXilbl = ['Top of atmosphere (TOA)', 'Top of atmosphere (TOA)', 'Top of atmosphere (TOA)']
@@ -339,26 +374,26 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
         plt.text(30, 1475, 'BSRN 1C ' + PrmYi[jj] + ": {:.2f}% / {:.2f}%".format(Stat_Test['T1C_ppl_' + PrmYi[jj]],
                                                                                  Stat_Test['T1C_erl_' + PrmYi[jj]]))
 
-        x = QC_df[PrmXi[jj]].values
-        y = QC_df[PrmYi[jj]].values
+        x = sp_df[PrmXi[jj]].values
+        y = meas_df[PrmYi[jj]].values
         if ShowFlag == -1:
-            Filteridx = (QC_df.TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000) & (flag_df.QCfinal == 0)
+            Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000) & (flag_df.QCfinal == 0)
         else:
-            Filteridx = (QC_df.TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000)
+            Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000)
         hist, xedges, yedges = np.histogram2d(x=x[Filteridx], y=y[Filteridx], bins=[200, 200],
                                               range=[[0, 1500], [0, 1500]])
         yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
         im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
         im00.set_clim(0, 0.25 * max(hist[(xedges > 5) & (yedges > 5)]))
 
-        idx0 = (QC_df.TOA > 0)
+        idx0 = (TOA > 0)
         idxSrtLim = np.argsort(x[idx0])
 
         xx = x[idx0][idxSrtLim]
         tx = np.arange(min(xx), max(xx), 100)
-        yy1 = BSRN_ERL_Ks[jj][0] * QC_df.TOANI[idx0][idxSrtLim] * np.sin(QC_df.GAMMA_S0[idx0][idxSrtLim]) ** \
+        yy1 = BSRN_ERL_Ks[jj][0] * TOANI[idx0][idxSrtLim] * np.sin(GAMMA_S0[idx0][idxSrtLim]) ** \
               BSRN_ERL_Ks[jj][1] + BSRN_ERL_Ks[jj][2]
-        yy2 = BSRN_PPL_Ks[jj][0] * QC_df.TOANI[idx0][idxSrtLim] * np.sin(QC_df.GAMMA_S0[idx0][idxSrtLim]) ** \
+        yy2 = BSRN_PPL_Ks[jj][0] * TOANI[idx0][idxSrtLim] * np.sin(GAMMA_S0[idx0][idxSrtLim]) ** \
               BSRN_PPL_Ks[jj][1] + BSRN_PPL_Ks[jj][2]
         fpoly1 = np.poly1d(np.polyfit(xx, yy1, 5))
         fpoly2 = np.poly1d(np.polyfit(xx, yy2, 5))
@@ -389,17 +424,17 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     ax22 = plt.subplot(gs2[0, 3])
     plt.text(12, 1.3, 'BSRN-2C' + ": {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']))
     if ShowFlag == -1:
-        idxPlot = (QC_df.GHI > 50) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
+        idxPlot = (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
     else:
-        idxPlot = (QC_df.GHI > 50) & (QC_df.SZA < 90)
+        idxPlot = (GHI > 50) & (SZA < 90)
 
-    hist, xedges, yedges = np.histogram2d(x=QC_df.SZA[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
+    hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
                                           range=[[10, 95], [0, 1.25]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.8 * max(hist.flatten()))
     if ShowFlag == 1:
-        plt.plot(QC_df.SZA[flag_df.QCFlag_Test2C_bsrn_kt], flag_df.K[flag_df.QCFlag_Test2C_bsrn_kt], 'rs', markersize=1,
+        plt.plot(SZA[flag_df.QCFlag_Test2C_bsrn_kt], flag_df.K[flag_df.QCFlag_Test2C_bsrn_kt], 'rs', markersize=1,
                  alpha=0.5, label='bsrn2C')
         ax22.legend(loc='lower left')
     # plt.plot(SZA[QCFlag_Test2C_bsrn_kd],KT[QCFlag_Test2C_bsrn_kd],'r.',markersize=1,label="Flagged data")
@@ -416,9 +451,9 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     ax24 = plt.subplot(gs2[1, 3])
     plt.text(0.025, 0.92, 'SERI-kn' + ": {:.2f}% ".format(Stat_Test['T2C_seri_knkt']))
     if ShowFlag == -1:
-        idxPlot = (QC_df.DNI > 0) & (QC_df.GHI > 0) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
+        idxPlot = (DNI > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
     else:
-        idxPlot = (QC_df.DNI > 0) & (QC_df.GHI > 0) & (QC_df.SZA < 90)
+        idxPlot = (DNI > 0) & (GHI > 0) & (SZA < 90)
     hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.Kn[idxPlot], bins=[200, 200],
                                           range=[[0, 1.25], [0, 1]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
@@ -439,9 +474,9 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     ax26 = plt.subplot(gs2[2, 3])
     plt.text(0.025, 1.3, 'SERI-K' + ": {:.2f}% ".format(Stat_Test['T2C_seri_kkt']))
     if ShowFlag == -1:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 0) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
+        idxPlot = (DIF > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
     else:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 0) & (QC_df.SZA < 90)
+        idxPlot = (DIF > 0) & (GHI > 0) & (SZA < 90)
     hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
                                           range=[[0, 1.2], [0, 1.2]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
@@ -461,16 +496,16 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     ax27 = plt.subplot(gs2[3, 2])
     plt.text(30, 1300, 'BSRN closure' + ": {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 50) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
+        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
     else:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 50) & (QC_df.SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=QC_df.GHI[idxPlot], y=QC_df.GHI_est[idxPlot], bins=[500, 500],
+        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90)
+    hist, xedges, yedges = np.histogram2d(x=GHI[idxPlot], y=GHI_est[idxPlot], bins=[500, 500],
                                           range=[[0, 1500], [0, 1500]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     if ShowFlag == 1:
-        ax27.plot(QC_df.GHI[flag_df.QCFlag_Test3C_bsrn_3cmp], QC_df.GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
+        ax27.plot(GHI[flag_df.QCFlag_Test3C_bsrn_3cmp], GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
                   markersize=1, label='closure', alpha=0.1)
         ax27.legend(loc='lower right')
     ax27.plot(np.array([0, 1400]), 0.85 * np.array([0, 1400]), 'k-.', alpha=0.4, linewidth=1.0)
@@ -486,17 +521,17 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     ax28 = plt.subplot(gs2[3, 3])
     plt.text(8, 0.52, "BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 50) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
+        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
     else:
-        idxPlot = (QC_df.DIF > 0) & (QC_df.GHI > 50) & (QC_df.SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=QC_df.SZA[idxPlot], y=QC_df.GHI[idxPlot] / QC_df.GHI_est[idxPlot],
+        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90)
+    hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=GHI[idxPlot] / GHI_est[idxPlot],
                                           bins=[200, 200], range=[[0, 90], [0, 2]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.5 * max(hist.flatten()))
     if ShowFlag == 1:
-        plt.plot(QC_df.SZA[flag_df.QCFlag_Test3C_bsrn_3cmp],
-                 QC_df.GHI[flag_df.QCFlag_Test3C_bsrn_3cmp] / QC_df.GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
+        plt.plot(SZA[flag_df.QCFlag_Test3C_bsrn_3cmp],
+                 GHI[flag_df.QCFlag_Test3C_bsrn_3cmp] / GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
                  markersize=1, label='closure', alpha=0.1)
         ax28.legend(loc='lower right')
     plt.plot([10, 75, 75, 90, 90, 75, 75, 10], [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92], 'k--', alpha=0.4,
@@ -556,8 +591,8 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
 
     ax31a = plt.subplot(gs3b[1:3, 6])
     # TODO: replace flag_df.QCfinal par flag_df.QCGHI
-    idxPlot_qc = (QC_df.GHI > 5) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (QC_df.GHI > 5) & (QC_df.SZA < 90)
+    idxPlot_qc = (GHI > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
+    idxPlot_all = (GHI > 5) & (SZA < 90)
     hist_qc, xedges = np.histogram(flag_df.KT[idxPlot_qc], bins=500, range=[0, 1.2])
     hist_all, xedges = np.histogram(flag_df.KT[idxPlot_all], bins=500, range=[0, 1.2])
     xval = (xedges[1:] + xedges[:-1]) / 2
@@ -573,8 +608,8 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
 
     ax31b = plt.subplot(gs3b[1:3, 7])
     # TODO: replace flag_df.QCfinal par flag_df.QCDNI
-    idxPlot_qc = (QC_df.DNI > 5) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (QC_df.DNI > 5) & (QC_df.SZA < 90)
+    idxPlot_qc = (DNI > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
+    idxPlot_all = (DNI > 5) & (SZA < 90)
     hist_qc, xedges = np.histogram(flag_df.Kn[idxPlot_qc], bins=500, range=[0, 1.2])
     hist_all, xedges = np.histogram(flag_df.Kn[idxPlot_all], bins=500, range=[0, 1.2])
     xval = (xedges[1:] + xedges[:-1]) / 2
@@ -589,8 +624,8 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
 
     ax31c = plt.subplot(gs3b[1:3, 8])
     # TODO: replace flag_df.QCfinal par flag_df.QCDIF
-    idxPlot_qc = (QC_df.DIF > 5) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (QC_df.DIF > 5) & (QC_df.SZA < 90)
+    idxPlot_qc = (DIF > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
+    idxPlot_all = (DIF > 5) & (SZA < 90)
     hist_qc, xedges = np.histogram(flag_df.K[idxPlot_qc], bins=500, range=[0, 1.2])
     hist_all, xedges = np.histogram(flag_df.K[idxPlot_all], bins=500, range=[0, 1.2])
     xval = (xedges[1:] + xedges[:-1]) / 2
@@ -611,38 +646,44 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
     # NB: the calculation can be optimized to run faster
 
-    isClearSky = pvlib.clearsky.detect_clearsky(QC_df.GHI, QC_df.CLEAR_SKY_GHI)
+    # Aliases
+    CLEAR_SKY_GHI = cams_df.CLEAR_SKY_GHI
+    CLEAR_SKY_DNI = cams_df.CLEAR_SKY_DNI
+
+
+    isClearSky = pvlib.clearsky.detect_clearsky(GHI, CLEAR_SKY_GHI)
     ax31 = plt.subplot(gs3[3:5, 2])
     YYL = [0.8, 1.2]
     if ShowFlag == -1:
-        idxPlot = isClearSky & (QC_df.DIF > 0) & (QC_df.GHI > 100) & (QC_df.SZA < 90) & (flag_df.QCfinal == 0) & \
-                  (QC_df.CLEAR_SKY_GHI.values > 50) & (QC_df.GHI.values > 50) & (QC_df.CLEAR_SKY_DNI.values > 0)
+        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
+                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
     else:
-        idxPlot = isClearSky & (QC_df.DIF > 0) & (QC_df.GHI > 100) & (QC_df.SZA < 90) & \
-                  (QC_df.CLEAR_SKY_GHI.values > 50) & (QC_df.GHI.values > 50) & (QC_df.CLEAR_SKY_DNI.values > 0)
-    vSAA = QC_df['ALPHA_S'].values
+        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
+                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+    vSAA = ALPHA_S.values
     if latitude < 0:
         vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
 
     xPlot = vSAA * 180 / np.pi
-    yPlot = np.zeros(QC_df.DNI.shape)
+    yPlot = np.zeros(DNI.shape)
     # yPlot[QC_df.CLEAR_SKY_DNI.values>0]=QC_df.GHI.values[QC_df.CLEAR_SKY_DNI.values>0]/QC_df.CLEAR_SKY_GHI.values[QC_df.CLEAR_SKY_DNI.values>0]
 
     if (latitude < 0):
-        kc = QC_df[idxPlot & (np.abs(vSAA * 180 / np.pi) < 60) & (QC_df.CLEAR_SKY_DNI.values > 0)].GHI / QC_df[
-            idxPlot & (np.abs(vSAA * 180 / np.pi) < 60) & (QC_df.CLEAR_SKY_DNI.values > 0)].CLEAR_SKY_GHI
+        angle_filter = np.abs(vSAA * 180 / np.pi) < 60
     else:
-        kc = QC_df[idxPlot & (np.abs(vSAA * 180 / np.pi - 180) < 60) & (QC_df.CLEAR_SKY_DNI.values > 0)].GHI / QC_df[
-            idxPlot & (np.abs(vSAA * 180 / np.pi - 180) < 60) & (QC_df.CLEAR_SKY_DNI.values > 0)].CLEAR_SKY_GHI
+        angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
+
+    kc = GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
+         CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
 
     S = kc.resample('1D', label='left').sum()
     C = kc.resample('1D', label='left').count()
     Dailydata = pd.DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
-    data4plot = pd.DataFrame( \
-        {'kc': QC_df[idxPlot].GHI.values / QC_df[idxPlot].CLEAR_SKY_GHI.values, \
+    data4plot = pd.DataFrame(
+        {'kc': GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
          'SAA': vSAA[idxPlot] * 180 / np.pi, \
-         'day': QC_df[idxPlot].index.floor(freq='D')}, \
-        index=QC_df[idxPlot].index)
+         'day': meas_df[idxPlot].index.floor(freq='D')}, \
+        index=meas_df[idxPlot].index)
     data4plot = data4plot.join(Dailydata, on='day', how='left')
     ix = data4plot.Avgkc > 0
     xPlot = data4plot.SAA[ix].values
@@ -665,22 +706,22 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     plt.colorbar(im00, label='point density (-)')
 
     print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
-    idxSC = (QC_df.GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
-    vSEA = QC_df.loc[idxSC, 'GAMMA_S0']
-    vSAA = QC_df.loc[idxSC, 'ALPHA_S']
+    idxSC = (GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
+    vSEA =  GAMMA_S0[idxSC]
+    vSAA = ALPHA_S[idxSC]
     if latitude < 0:
         vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
 
     SELMax = 45
 
     ax32 = plt.subplot(gs3[5:7, 2])
-    vKT = QC_df.loc[idxSC, 'GHI'] / QC_df.loc[idxSC, 'TOA']
+    vKT = GHI[idxSC] / TOA[idxSC]
     idx_sort = np.argsort(vKT.values)
     im32 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKT[idx_sort], cmap=cmShading,
                        marker='s', alpha=.5)
     plt.ylabel('Solar elevation angle [°]', fontsize=FSZ)
     plt.xlabel('Solar azimuth angle [°]', fontsize=FSZ)
-    if (np.abs(latitude) < 60):
+    if horizons is not None:
         plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
         plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
     if latitude < 0:
@@ -695,13 +736,13 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
 
     print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
     ax33 = plt.subplot(gs3[7:9, 2])
-    vKN = QC_df.loc[idxSC, 'DNI'] / QC_df.loc[idxSC, 'TOANI']
+    vKN = DNI[idxSC] / TOANI[idxSC]
     idx_sort = np.argsort(vKN.values)
     im33 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKN[idx_sort], cmap=cmShading,
                        marker='s', alpha=.5)
     plt.ylabel('Solar elevation angle [°]', fontsize=FSZ)
     plt.xlabel('Solar azimuth angle [°]', fontsize=FSZ)
-    if (np.abs(latitude) < 60):
+    if horizons is not None :
         plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
         plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
     if latitude < 0:
@@ -715,76 +756,90 @@ def SolarRadVisualControl(QC_df, Stat_Test, flag_df, ShowFlag=-1, ShowMcClear=Fa
     plt.colorbar(im33, label='DNI/TOANI (-)')
 
 
-def flagData(QC_df):
+def flagData(meas_df, sp_df):
+    """
+    :param meas_df: In situ measurements
+    :param sp_df: Sun pos / theoretical measurements
+    :return: QC flags. -1: no processed. 0: processed and ok. 1: Processed and failed
+    """
 
     MinDailyShareFlag = 0.2
 
-    GHI = QC_df.GHI
-    GHI_est = QC_df.DIF + QC_df.DNI * np.cos(QC_df.THETA_Z)
+    # Aliases
+    GHI = meas_df.GHI
+    DIF = meas_df.DIF
+    DNI = meas_df.DNI
 
-    SZA = QC_df.THETA_Z * 180 / np.pi
+    TOA = sp_df.TOA
+    TOANI = sp_df.TOANI
+    GAMMA_S0 = sp_df.GAMMA_S0
+    #CLEAR_SKY_GHI = sp_df.CLEAR_SKY_GHI
+    #CLEAR_SKY_DNI = sp_df.CLEAR_SKY_DNI
 
-    KT = np.zeros(QC_df.GHI.shape)
-    KT[QC_df.TOA >= 1] = QC_df.GHI[QC_df.TOA >= 1] / QC_df.TOA[QC_df.TOA >= 1]
+    GHI_est = meas_df.DIF + meas_df.DNI * np.cos(sp_df.THETA_Z)
+    SZA = sp_df.THETA_Z * 180 / np.pi
 
-    Kn = np.zeros(QC_df.GHI.shape)
-    Kn[QC_df.TOANI >= 1] = QC_df.DNI[QC_df.TOANI >= 1] / QC_df.TOANI[QC_df.TOANI >= 1]
+    shape = meas_df.GHI.shape
 
-    K = np.zeros(QC_df.GHI.shape)
-    K[QC_df.GHI >= 1] = QC_df.DIF[QC_df.GHI >= 1] / QC_df.GHI[QC_df.GHI >= 1]
+    KT = np.zeros(shape)
+    KT[TOA >= 1] = GHI[TOA >= 1] / TOA[TOA >= 1]
 
-    kc = np.zeros(QC_df.GHI.shape)
-    kc[QC_df.CLEAR_SKY_GHI >= 1] = QC_df.GHI[QC_df.CLEAR_SKY_GHI >= 1] / QC_df.CLEAR_SKY_GHI[QC_df.CLEAR_SKY_GHI >= 1]
+    Kn = np.zeros(shape)
+    Kn[TOANI >= 1] = DNI[TOANI >= 1] / TOANI[TOANI >= 1]
 
-    kbc = np.zeros(QC_df.GHI.shape)
-    kbc[QC_df.CLEAR_SKY_DNI >= 1] = QC_df.DNI[QC_df.CLEAR_SKY_DNI >= 1] / QC_df.CLEAR_SKY_DNI[QC_df.CLEAR_SKY_DNI >= 1]
+    K = np.zeros(shape)
+    K[GHI >= 1] = DIF[GHI >= 1] / GHI[GHI >= 1]
+
+    #kc = np.zeros(shape)
+    #kc[CLEAR_SKY_GHI >= 1] = GHI[CLEAR_SKY_GHI >= 1] / CLEAR_SKY_GHI[CLEAR_SKY_GHI >= 1]
+
+    #kbc = np.zeros(shape)
+    #kbc[CLEAR_SKY_DNI >= 1] = DNI[CLEAR_SKY_DNI >= 1] / CLEAR_SKY_DNI[CLEAR_SKY_DNI >= 1]
 
     # % % -----------   Calculation of the individual QC flags -----------------
     # BSRN one-component test
-    flag_df = copy.deepcopy(QC_df[['GHI', 'DIF', 'DNI']])
-    flag_df["QCFlag_Test1C_ppl_GHI"] = (QC_df.TOA > 0) & (
-                (QC_df.GHI <= -4) | (QC_df.GHI > 1.5 * QC_df.TOANI * np.sin(QC_df.GAMMA_S0) ** 1.2 + 100))
-    flag_df["QCFlag_Test1C_erl_GHI"] = (QC_df.TOA > 0) & (
-                (QC_df.GHI <= -2) | (QC_df.GHI > 1.2 * QC_df.TOANI * np.sin(QC_df.GAMMA_S0) ** 1.2 + 50))
-    flag_df["QCFlag_Test1C_ppl_DIF"] = (QC_df.TOA > 0) & (
-                (QC_df.DIF <= -4) | (QC_df.DIF > 0.95 * QC_df.TOANI * np.sin(QC_df.GAMMA_S0) ** 1.2 + 50))
-    flag_df["QCFlag_Test1C_erl_DIF"] = (QC_df.TOA > 0) & (
-                (QC_df.DIF <= -2) | (QC_df.DIF > 0.75 * QC_df.TOANI * np.sin(QC_df.GAMMA_S0) ** 1.2 + 30))
-    flag_df["QCFlag_Test1C_ppl_DNI"] = (QC_df.TOA > 0) & ((QC_df.DNI <= -4) | (QC_df.DNI > QC_df.TOANI))
-    flag_df["QCFlag_Test1C_erl_DNI"] = (QC_df.TOA > 0) & (
-                (QC_df.DNI <= -2) | (QC_df.DNI > 0.95 * QC_df.TOANI * np.sin(QC_df.GAMMA_S0) ** 0.2 + 10))
+    flag_df = DataFrame(index=meas_df.index)
+    flag_df["QCFlag_Test1C_ppl_GHI"] = (TOA > 0) & (
+            (GHI <= -4) | (GHI > 1.5 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 100))
+    flag_df["QCFlag_Test1C_erl_GHI"] = (TOA > 0) & (
+            (GHI <= -2) | (GHI > 1.2 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
+    flag_df["QCFlag_Test1C_ppl_DIF"] = (TOA > 0) & (
+            (DIF <= -4) | (DIF > 0.95 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
+    flag_df["QCFlag_Test1C_erl_DIF"] = (TOA > 0) & (
+            (DIF <= -2) | (DIF > 0.75 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 30))
+    flag_df["QCFlag_Test1C_ppl_DNI"] = (TOA > 0) & ((DNI <= -4) | (DNI > TOANI))
+    flag_df["QCFlag_Test1C_erl_DNI"] = (TOA > 0) & (
+            (DNI <= -2) | (DNI > 0.95 * TOANI * np.sin(GAMMA_S0) ** 0.2 + 10))
 
     flag_df["Kn"] = Kn
     flag_df["K"] = K
-    flag_df["kc"] = kc
-    flag_df["kbc"] = kbc
+    #flag_df["kc"] = kc
+    #flag_df["kbc"] = kbc
     flag_df["KT"] = KT
 
     # BSRN two-component test
-    flag_df["QCFlag_Test2C_bsrn_kt"] = ((QC_df.TOA > 0) & (QC_df.GHI > 50)) & ( \
-                ((SZA < 75) & (K > 1.05)) | \
+    flag_df["QCFlag_Test2C_bsrn_kt"] = ((TOA > 0) & (GHI > 50)) & (
+                ((SZA < 75) & (K > 1.05)) |
                 ((SZA >= 75) & (K > 1.1)))
 
     # SERI-QC two-component test
-    flag_df["QCFlag_Test2C_seri_kn_kt"] = (QC_df.TOA > 0) & ((Kn > KT) | (Kn > 0.8) | (KT > 1.35))
-    flag_df["QCFlag_Test2C_seri_k_kt"] = (QC_df.TOA > 0) & (
+    flag_df["QCFlag_Test2C_seri_kn_kt"] = (TOA > 0) & ((Kn > KT) | (Kn > 0.8) | (KT > 1.35))
+    flag_df["QCFlag_Test2C_seri_k_kt"] = (TOA > 0) & (
                 ((KT < 0.6) & (K > 1.1)) | ((KT >= 0.6) & (K > 0.95)) | (KT > 1.35))
 
     # BSRN three-component test
-    flag_df["QCFlag_Test3C_bsrn_3cmp"] = (QC_df.TOA > 0) & (
+    flag_df["QCFlag_Test3C_bsrn_3cmp"] = (TOA > 0) & (
                 ((SZA <= 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.08)) | (
                     (SZA > 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.15)))
 
     # Tracker off test
-    GHI_measured = QC_df.GHI
-    DNI_measured = QC_df.DNI
-    GHI_clear = 0.8 * QC_df.TOA
+    GHI_clear = 0.8 * TOA
     DIF_clear = 0.165 * GHI_clear
     DNI_clear = GHI_clear - DIF_clear
 
-    flag_df["QCFlag_TrackerOff"] = ((SZA <= 85) & \
-                                    ((GHI_clear - GHI_measured) / (GHI_clear + GHI_measured) < 0.2) & \
-                                    ((DNI_clear - DNI_measured) / (DNI_clear + DNI_measured) > 0.95))
+    flag_df["QCFlag_TrackerOff"] = ((SZA <= 85) &
+                                    ((GHI_clear - GHI) / (GHI_clear + GHI) < 0.2) &
+                                    ((DNI_clear - DNI) / (DNI_clear + DNI) > 0.95))
     # % % Combination of individual QC tests
 
     # if at least one of the test is positive, we flag all data (to be eventually refined)
@@ -794,58 +849,55 @@ def flagData(QC_df):
                        flag_df["QCFlag_Test3C_bsrn_3cmp"] | flag_df["QCFlag_TrackerOff"]
 
     # Evalue the share of flag data per day
-    DailyFlagStat = flag_df["QCtot"].resample('D').sum() / (QC_df.TOA > 0).resample('D').sum()
+    DailyFlagStat = flag_df["QCtot"].resample('D').sum() / (TOA > 0).resample('D').sum()
 
     # filter if at least on test fail or the number of flag per day exceeds the minimal share
     flag_df["QCfinal"] = flag_df["QCtot"] | np.in1d(flag_df.index.normalize(),
                                                     DailyFlagStat[DailyFlagStat > MinDailyShareFlag].index.normalize())
 
-    # % %  -------------------  Statistics on the data  -----------------------
-    Stat_Test = { \
-        'T1C_erl_GHI': sum(flag_df.QCFlag_Test1C_erl_GHI & (QC_df.TOA > 0) & (QC_df.GHI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.GHI > -2)) * 100, \
-        'T1C_ppl_GHI': sum(flag_df.QCFlag_Test1C_ppl_GHI & (QC_df.TOA > 0) & (QC_df.GHI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.GHI > -2)) * 100, \
-        'T1C_erl_DIF': sum(flag_df.QCFlag_Test1C_erl_DIF & (QC_df.TOA > 0) & (QC_df.DIF > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DIF > -2)) * 100, \
-        'T1C_ppl_DIF': sum(flag_df.QCFlag_Test1C_ppl_DIF & (QC_df.TOA > 0) & (QC_df.DIF > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DIF > -2)) * 100, \
-        'T1C_erl_DNI': sum(flag_df.QCFlag_Test1C_erl_DNI & (QC_df.TOA > 0) & (QC_df.DNI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DNI > -2)) * 100, \
-        'T1C_ppl_DNI': sum(flag_df.QCFlag_Test1C_ppl_DNI & (QC_df.TOA > 0) & (QC_df.DNI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DNI > -2)) * 100, \
-        'T2C_bsrn_kt': sum(flag_df.QCFlag_Test2C_bsrn_kt & (QC_df.TOA > 0) & (QC_df.GHI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.GHI > -2)) * 100, \
+    return flag_df
+
+
+def qc_stats(meas_df, sp_df, flag_df) :
+
+    GHI = meas_df.GHI
+    DIF = meas_df.DIF
+    DNI = meas_df.DNI
+
+    TOA = sp_df.TOA
+
+    return  {
+        'T1C_erl_GHI': sum(flag_df.QCFlag_Test1C_erl_GHI & (TOA > 0) & (GHI > -2)) / sum(
+            (TOA > 0) & (GHI > -2)) * 100,
+        'T1C_ppl_GHI': sum(flag_df.QCFlag_Test1C_ppl_GHI & (TOA > 0) & (GHI > -2)) / sum(
+            (TOA > 0) & (GHI > -2)) * 100,
+        'T1C_erl_DIF': sum(flag_df.QCFlag_Test1C_erl_DIF & (TOA > 0) & (DIF > -2)) / sum(
+            (TOA > 0) & (DIF > -2)) * 100,
+        'T1C_ppl_DIF': sum(flag_df.QCFlag_Test1C_ppl_DIF & (TOA > 0) & (DIF > -2)) / sum(
+            (TOA > 0) & (DIF > -2)) * 100,
+        'T1C_erl_DNI': sum(flag_df.QCFlag_Test1C_erl_DNI & (TOA > 0) & (DNI > -2)) / sum(
+            (TOA > 0) & (DNI > -2)) * 100,
+        'T1C_ppl_DNI': sum(flag_df.QCFlag_Test1C_ppl_DNI & (TOA > 0) & (DNI > -2)) / sum(
+            (TOA > 0) & (DNI > -2)) * 100,
+        'T2C_bsrn_kt': sum(flag_df.QCFlag_Test2C_bsrn_kt & (TOA > 0) & (GHI > -2)) / sum(
+            (TOA > 0) & (GHI > -2)) * 100,
         'T2C_seri_knkt': sum(
-            flag_df.QCFlag_Test2C_seri_kn_kt & (QC_df.TOA > 0) & (QC_df.DNI > -2) & (QC_df.GHI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DNI > -2) & (QC_df.GHI > -2)) * 100, \
+            flag_df.QCFlag_Test2C_seri_kn_kt & (TOA > 0) & (DNI > -2) & (GHI > -2)) / sum(
+            (TOA > 0) & (DNI > -2) & (GHI > -2)) * 100,
         'T2C_seri_kkt': sum(
-            flag_df.QCFlag_Test2C_seri_k_kt & (QC_df.TOA > 0) & (QC_df.DIF > -2) & (QC_df.GHI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.DIF > -2) & (QC_df.GHI > -2)) * 100, \
-        'T3C_bsrn': sum(flag_df.QCFlag_Test3C_bsrn_3cmp & (QC_df.TOA > 0) & (QC_df.GHI > -2) & (QC_df.DIF > -2) & (
-                    QC_df.DNI > -2)) / sum(
-            (QC_df.TOA > 0) & (QC_df.GHI > -2) & (QC_df.DIF > -2) & (QC_df.DNI > -2)) * 100}
-    # Stat_FlaggedQCFinal=sum((QC_df.QCfinal)&(QC_df.TOA>0))/sum((QC_df.TOA>0))*100
-
-    return Stat_Test, flag_df
+            flag_df.QCFlag_Test2C_seri_k_kt & (TOA > 0) & (DIF > -2) & (GHI > -2)) / sum(
+            (TOA > 0) & (DIF > -2) & (GHI > -2)) * 100,
+        'T3C_bsrn': sum(
+            flag_df.QCFlag_Test3C_bsrn_3cmp & (TOA > 0) & (GHI > -2) & (DIF > -2) & (
+                    DNI > -2)) / sum(
+            (TOA > 0) & (GHI > -2) & (DIF > -2) & (DNI > -2)) * 100}
 
 
-def enrich_data(df, includeCAMS=True):
+def prepare_data(df):
     """Adds sg2, cams and horizon data"""
 
-    # Get horizon and adds it to metadata
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
-
-    # Fetch horizon from WPS
-    if (np.abs(lat) < 60):
-        horizon = wps_Horizon_SRTM(lat, lon, alt)
-    else:
-        horizon = pd.DataFrame([])
-
-    df.attrs[HORIZON_ATTR] = horizon
-
+    # Fill out of range values with NAN
+    # XXX use "range" QC check instead
     for varname in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
         var = df[varname]
         var[var > MAX_VAL] = np.nan
@@ -856,65 +908,32 @@ def enrich_data(df, includeCAMS=True):
         DHI='DIF',
         BNI='DNI'))
 
-
     # Resample ?
     resolution_min = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR] // 60
     if resolution_min != 1 :
         warning("Input resolution is %d minutes, resampling to 1 min" % resolution_min)
         df = df.resample("1Min").ffill()
 
-    sr, sp = sun_position(lat, lon, alt, df.index)
+    df = df.asfreq("1Min")
 
-    SR = np.squeeze(sr[:, 0, 0])
-    SR_Day = SR.astype('datetime64[D]').astype(SR.dtype)
-    SR_TOD = (SR - SR_Day).astype(float) / 1000 / 60 / 60
+    start_date = df.index.min().normalize()
+    end_date = df.index.max().normalize() + np.timedelta64(24 * 60 - 1, "m")
 
-    SS = np.squeeze(sr[:, 0, 2])
-    SS_Day = SS.astype('datetime64[D]').astype(SS.dtype)
-    SS_TOD = (SS - SS_Day).astype(float) / 1000 / 60 / 60
+    df = df.reindex(pd.date_range(start_date, end_date, freq="60S"))
 
-    # Add extra columns from SG2 to dataframe
-    df['THETA_Z'] = np.pi / 2 - np.squeeze(sp.topoc.gamma_S0)
-    df['GAMMA_S0'] = np.squeeze(sp.topoc.gamma_S0)
-    df['ALPHA_S'] = np.squeeze(sp.topoc.alpha_S)
-    df['SZA'] = 90 - 180 / np.pi * np.squeeze(sp.topoc.gamma_S0)
-    df['TOA'] = np.squeeze(sp.topoc.toa_hi)
-    df['TOANI'] = np.squeeze(sp.topoc.toa_ni)
-    df['SR_h'] = SR_TOD
-    df['SS_h'] = SS_TOD
-
-    if includeCAMS:
-
-        if CAMS_EMAIL_ENV in os.environ :
-            cams_email = os.environ[CAMS_EMAIL_ENV]
-        else:
-            raise Exception("Cams emails not found. Please set the env variable %s or use a .env file" % CAMS_EMAIL_ENV)
-
-
-        CAMS_DF, CAMSmetada = get_cams(
-            start_date=df.index[0],
-            end_date=df.index[-1],
-            lat=lat, lon=lon,
-            cams_email=cams_email,
-            altitude=alt)
-
-        CAMS_DF2 = pd.DataFrame({
-            'CLEAR_SKY_GHI': CAMS_DF.ghi_clear.values,
-            'CLEAR_SKY_DNI': CAMS_DF.dni_clear.values,
-            'CLEAR_SKY_DIF': CAMS_DF.dhi_clear.values}, index=CAMS_DF.index.values)
-
-        attrs = df.attrs
-        # df = df.merge(CAMS_DF2, how='left', left_index=True, right_index=True)
-        df = CAMS_DF2.merge(df, how='left', left_index=True, right_index=True)
-        df.attrs.update(attrs)
+    info("Start time : %s", df.index.min())
+    info("End time : %s", df.index.max())
 
     return df
 
 @cache.memoize()
-def sun_position(lat, lon, alt, times) :
+def sun_position(lat, lon, alt, start_time, end_time, freq='60S') :
+
     info("Computing sun position")
     if alt == np.nan:
         alt = 0
+
+    times = pd.date_range(start_time, end_time, freq=freq)
 
     sun_rise = sg2.sun_rise(
         [[lon, lat, alt]],
@@ -925,14 +944,41 @@ def sun_position(lat, lon, alt, times) :
         times,
         ["topoc.alpha_S", "topoc.gamma_S0", "topoc.toa_hi", "topoc.toa_ni"])
 
+    SR = np.squeeze(sun_rise[:, 0, 0])
+    SR_Day = SR.astype('datetime64[D]').astype(SR.dtype)
+    SR_TOD = (SR - SR_Day).astype(float) / 1000 / 60 / 60
+
+    SS = np.squeeze(sun_rise[:, 0, 2])
+    SS_Day = SS.astype('datetime64[D]').astype(SS.dtype)
+    SS_TOD = (SS - SS_Day).astype(float) / 1000 / 60 / 60
+
+    df = pd.DataFrame(index=times)
+
+    # Add extra columns from SG2 to dataframe
+    df['THETA_Z'] = np.pi / 2 - np.squeeze(sun_pos.topoc.gamma_S0)
+    df['GAMMA_S0'] = np.squeeze(sun_pos.topoc.gamma_S0)
+    df['ALPHA_S'] = np.squeeze(sun_pos.topoc.alpha_S)
+    df['SZA'] = 90 - 180 / np.pi * np.squeeze(sun_pos.topoc.gamma_S0)
+    df['TOA'] = np.squeeze(sun_pos.topoc.toa_hi)
+    df['TOANI'] = np.squeeze(sun_pos.topoc.toa_ni)
+    df['SR_h'] = SR_TOD
+    df['SS_h'] = SS_TOD
 
     info("end of sun position")
-    return sun_rise, sun_pos
+    return df
+
 
 @cache.memoize()
-def get_cams(start_date, end_date, lat, lon, cams_email, altitude, time_step="1min") :
+def get_cams(start_date, end_date, lat, lon, altitude, time_step="1min") :
+
     info("Calling CAMS")
-    res =  pvlib.iotools.get_cams(
+
+    if CAMS_EMAIL_ENV in os.environ:
+        cams_email = os.environ[CAMS_EMAIL_ENV]
+    else:
+        raise Exception("Cams emails not found. Please set the env variable %s or use a .env file" % CAMS_EMAIL_ENV)
+
+    CAMS_DF, _ =  pvlib.iotools.get_cams(
                 start=start_date,
                 end=end_date,
                 latitude=lat, longitude=lon,
@@ -941,11 +987,21 @@ def get_cams(start_date, end_date, lat, lon, cams_email, altitude, time_step="1m
                 altitude=altitude, time_step=time_step, time_ref='UT', verbose=False,
                 integrated=False, label='right', map_variables=True,
                 server='www.soda-is.com', timeout=180)
+
+    res = pd.DataFrame({
+        'CLEAR_SKY_GHI': CAMS_DF.ghi_clear.values,
+        'CLEAR_SKY_DNI': CAMS_DF.dni_clear.values,
+        'CLEAR_SKY_DIF': CAMS_DF.dhi_clear.values},
+        index=CAMS_DF.index.values)
+
     info("End calling CAMS")
+
     return res
 
 @cache.memoize()
 def wps_Horizon_SRTM(lat, lon, altitude):
+    if np.abs(lat) < 60 :
+        return None
 
     info("Fetching horizons from WPS")
 
