@@ -403,9 +403,9 @@ def SolarRadVisualControl(
         plt.plot(tx, fpoly2(tx), 'k--', alpha=0.4, linewidth=0.8)
 
         if ShowFlag == 1:
-            plt.plot(x[flag_df['QCFlag_Test1C_erl_' + PrmYi[jj]]], y[flag_df['QCFlag_Test1C_erl_' + PrmYi[jj]]], 'rs',
+            plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
                      markersize=1, alpha=0.5)
-            plt.plot(x[flag_df['QCFlag_Test1C_ppl_' + PrmYi[jj]]], y[flag_df['QCFlag_Test1C_ppl_' + PrmYi[jj]]], 'rs',
+            plt.plot(x[flag_df['T1C_ppl_' + PrmYi[jj]]], y[flag_df['T1C_ppl_' + PrmYi[jj]]], 'rs',
                      markersize=1, alpha=0.5, label='erl')
             ax21.legend(loc='lower right')
 
@@ -434,10 +434,10 @@ def SolarRadVisualControl(
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.8 * max(hist.flatten()))
     if ShowFlag == 1:
-        plt.plot(SZA[flag_df.QCFlag_Test2C_bsrn_kt], flag_df.K[flag_df.QCFlag_Test2C_bsrn_kt], 'rs', markersize=1,
+        plt.plot(SZA[flag_df.T2C_bsrn_kt], flag_df.K[flag_df.T2C_bsrn_kt], 'rs', markersize=1,
                  alpha=0.5, label='bsrn2C')
         ax22.legend(loc='lower left')
-    # plt.plot(SZA[QCFlag_Test2C_bsrn_kd],KT[QCFlag_Test2C_bsrn_kd],'r.',markersize=1,label="Flagged data")
+    # plt.plot(SZA[T2C_bsrn_kd],KT[T2C_bsrn_kd],'r.',markersize=1,label="Flagged data")
     plt.plot([0, 75, 75, 100], [1.05, 1.05, 1.1, 1.1], 'k--', alpha=0.4, linewidth=0.8)
     plt.xlabel('Solar zenith angle (°)', fontsize=FSZ)
     plt.ylabel('DIF/GHI (-)', fontsize=FSZ)
@@ -461,7 +461,7 @@ def SolarRadVisualControl(
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     plt.plot([0, 0.8, 1.35, 1.35], [0, 0.8, 0.8, 0], 'k--', alpha=0.4, linewidth=0.8)
     if ShowFlag == 1:
-        plt.plot(flag_df.KT[flag_df.QCFlag_Test2C_seri_kn_kt], flag_df.Kn[flag_df.QCFlag_Test2C_seri_kn_kt], 'r.',
+        plt.plot(flag_df.KT[flag_df.T2C_seri_kn_kt], flag_df.Kn[flag_df.T2C_seri_kn_kt], 'r.',
                  markersize=0.9, label='SERI-kn')
         ax24.legend(loc='upper right')
     plt.xlabel('GHI/TOA (-)', fontsize=FSZ)
@@ -484,7 +484,7 @@ def SolarRadVisualControl(
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     plt.plot([0, 0.6, 0.6, 1.35, 1.35], [1.1, 1.1, 0.95, 0.95, 0], 'k--', alpha=0.4, linewidth=0.8)
     if ShowFlag == 1:
-        plt.plot(flag_df.KT[flag_df.QCFlag_Test2C_seri_k_kt], flag_df.K[flag_df.QCFlag_Test2C_seri_k_kt], 'r.',
+        plt.plot(flag_df.KT[flag_df.T2C_seri_k_kt], flag_df.K[flag_df.T2C_seri_k_kt], 'r.',
                  markersize=0.9, label='seri-kkt')
         ax26.legend(loc='upper right')
     plt.xlabel('GHI/TOA (-)', fontsize=FSZ)
@@ -505,7 +505,7 @@ def SolarRadVisualControl(
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     if ShowFlag == 1:
-        ax27.plot(GHI[flag_df.QCFlag_Test3C_bsrn_3cmp], GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
+        ax27.plot(GHI[flag_df.T3C_bsrn_3cmp], GHI_est[flag_df.T3C_bsrn_3cmp], 'r.',
                   markersize=1, label='closure', alpha=0.1)
         ax27.legend(loc='lower right')
     ax27.plot(np.array([0, 1400]), 0.85 * np.array([0, 1400]), 'k-.', alpha=0.4, linewidth=1.0)
@@ -530,8 +530,8 @@ def SolarRadVisualControl(
     im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
     im00.set_clim(0, 0.5 * max(hist.flatten()))
     if ShowFlag == 1:
-        plt.plot(SZA[flag_df.QCFlag_Test3C_bsrn_3cmp],
-                 GHI[flag_df.QCFlag_Test3C_bsrn_3cmp] / GHI_est[flag_df.QCFlag_Test3C_bsrn_3cmp], 'r.',
+        plt.plot(SZA[flag_df.T3C_bsrn_3cmp],
+                 GHI[flag_df.T3C_bsrn_3cmp] / GHI_est[flag_df.T3C_bsrn_3cmp], 'r.',
                  markersize=1, label='closure', alpha=0.1)
         ax28.legend(loc='lower right')
     plt.plot([10, 75, 75, 90, 90, 75, 75, 10], [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92], 'k--', alpha=0.4,
@@ -643,67 +643,71 @@ def SolarRadVisualControl(
 
     # print(str(dt.datetime.now())+": --> QC: planarity check")
 
-    print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
-    # NB: the calculation can be optimized to run faster
+    if cams_df is not None :
 
-    # Aliases
-    CLEAR_SKY_GHI = cams_df.CLEAR_SKY_GHI
-    CLEAR_SKY_DNI = cams_df.CLEAR_SKY_DNI
+        print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
+        # NB: the calculation can be optimized to run faster
+
+        # Aliases
+        CLEAR_SKY_GHI = cams_df.CLEAR_SKY_GHI
+        CLEAR_SKY_DNI = cams_df.CLEAR_SKY_DNI
 
 
-    isClearSky = pvlib.clearsky.detect_clearsky(GHI, CLEAR_SKY_GHI)
-    ax31 = plt.subplot(gs3[3:5, 2])
-    YYL = [0.8, 1.2]
-    if ShowFlag == -1:
-        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
-                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-    else:
-        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
-                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-    vSAA = ALPHA_S.values
-    if latitude < 0:
-        vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
+        isClearSky = pvlib.clearsky.detect_clearsky(GHI, CLEAR_SKY_GHI)
+        ax31 = plt.subplot(gs3[3:5, 2])
+        YYL = [0.8, 1.2]
+        if ShowFlag == -1:
+            idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
+                      (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+        else:
+            idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
+                      (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+        vSAA = ALPHA_S.values
+        if latitude < 0:
+            vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
 
-    xPlot = vSAA * 180 / np.pi
-    yPlot = np.zeros(DNI.shape)
-    # yPlot[QC_df.CLEAR_SKY_DNI.values>0]=QC_df.GHI.values[QC_df.CLEAR_SKY_DNI.values>0]/QC_df.CLEAR_SKY_GHI.values[QC_df.CLEAR_SKY_DNI.values>0]
+        xPlot = vSAA * 180 / np.pi
+        yPlot = np.zeros(DNI.shape)
+        # yPlot[QC_df.CLEAR_SKY_DNI.values>0]=QC_df.GHI.values[QC_df.CLEAR_SKY_DNI.values>0]/QC_df.CLEAR_SKY_GHI.values[QC_df.CLEAR_SKY_DNI.values>0]
 
-    if (latitude < 0):
-        angle_filter = np.abs(vSAA * 180 / np.pi) < 60
-    else:
-        angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
+        if (latitude < 0):
+            angle_filter = np.abs(vSAA * 180 / np.pi) < 60
+        else:
+            angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
 
-    kc = GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
-         CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
+        kc = GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
+             CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
 
-    S = kc.resample('1D', label='left').sum()
-    C = kc.resample('1D', label='left').count()
-    Dailydata = pd.DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
-    data4plot = pd.DataFrame(
-        {'kc': GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
-         'SAA': vSAA[idxPlot] * 180 / np.pi, \
-         'day': meas_df[idxPlot].index.floor(freq='D')}, \
-        index=meas_df[idxPlot].index)
-    data4plot = data4plot.join(Dailydata, on='day', how='left')
-    ix = data4plot.Avgkc > 0
-    xPlot = data4plot.SAA[ix].values
-    yPlot = data4plot.kc[ix].values / data4plot.Avgkc[ix].values
+        S = kc.resample('1D', label='left').sum()
+        C = kc.resample('1D', label='left').count()
+        Dailydata = pd.DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
+        data4plot = pd.DataFrame(
+            {'kc': GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
+             'SAA': vSAA[idxPlot] * 180 / np.pi, \
+             'day': meas_df[idxPlot].index.floor(freq='D')}, \
+            index=meas_df[idxPlot].index)
+        data4plot = data4plot.join(Dailydata, on='day', how='left')
+        ix = data4plot.Avgkc > 0
+        xPlot = data4plot.SAA[ix].values
+        yPlot = data4plot.kc[ix].values / data4plot.Avgkc[ix].values
 
-    if latitude >= 0:
-        dxx = 0
-    else:
-        dxx = 180
-    hist, xedges, yedges = np.histogram2d(x=xPlot, y=yPlot, bins=[180, 100], range=[[0 - dxx, 360 - dxx], YYL])
-    plt.plot([0 - dxx, 360 - dxx], [1, 1], 'r--', alpha=0.4, linewidth=0.8)
-    plt.xlim((0 - dxx, 360 - dxx))
-    ax31.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=cmDensity)
-    im00.set_clim(0, 0.7 * max(hist.flatten()))
-    plt.ylabel('kc/kc_daily (-)', fontsize=FSZ)
-    plt.xlabel('Solar azimuth angle (°)', fontsize=FSZ)
-    ax31.set_ylim(YYL)
-    plt.colorbar(im00, label='point density (-)')
+        if latitude >= 0:
+            dxx = 0
+        else:
+            dxx = 180
+        hist, xedges, yedges = np.histogram2d(x=xPlot, y=yPlot, bins=[180, 100], range=[[0 - dxx, 360 - dxx], YYL])
+        plt.plot([0 - dxx, 360 - dxx], [1, 1], 'r--', alpha=0.4, linewidth=0.8)
+        plt.xlim((0 - dxx, 360 - dxx))
+        ax31.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
+        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
+        im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=cmDensity)
+        im00.set_clim(0, 0.7 * max(hist.flatten()))
+        plt.ylabel('kc/kc_daily (-)', fontsize=FSZ)
+        plt.xlabel('Solar azimuth angle (°)', fontsize=FSZ)
+        ax31.set_ylim(YYL)
+        plt.colorbar(im00, label='point density (-)')
+
+
 
     print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
     idxSC = (GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
@@ -799,16 +803,16 @@ def flagData(meas_df, sp_df):
     # % % -----------   Calculation of the individual QC flags -----------------
     # BSRN one-component test
     flag_df = DataFrame(index=meas_df.index)
-    flag_df["QCFlag_Test1C_ppl_GHI"] = (TOA > 0) & (
+    flag_df["T1C_ppl_GHI"] = (TOA > 0) & (
             (GHI <= -4) | (GHI > 1.5 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 100))
-    flag_df["QCFlag_Test1C_erl_GHI"] = (TOA > 0) & (
+    flag_df["T1C_erl_GHI"] = (TOA > 0) & (
             (GHI <= -2) | (GHI > 1.2 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
-    flag_df["QCFlag_Test1C_ppl_DIF"] = (TOA > 0) & (
+    flag_df["T1C_ppl_DIF"] = (TOA > 0) & (
             (DIF <= -4) | (DIF > 0.95 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
-    flag_df["QCFlag_Test1C_erl_DIF"] = (TOA > 0) & (
+    flag_df["T1C_erl_DIF"] = (TOA > 0) & (
             (DIF <= -2) | (DIF > 0.75 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 30))
-    flag_df["QCFlag_Test1C_ppl_DNI"] = (TOA > 0) & ((DNI <= -4) | (DNI > TOANI))
-    flag_df["QCFlag_Test1C_erl_DNI"] = (TOA > 0) & (
+    flag_df["T1C_ppl_DNI"] = (TOA > 0) & ((DNI <= -4) | (DNI > TOANI))
+    flag_df["T1C_erl_DNI"] = (TOA > 0) & (
             (DNI <= -2) | (DNI > 0.95 * TOANI * np.sin(GAMMA_S0) ** 0.2 + 10))
 
     flag_df["Kn"] = Kn
@@ -818,17 +822,17 @@ def flagData(meas_df, sp_df):
     flag_df["KT"] = KT
 
     # BSRN two-component test
-    flag_df["QCFlag_Test2C_bsrn_kt"] = ((TOA > 0) & (GHI > 50)) & (
+    flag_df["T2C_bsrn_kt"] = ((TOA > 0) & (GHI > 50)) & (
                 ((SZA < 75) & (K > 1.05)) |
                 ((SZA >= 75) & (K > 1.1)))
 
     # SERI-QC two-component test
-    flag_df["QCFlag_Test2C_seri_kn_kt"] = (TOA > 0) & ((Kn > KT) | (Kn > 0.8) | (KT > 1.35))
-    flag_df["QCFlag_Test2C_seri_k_kt"] = (TOA > 0) & (
+    flag_df["T2C_seri_kn_kt"] = (TOA > 0) & ((Kn > KT) | (Kn > 0.8) | (KT > 1.35))
+    flag_df["T2C_seri_k_kt"] = (TOA > 0) & (
                 ((KT < 0.6) & (K > 1.1)) | ((KT >= 0.6) & (K > 0.95)) | (KT > 1.35))
 
     # BSRN three-component test
-    flag_df["QCFlag_Test3C_bsrn_3cmp"] = (TOA > 0) & (
+    flag_df["T3C_bsrn_3cmp"] = (TOA > 0) & (
                 ((SZA <= 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.08)) | (
                     (SZA > 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.15)))
 
@@ -837,16 +841,16 @@ def flagData(meas_df, sp_df):
     DIF_clear = 0.165 * GHI_clear
     DNI_clear = GHI_clear - DIF_clear
 
-    flag_df["QCFlag_TrackerOff"] = ((SZA <= 85) &
+    flag_df["tracker_off"] = ((SZA <= 85) &
                                     ((GHI_clear - GHI) / (GHI_clear + GHI) < 0.2) &
                                     ((DNI_clear - DNI) / (DNI_clear + DNI) > 0.95))
     # % % Combination of individual QC tests
 
     # if at least one of the test is positive, we flag all data (to be eventually refined)
-    flag_df["QCtot"] = flag_df["QCFlag_Test1C_erl_GHI"] | flag_df["QCFlag_Test1C_erl_DIF"] | \
-                       flag_df["QCFlag_Test1C_erl_DNI"] | flag_df["QCFlag_Test2C_bsrn_kt"] | \
-                       flag_df["QCFlag_Test2C_seri_kn_kt"] | flag_df["QCFlag_Test2C_seri_k_kt"] | \
-                       flag_df["QCFlag_Test3C_bsrn_3cmp"] | flag_df["QCFlag_TrackerOff"]
+    flag_df["QCtot"] = flag_df["T1C_erl_GHI"] | flag_df["T1C_erl_DIF"] | \
+                       flag_df["T1C_erl_DNI"] | flag_df["T2C_bsrn_kt"] | \
+                       flag_df["T2C_seri_kn_kt"] | flag_df["T2C_seri_k_kt"] | \
+                       flag_df["T3C_bsrn_3cmp"] | flag_df["tracker_off"]
 
     # Evalue the share of flag data per day
     DailyFlagStat = flag_df["QCtot"].resample('D').sum() / (TOA > 0).resample('D').sum()
@@ -867,28 +871,28 @@ def qc_stats(meas_df, sp_df, flag_df) :
     TOA = sp_df.TOA
 
     return  {
-        'T1C_erl_GHI': sum(flag_df.QCFlag_Test1C_erl_GHI & (TOA > 0) & (GHI > -2)) / sum(
+        'T1C_erl_GHI': sum(flag_df.T1C_erl_GHI & (TOA > 0) & (GHI > -2)) / sum(
             (TOA > 0) & (GHI > -2)) * 100,
-        'T1C_ppl_GHI': sum(flag_df.QCFlag_Test1C_ppl_GHI & (TOA > 0) & (GHI > -2)) / sum(
+        'T1C_ppl_GHI': sum(flag_df.T1C_ppl_GHI & (TOA > 0) & (GHI > -2)) / sum(
             (TOA > 0) & (GHI > -2)) * 100,
-        'T1C_erl_DIF': sum(flag_df.QCFlag_Test1C_erl_DIF & (TOA > 0) & (DIF > -2)) / sum(
+        'T1C_erl_DIF': sum(flag_df.T1C_erl_DIF & (TOA > 0) & (DIF > -2)) / sum(
             (TOA > 0) & (DIF > -2)) * 100,
-        'T1C_ppl_DIF': sum(flag_df.QCFlag_Test1C_ppl_DIF & (TOA > 0) & (DIF > -2)) / sum(
+        'T1C_ppl_DIF': sum(flag_df.T1C_ppl_DIF & (TOA > 0) & (DIF > -2)) / sum(
             (TOA > 0) & (DIF > -2)) * 100,
-        'T1C_erl_DNI': sum(flag_df.QCFlag_Test1C_erl_DNI & (TOA > 0) & (DNI > -2)) / sum(
+        'T1C_erl_DNI': sum(flag_df.T1C_erl_DNI & (TOA > 0) & (DNI > -2)) / sum(
             (TOA > 0) & (DNI > -2)) * 100,
-        'T1C_ppl_DNI': sum(flag_df.QCFlag_Test1C_ppl_DNI & (TOA > 0) & (DNI > -2)) / sum(
+        'T1C_ppl_DNI': sum(flag_df.T1C_ppl_DNI & (TOA > 0) & (DNI > -2)) / sum(
             (TOA > 0) & (DNI > -2)) * 100,
-        'T2C_bsrn_kt': sum(flag_df.QCFlag_Test2C_bsrn_kt & (TOA > 0) & (GHI > -2)) / sum(
+        'T2C_bsrn_kt': sum(flag_df.T2C_bsrn_kt & (TOA > 0) & (GHI > -2)) / sum(
             (TOA > 0) & (GHI > -2)) * 100,
         'T2C_seri_knkt': sum(
-            flag_df.QCFlag_Test2C_seri_kn_kt & (TOA > 0) & (DNI > -2) & (GHI > -2)) / sum(
+            flag_df.T2C_seri_kn_kt & (TOA > 0) & (DNI > -2) & (GHI > -2)) / sum(
             (TOA > 0) & (DNI > -2) & (GHI > -2)) * 100,
         'T2C_seri_kkt': sum(
-            flag_df.QCFlag_Test2C_seri_k_kt & (TOA > 0) & (DIF > -2) & (GHI > -2)) / sum(
+            flag_df.T2C_seri_k_kt & (TOA > 0) & (DIF > -2) & (GHI > -2)) / sum(
             (TOA > 0) & (DIF > -2) & (GHI > -2)) * 100,
         'T3C_bsrn': sum(
-            flag_df.QCFlag_Test3C_bsrn_3cmp & (TOA > 0) & (GHI > -2) & (DIF > -2) & (
+            flag_df.T3C_bsrn_3cmp & (TOA > 0) & (GHI > -2) & (DIF > -2) & (
                     DNI > -2)) / sum(
             (TOA > 0) & (GHI > -2) & (DIF > -2) & (DNI > -2)) * 100}
 

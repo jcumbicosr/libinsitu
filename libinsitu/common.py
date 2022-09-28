@@ -337,11 +337,11 @@ def nc2df(
         chunked=False,
         chunk_size=CHUNK_SIZE,
         steps=1,
-        rename=False) :
+        rename_cols=False) :
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
-        :param rename: If True (default) rename solar irradiance columns to proper names
+        :param rename_cols: If True (default) rename solar irradiance columns to proper names
         :param ncfile: NetCDF Dataset or filename, or URL
         :param drop_duplicates: If true (default), duplicate rows with same time are droppped
         :param skip_na : If True, drop rows containing only nan values
@@ -357,7 +357,7 @@ def nc2df(
 
     chunks = __nc2df(
         ncfile, start_time, end_time,
-        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename)
+        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename_cols)
 
     # Handling either single result or chunked generator
     if not chunked :

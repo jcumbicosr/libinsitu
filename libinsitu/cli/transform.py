@@ -247,7 +247,6 @@ def process_chunck(handler, infile, ncfile, args, properties):
     # Seconds to time index, as per start date and resolution
     time_idx = seconds_to_idx(ncfile, times_sec)
 
-
     chunk_start = min(chunk_dates)
     chunk_end = max(chunk_dates)
     chunk_end_int = datetime64_to_sec(ncfile, chunk_end)
