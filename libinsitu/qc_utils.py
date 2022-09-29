@@ -260,7 +260,7 @@ def SolarRadVisualControl(
         im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
         im00.set_clim(0, Ratio4C * max(hist.flatten()))
 
- 
+
         plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
 
         plt.ylim((1 - dYL, 1 + dYL))

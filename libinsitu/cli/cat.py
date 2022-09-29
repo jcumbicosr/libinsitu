@@ -153,56 +153,91 @@ def main() :
 
     if args.stats :
 
-        stats = defaultdict(lambda : Stat())
-        for chunk in chunks :
-            for col in chunk.columns :
-                series = chunk[col]
-                stats[col].accumulate(series)
-
-        table = Table()
-        for name in ["column", "count", "min", "max", "mean"] :
-            table.add_column(name)
-
-        for colname, stat in stats.items() :
-            table.add_row(
-                colname,
-                "%d" % stat.count,
-                "%.05g" % stat.min,
-                "%.05g" % stat.max,
-                "%.05g" % (stat.sum / stat.count))
-
-        console = Console()
-        console.print(table)
+        show_stats(chunks)
 
     else:
-        header = True
-        formatters = None
-        for chunk in chunks :
 
-            if len(chunk) == 0 :
+        print_data(chunks, args)
+
+def print_data(chunks, args) :
+    header = True
+    formatters = None
+    for chunk in chunks:
+
+        if len(chunk) == 0:
+            continue
+
+        chunk = format_QC(chunk, args.qc_format)
+
+        if header and args.header:
+            print_meta(chunk)
+
+        if formatters is None:
+            formatters = build_formatters(chunk)
+
+        if args.no_data:
+            break
+
+        if args.type == "text":
+            chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
+            print("")
+        elif args.type == "csv":
+            output = StringIO()
+            chunk.to_csv(output, index_label="time", header=header)
+            output.seek(0)
+            sys.stdout.write(output.read())
+
+        header = False
+
+def show_stats(chunks) :
+
+    console = Console()
+
+    stats = defaultdict(lambda : Stat())
+    for chunk in chunks :
+
+        chunk = format_QC(chunk, QC_EXPAND)
+
+        for col in chunk.columns :
+            series = chunk[col]
+            stats[col].accumulate(series)
+
+    # Data vars stats
+    table = Table("column", "count", "min", "max", "mean")
+
+    has_qc = False
+
+    for colname, stat in stats.items() :
+
+        if colname.startswith(QC_FLAGS_VAR) :
+            has_qc = True
+            continue
+
+        table.add_row(
+            colname,
+            "%d" % stat.count,
+            "%.05g" % stat.min,
+            "%.05g" % stat.max,
+            "%.05g" % (stat.sum / stat.count))
+
+    console.print(table)
+
+    if has_qc :
+
+        table = Table("QC flag", "fail", "%")
+        for colname, stat in stats.items() :
+
+            if not colname.startswith(QC_FLAGS_VAR) :
                 continue
 
-            chunk = format_QC(chunk, args.qc_format)
+            table.add_row(
+                colname.strip(QC_FLAGS_VAR + "."),
+                "%d" % stat.sum,
+                "%.02f" % (stat.sum / stat.count * 100))
 
-            if header and args.header :
-                print_meta(chunk)
+        console.print(table)
 
-            if formatters is None :
-                formatters = build_formatters(chunk)
-
-            if args.no_data :
-                break
-
-            if args.type == "text" :
-                chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
-                print("")
-            elif args.type == "csv" :
-                output = StringIO()
-                chunk.to_csv(output, index_label="time", header=header)
-                output.seek(0)
-                sys.stdout.write(output.read())
-
-            header = False
+    # QC stats
 
 def format_QC(df, qc_format) :
     if not QC_FLAGS_VAR in df.columns :
