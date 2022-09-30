@@ -57,96 +57,167 @@ variables:
 		GHI:grid_mapping = "crs" ;
 		GHI:least_significant_digit=1;
 
-	float DHI(time) ;
-		DHI:long_name = "Diffuse horizontal radiation" ;
-		DHI:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
-		DHI:abbreviation = "DHI" ;
-		DHI:units = "W m-2" ;
-		DHI:_valid_min=0.0 ;
-		DHI:_valid_max=3000 ;
-		DHI:grid_mapping = "crs" ;
-		DHI:least_significant_digit=1;
+	float DIF(time) ;
+		DIF:long_name = "Diffuse horizontal radiation" ;
+		DIF:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
+		DIF:abbreviation = "DHI" ;
+		DIF:units = "W m-2" ;
+		DIF:_valid_min=0.0 ;
+		DIF:_valid_max=3000 ;
+		DIF:grid_mapping = "crs" ;
+		DIF:least_significant_digit=1;
 
-	float BNI(time) ;
-		BNI:long_name = "Beam (or direct) normal radiation" ;
-		BNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
-		BNI:abbreviation = "BNI" ;
-		BNI:units = "W m-2" ;
-		BNI:_valid_min=0.0 ;
-		BNI:_valid_max=3000 ;
-		BNI:grid_mapping = "crs" ;
-		BNI:least_significant_digit=1;
+	float DNI(time) ;
+		DNI:long_name = "Beam (or direct) normal radiation" ;
+		DNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
+		DNI:abbreviation = "BNI" ;
+		DNI:units = "W m-2" ;
+		DNI:_valid_min=0.0 ;
+		DNI:_valid_max=3000 ;
+		DNI:grid_mapping = "crs" ;
+		DNI:least_significant_digit=1;
 
-	float T2(time) ;
-		T2:long_name = "Air temperature at 2 m height" ;
-		T2:standard_name = "air_temperature" ;
-		T2:abbreviation = "T2" ;
-		T2:units = "K" ;
-		T2:_valid_min=123.0 ;
-		T2:_valid_max=372.9 ;
-		T2:grid_mapping = "crs" ;
-		T2:least_significant_digit=1;
+	float GHIcalc(time) ;
+		GHIcalc:parameter = "Short-wave downward (GLOBAL) radiation" ;
+		GHIcalc:long_name = "Global Horizontal Irradiance calculated with the diffuse and direct components" ;
+		GHIcalc:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
+		GHIcalc:abbreviation = "SWD" ;
+		GHIcalc:units = "W m-2" ;
+		GHIcalc:_valid_min = -10. ;
+		GHIcalc:_valid_max = 3000 ;
+		GHIcalc:least_significant_digit = 1 ;
 
-	float RH(time) ;
+    float Elev(time) ;
+		Elev:parameter = "Solar elevation angle" ;
+		Elev:long_name = "Solar elevation angle" ;
+		Elev:abbreviation = "Elev" ;
+		Elev:units = "degree" ;
+		Elev:_valid_min = -1 ;
+		Elev:_valid_max = 95 ;
+		Elev:least_significant_digit = 3 ;
 
-		RH:long_name = "Relative humidity" ;
-		RH:standard_name = "relative_humidity" ;
-		RH:abbreviation = "RH" ;
-		RH:units = "1" ;
-		RH:_valid_min=0.0 ;
-		RH:_valid_max=1.0 ;
-		RH:grid_mapping = "crs" ;
-		RH:least_significant_digit=3;
+	float Azim(time) ;
+		Azim:parameter = "Solar azimuth angle" ;
+		Azim:long_name = "Solar azimuth angle" ;
+		Azim:abbreviation = "Azim" ;
+		Azim:units = "degree" ;
+		Azim:_valid_min = -362 ;
+		Azim:_valid_max = 362 ;
+		Azim:least_significant_digit = 3 ;
 
-	float WS(time) ;
+	float Kc(time) ;
+		Kc:parameter = "Clear sky index" ;
+		Kc:long_name = "Clear sky index" ;
+		Kc:abbreviation = "Kc" ;
+		Kc:comment = "Kc is the clearsky index calculated with CAMS mcclear with GHIcalc/GHI McClear" ;
+		Kc:_valid_min = -0.1 ;
+		Kc:_valid_max = 2 ;
+		Kc:least_significant_digit = 3 ;
+		
+	int flagPPLDIF(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+		
+	int flagERLDIF(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-		WS:long_name = "Wind speed" ;
-		WS:standard_name = "wind_speed" ;
-		WS:abbreviation = "windspd" ;
-		WS:units = "m s-1" ;
-		WS:_valid_min=0.0;
-		WS:_valid_max=100.0;
-		WS:grid_mapping = "crs" ;
-		WS:least_significant_digit=2;
+	int flagPPLDNI(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-	float WD(time) ;
+	int flagERLDNI(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-		WD:long_name = "Wind direction, clockwise from north" ;
-		WD:standard_name = "wind_direction" ;
-		WD:abbreviation = "winddir" ;
-		WD:units = "degrees";
-		WD:_valid_min=0.0;
-		WD:_valid_max=360.0;
-		WD:grid_mapping = "crs" ;
-		WD:least_significant_digit=1;
+	int flagPPLGHI(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-	float P(time) ;
-		P:parameter = "Station pressure" ;
-		P:long_name = "Air pressure at station height" ;
-		P:standard_name = "air_pressure" ;
+	int flagERLGHI(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-		P:units = "Pa" ;
-		P:_valid_min=0.0 ;
-		P:_valid_max=120000.0;
-		P:grid_mapping = "crs" ;
-		P:least_significant_digit=0;
+	int flag3highSZA(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
 
-	uint QC(time) ;
-	    QC:long_name = "QC flag status";
-	    QC:comment = "Flag=1 means QC test failed";
-	    QC:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
-	    QC:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+	int flag3lowSZA(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKt(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKKt(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKn(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKnKt(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKhighSZA(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagKlowSZA(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagTracker(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+	int flagManual(time) ;
+		*:_valid_min =  0;
+		*:_valid_max =  1;
+		*:_FillValue = -999;
+		*:missing_value = -999;
+
+
 
 # Global attributes
 
     # Main info
     :id = "{Network_ID}-{Station_ID}";
     :title = "Timeseries of {Network_LongName} ({Network_ID}). Station : {Station_Name}" ;
-    :summary = "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server." ;
-    :keywords = "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure"
-    :keywords_vocabulary = "GCMD Science Keywords" ;
-    :keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
-    :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
+    :description = "Reference data used for the validation work in the IEA PVPS task 16" ;
     :featureType = "timeSeries" ;
     :cdm_data_type = "timeSeries";
 
@@ -163,15 +234,15 @@ variables:
     :creator_name =  "{Station_ContactName}" ;
     :institution =  "{Station_Institute}" ;
     :metadata_link =  "{Station_Url}";
-    :creator_email = "{Network_ContactPersonMail}";
     :creator_url = "{Network_DescriptionURL}" ;
+    :creator_email = "{Network_ContactPersonMail}";
     :references = "{Network_References}" ;
     :license = "{Network_LicenseInfoURL}" ;
 
     :comment = "{Station_Comment}" ;
 
     # Station info & coordinates [ACDD1.3]
-    :project = "{Network_LongName}"; # Network long name
+    :project = "IEA PVPS task 16"; # Network long name
     :platform = "{Station_Name}" ; # Should be a long / full name
     :geospatial_lat_min = {Station_Latitude} ;
     :geospatial_lon_min = {Station_Longitude} ;

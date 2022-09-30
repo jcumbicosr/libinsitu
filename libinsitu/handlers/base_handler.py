@@ -115,16 +115,11 @@ class InSituHandler :
 
         filenames = list(_zip_glob(pattern))
 
-        debug(pattern, filenames)
-
-        re_pattern = self.re_pattern()
-
-        debug(re_pattern)
 
         # Finer filter on each name
         def filter_f(filename) :
             basename = os.path.basename(filename)
-            return True if re.match(re_pattern, basename, flags=re.IGNORECASE) else False
+            return True if self.match_pattern(basename) else False
 
         return list(filename for filename in filenames if filter_f(filename))
 

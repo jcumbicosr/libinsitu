@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import datetime
+import numpy as np
 import os.path
 import sys
 from os.path import basename, dirname
@@ -130,7 +131,7 @@ def process_network(network, station_id, out_filename, args) :
                 logger.exception(e)
 
 
-# FIXME : Rarely helps, we should write some clever system to split indices into list of slices
+
 def idx2slice(idx) :
     """If indices are regular, transform it into a slice : much faster for writing"""
 
@@ -141,7 +142,7 @@ def idx2slice(idx) :
 
     if np.all(np.diff(idx) == step) :
         debug("Idx was slice")
-        return slice(idx[0], idx[1] + step, step)
+        return slice(idx[0], idx[-1] + step, step)
 
     return idx
 
@@ -151,15 +152,17 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
     overlapping_mask = times_idx < size_before
     overlapping_indices = times_idx[overlapping_mask]
 
-    for varname in DATA_VARS:
-
-        if not varname in data :
-            continue
+    for varname in data.columns:
 
         var = ncfile.variables[varname]
         new_values = data[[varname]].values.flatten()
 
         check_boundaries(var, new_values)
+
+        # Overcoming this bug ; https://github.com/scipy/scipy/issues/6097
+        if np.issubdtype(var.dtype, np.integer) :
+            fill_value = getattr(var, FILL_VALUE_ATTR, DEFAULT_FILL_VALUE)
+            new_values[np.isnan(new_values)] = fill_value
 
         if not np.any(overlapping_mask) or not args.check:
             # No overlap with previous data ? no need for check
@@ -216,15 +219,15 @@ def process_chunck(handler, infile, ncfile, args, properties):
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
+    # Reshape : regular time is faster to write in NetCDF (as slice)
+    data = data.asfreq("%dS" % resolution_s)
+
     # Transform time to seconds since start date and time idx
     chunk_dates = data.index.values
 
     times_sec = datetime64_to_sec(ncfile, chunk_dates)
 
     columns = list(data.columns)
-    for col in columns:
-        if col not in DATA_VARS:
-            error("Unknown column '%s'. Not part of %s", col, DATA_VARS)
 
     # Create vars if not present yet
     missing_vars = list(col for col in columns if not col in ncfile.variables)

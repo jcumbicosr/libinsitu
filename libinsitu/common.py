@@ -35,6 +35,9 @@ QC_FLAGS_VAR = "QC"
 # Variable attributes
 VALID_MIN_ATTR = "_valid_min"
 VALID_MAX_ATTR = "_valid_max"
+FILL_VALUE_ATTR = "_FillValue"
+
+DEFAULT_FILL_VALUE = -999
 
 # Alternate names often found for variables
 ALTERNATE_NAMES = {

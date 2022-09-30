@@ -35,12 +35,13 @@ def replace_placeholders(strval, attributes) :
     return re.sub(r'{\w+}', repl, strval)
 
 def parse_cdl(lines, attributes=dict()) :
+    """ Parse CDL file """
 
     res = CDL()
 
     section = None
+    curr_var = None;
 
-    """ Parse CDL file """
     for line in lines :
         line = line.strip()
 
@@ -67,6 +68,9 @@ def parse_cdl(lines, attributes=dict()) :
 
             elif section == "variables" :
                 varname, attrname = key.split(":")
+
+                if varname == "*" :
+                    varname = curr_var
                 if isinstance(val, str) :
                     val = replace_placeholders(val, attributes)
                 if varname == "" :
@@ -107,6 +111,7 @@ def parse_cdl(lines, attributes=dict()) :
                 var, dims = var.split("(")
                 dims = dims.strip(")").strip().split(",")
             res.variables[var] = Variable(var, type, dims)
+            curr_var = var
         else :
             raise Exception("Bad line : %s" %line)
 
@@ -202,15 +207,32 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
 
 def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
 
-    cdl = parse_cdl(read_res(CDL_PATH), properties)
+    try:
+        # Try to load custom CDL first
+        custom_name = properties["Network_ID"] + ".cdl"
+        cdl = parse_cdl(read_res(custom_name), properties)
+        info("Used custom CDL : %s" % custom_name)
+
+    except FileNotFoundError:
+        cdl = parse_cdl(read_res(CDL_PATH), properties)
+
+    # Ensures all requested data vars are defined
+    missing_vars = set(data_var for data_var in data_vars if data_var not in cdl.variables)
+    if len(missing_vars) > 0 :
+        raise Exception("Unknown data vars : %s" % missing_vars)
 
     filtered_cdl = deepcopy(cdl)
 
     # Filter data vars (variables with "time" dimension)
     # Also adds the "Time" variable
-    filtered_cdl.variables = dict((key, var)
-                         for key, var in cdl.variables.items()
-                         if (not "time" in var.dimensions) or var.name in data_vars + [TIME_VAR])
+    filtered_cdl.variables = dict()
+    for key, var in cdl.variables.items() :
+        if "time" in var.dimensions and not key in data_vars + [TIME_VAR] :
+            continue
+        filtered_cdl.variables[key] = var
+
+
+
 
     cdl2netcdf(netcdf, filtered_cdl, dry_run, delete_attrs)
 

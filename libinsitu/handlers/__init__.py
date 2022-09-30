@@ -2,6 +2,7 @@ from libinsitu.handlers import SAURAN, SKYNET
 from libinsitu.handlers.ABOM import ABOMHandler
 from libinsitu.handlers.BSRN import BSRNHandler
 from libinsitu.handlers.ESMAP import ESMAPHandler
+from libinsitu.handlers.IEA_PVPS import IEA_PVPSHandler
 from libinsitu.handlers.ISE_PVLive import ISEPVLive
 from libinsitu.handlers.NREL_MIDC import NRELHandler
 from libinsitu.handlers.RAD import RADHandler
@@ -21,6 +22,7 @@ HANDLERS = {
     "NREL_MIDC" : NRELHandler,
     "SURFRAD" : RADHandler,
     "SOLRAD" : RADHandler,
-    "SKYNET" : SkyNetHandler
+    "SKYNET" : SkyNetHandler,
+    "IEA_PVPS" : IEA_PVPSHandler
 }
 
