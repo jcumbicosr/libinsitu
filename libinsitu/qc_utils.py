@@ -1008,11 +1008,10 @@ def wps_Horizon_SRTM(lat, lon, altitude):
     info("Fetching horizons from WPS")
 
     str_wps = 'http://toolbox.webservice-energy.org/service/wps?service=WPS&request=Execute&identifier=compute_horizon_srtm&version=1.0.0&DataInputs='
-    datainputs_wps = 'latitude={:.6f};longitude={:.6f};altitude={:.1f}'.format(lat, lon, altitude);
+    datainputs_wps = 'latitude={:.6f};longitude={:.6f};altitude={:.1f}'.format(lat, lon, altitude)
 
-    print(datainputs_wps)
-    print('{}{}'.format(str_wps, datainputs_wps))
     response = urlopen('{}{}'.format(str_wps, datainputs_wps))
+
     HZ = pd.read_csv(response, delimiter=';', comment='#', header=None, skiprows=17, nrows=360,
                          names=['AZIMUT', 'ELEVATION'])
 
@@ -1025,6 +1024,7 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 def write_flags(ncfile, flags_df) :
 
     # Parse CDL : use defaultdict to avoid warning
+    # XXX try to not parse it twise and get it from above
     cdl = parse_cdl(read_res(CDL_PATH), attributes=DefaultDict(lambda : "-"))
 
     # Create var if not present yet
