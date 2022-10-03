@@ -10,10 +10,14 @@ This convention is implemented by the python library [**libinsitu**](../README.m
 * A workflow for transforming in situ measurements from various networks into standardized datasets
 * Python functions and command line (CLI) tools to explore and extract data from files following this convention
 
-This libraries embeds a [Common Data Langage (CDL) template](../libinsitu/res/base.cdl), describing a NetCDF file format, 
+This library embeds a [Common Data Langage (CDL) template](../libinsitu/res/base.cdl), describing a NetCDF file format, 
 filled at runtime with metadata gathered for several [networks](../libinsitu/res/networks.csv) and [their stations](../libinsitu/res/station-info). 
 
-# File format 
+
+
+---
+
+## File format 
 
 We propose to format the data into [**NetCDF** files](https://www.unidata.ucar.edu/software/netcdf/).
 
@@ -27,27 +31,35 @@ The present convention is based on two other conventions :
 * [CF conventions](https://cfconventions.org/) & [Standard names](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html): Convention of meta data from Climate and Forecast community.
 * [Attribute Convention for Data Discovery](https://wiki.esipfed.org/Attribute_Convention_for_Data_Discovery_1-3)
 
-We advise to use version 4 or above of NetCDF. 
+We advise to use version 4 or above of NetCDF.
 
-# Data granularity 
+---
+
+## Data granularity 
 
 We recommend to distribute one file per station of measurements. 
 
-Providers can split the data into yearly or monthly subsets but should also provide aggregated datasets for easier requesting / subsetting. 
+Providers can split the data into yearly or monthly subsets but should also provide aggregated datasets for easier requesting / subsetting.
 
-# Compression  
+---
+
+## Compression  
 
 We recommend to activate lossless [zlib compression](https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables).
 
 Optionally we recommend of use lossly compression by truncating data values to proper significant digits. 
 For this purpose we use the attribute **least_significant_digit** supported by the Python driver of **NetCDF**.  
 
-# Dimensions
+---
+
+## Dimensions
 
 Each file should have only one dimension  :
 - Unlimited dimension for time, named **time**
 
-# Variables
+---
+
+## Variables
 
 We propose to include a subset of [standard CF variables](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html).
 
@@ -55,7 +67,7 @@ We suggest names for these variables but we only enforce :
 * Their **standard_name** attribute, as per CF conventions
 * Their units
 
-## Time
+### Time
 
 Each NetCDF file should have a single time variable, with *standard_name* **"time"**, along the **time** dimension. 
 This time should be expressed as seconds since first january 1970. Hence, following the CF conventions, the units of 
@@ -79,7 +91,7 @@ int Time(time) ;
     Time:calendar = "gregorian" ;
 ```
 
-## Station name and coordinates
+### Station name and coordinates
 
 Following the CF conventions, some station metadata are stored as separate variables :
 * The name of the station, as a string
@@ -119,7 +131,7 @@ float elevation;
     elevation:axis = "Z" ;
 ```
 
-## CRS
+### CRS
 
 An empty variable named **crs** should be created to store information about the coordinate system.
 It should be referenced by any data varaible via the attribute **grid_mapping**.
@@ -133,7 +145,7 @@ double crs ;
     crs:epsg_code = "EPSG:4326";
 ```
 
-## Data variables
+### Data variables
 
 Data variables should be one dimensional along the **time** axis. Their type should be *float* or *double*.
 
@@ -256,7 +268,7 @@ float P(time) ;
 ```
 
 
-# Global attributes 
+## Global attributes 
 
 Here, we propose a list of recommended global metadata providing additional information of the data and the station.
 
@@ -265,7 +277,7 @@ We try to stick as much as possible to the existing CF and ACDD conventions.
 Some of those attributes may seem redondant with the contents of some variables. 
 They are useful anyway as it is simpler to fetch all global attributes than to dig into the values of the variables, espcecially for remote access (ODAP) 
 
-## Main info
+### Main info
 
 | Name                | Content                 | Example                                                                                                                                                                                                                                                                           |
 |---------------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -277,7 +289,7 @@ They are useful anyway as it is simpler to fetch all global attributes than to d
 | featureType         | "timeSeries"            | "timeSeries"                                                                                                                                                                                                                                                                              |
 | Conventions         | List of conventions     | "CF-1.9,ACDD-1.3"                                                                                                                                                                                                                                                                         |
 
-## Publisher info
+### Publisher info
 
 | Name                  |          Name of the publisher                     | Example                                                                                                                                    |
 |-----------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
@@ -287,7 +299,7 @@ They are useful anyway as it is simpler to fetch all global attributes than to d
 | publisher_institution | Name of publisher institution | "Mines Paristech - PSL"                                                                                                                    |
 
 
-## Creator info
+### Creator info
 
 Info on the creator of data.
 It may or may not be the same as publisher
@@ -301,7 +313,7 @@ It may or may not be the same as publisher
 | license     | Link to license of data      | "https://bsrn.awi.de/data/conditions-of-data-release/" |
 
 
-### Station info
+#### Station info
 
 The station info are mappend into ACDD attributes.
 
@@ -316,7 +328,7 @@ The station info are mappend into ACDD attributes.
 | geospatial_bounds     | POINT({Station_Latitude} {Station_Longitude}) | "POINT(79.27 101.75)"                |
 | geospatial_bounds_crs | Projection                                    | "EPSG:4326"                          |
 
-## Time information
+### Time information
 
 | Name                     | Content                                                     | Example               |
 |--------------------------|-------------------------------------------------------------|-----------------------|
@@ -327,13 +339,13 @@ The station info are mappend into ACDD attributes.
 | date_created             | Creation time                                               | "2021-01-01T00:00:00" |
 | date_modified            | Modification time                                           | "2021-01-01T00:00:00" |
 
-## Custom IN Situ metadata
+### Custom IN Situ metadata
 
 The followig attributes are not part of CF or ACDD conventions. 
 
 They are additional metadata recommended for this specific use case.
 
-### IDs
+#### IDs
 
 Unique Ids usefull for identifying network and station.
 
@@ -345,7 +357,7 @@ Unique Ids usefull for identifying network and station.
 | station_uid    | Numeric ID of the station, if any                                      | 102     |
 | station_wmo_id | WMO ID of the station, if any                                          |         |
 
-### Surface 
+#### Surface 
 
 Description of the surface around the station
 
@@ -355,7 +367,7 @@ Description of the surface around the station
 | topography_type | flat, hilly, moutain valley, mountain top, ... |            |
 | rural_urban     | "rural" or "urban"                             | "rural"    |
 
-### Station location
+#### Station location
 
 | Name            | Content                 | Example                  |
 |-----------------|-------------------------|--------------------------|
@@ -364,14 +376,14 @@ Description of the surface around the station
 | station_address | Address of the station  | "100, Erfurterweg (123)" |
 | station_city    | City of the station     | "Carpentras"             |
 
-### Misc
+#### Misc
 
 | Name             | Content                                | Example  |
 |------------------|----------------------------------------|----------|
 | climate          | Climate at the station (KeoppenGeiger) | "EF"     |
 | operation_status | 'active', 'inactive' or 'closed'         | "closed" |
 
-# Distribution of files
+## Distribution of files
 
 We advise to distribute the NetCDF files with [THREDDS data server (TDS)](https://github.com/Unidata/tds). 
 
