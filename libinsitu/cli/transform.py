@@ -6,7 +6,7 @@ from os.path import basename, dirname
 
 from libinsitu.common import *
 from libinsitu.cdl import *
-from libinsitu.handlers import HANDLERS, InSituHandler
+from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
 from libinsitu.log import debug, info, warning, logger, LogContext, error
 import argparse
 
@@ -320,7 +320,7 @@ def main():
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
-    parser.add_argument('--network', '-n', help='Network name', required=True, choices=list(HANDLERS.keys()))
+    parser.add_argument('--network', '-n', help='Network name', required=True, choices=listNetworks())
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
     parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")

@@ -19,6 +19,8 @@ from unidecode import unidecode
 from datetime import datetime
 from urllib.request import urlretrieve
 
+from libinsitu import VALID_COLS
+
 OUT_DIR = "src/res/station-info/"
 
 from libinsitu.log import error
@@ -40,40 +42,7 @@ COL_SUBS = {
     "Type" : "QualityStandard"
 }
 
-# Columns, in order to appear
-VALID_COLS = [
-    "ID",
-    "UID",
-    "WMOID",
-    "Name",
-    "Latitude",
-    "Longitude",
-    "Elevation",
-    "Timezone",
-    "Address",
-    "City",
-    "Region",
-    "Country",
-    "SurfaceType",
-    "TopographyType",
-    "RuralUrban",
-    "Climate",
-    "OperationStatus",
-    "TimeResolution",
- #   "DataBegin",
- #   "DataEnd",
-    "ContactName",
-    "Institute",
-    "Url",
-    "CommissionDate",
-    "DecommissionDate",
-    "StartDate",
-    "EndDate",
-    "DNI_Col",
-    "DHI_Col",
-    "GHI_Col",
-    "QualityStandard",
-    "Comment"]
+
 
 GEOLOC = {
     "Country" : ["country"],

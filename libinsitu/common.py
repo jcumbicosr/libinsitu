@@ -15,6 +15,9 @@ import pandas as pd
 from pkgutil import get_data
 import os
 import re
+import sys
+
+from six import StringIO
 
 from libinsitu.log import warning
 
@@ -29,6 +32,41 @@ HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
+
+# Columns for station info, in order of apparition
+VALID_COLS = [
+    "ID",
+    "UID",
+    "WMOID",
+    "Name",
+    "Latitude",
+    "Longitude",
+    "Elevation",
+    "Timezone",
+    "StartDate",
+    "EndDate",
+    "TimeResolution",
+    "Address",
+    "City",
+    "Region",
+    "Country",
+    "SurfaceType",
+    "TopographyType",
+    "RuralUrban",
+    "Climate",
+    "OperationStatus",
+ #   "DataBegin",
+ #   "DataEnd",
+    "ContactName",
+    "Institute",
+    "Url",
+    "CommissionDate",
+    "DecommissionDate",
+    "DNI_Col",
+    "DHI_Col",
+    "GHI_Col",
+    "QualityStandard",
+    "Comment"]
 
 # Variable attributes
 VALID_MIN_ATTR = "_valid_min"
@@ -613,3 +651,17 @@ def parallel_map(fn, iterable, parallel, max_workers=None) :
         return exec.map(fn, iterable)
     else:
         return map(fn, iterable)
+
+def df_to_csv(df, out=sys.stdout, **args) :
+    """Output CSV to stdout"""
+    output = StringIO()
+    df.to_csv(output, **args)
+    output.seek(0)
+    out.write(output.read())
+
+def df_to_json(df, out=sys.stdout, **args) :
+    """Output CSV to stdout"""
+    output = StringIO()
+    df.to_json(output, **args)
+    output.seek(0)
+    out.write(output.read())
