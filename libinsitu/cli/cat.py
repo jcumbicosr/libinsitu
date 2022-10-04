@@ -5,14 +5,18 @@ from dateutil.relativedelta import relativedelta
 import argparse
 import numpy as np
 from numpy import datetime64
+from pandas import Series
 from rich.console import Console
 from rich.table import Table
-from six import StringIO
 from datetime import datetime
 
-from libinsitu import df_to_csv
 from libinsitu.log import debug
-from libinsitu.common import nc2df, CHUNK_SIZE
+from libinsitu.common import nc2df, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
+
+QC_NONE = "none"
+QC_MASK = "masks"
+QC_NAMES = "names"
+QC_EXPAND = "expand"
 
 DATE_FORMATS_PARTS = [
     ("%Y", 4, "years"),
@@ -88,6 +92,8 @@ def float_to_str(nb_digits) :
 def build_formatters(df) :
     res = dict()
     for varname in df.columns :
+        if not varname in df.attrs["variables"] :
+            continue
         var_attrs = df.attrs["variables"][varname]
         if "least_significant_digit" in var_attrs :
             res[varname] = float_to_str(var_attrs["least_significant_digit"])
@@ -99,7 +105,9 @@ def main() :
     parser.add_argument('filename', metavar='<file.nc> or <http://opendap-url/.nc>', type=str, help='Input file or URL')
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
+    parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
+    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=None)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
     parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")
@@ -115,6 +123,7 @@ def main() :
 
     fromTime=None
     toTime=None
+
     if args.filter :
         if "~" in args.filter :
             filter1, filter2 = args.filter.split("~")
@@ -123,62 +132,161 @@ def main() :
         else :
             fromTime, toTime = parse_date_filter(args.filter)
 
+    if args.qc_format is None :
+        if args.type == "csv" :
+            args.qc_format = QC_EXPAND
+        else :
+            args.qc_format = QC_NAMES
 
     chunks = nc2df(
         args.filename,
         fromTime, toTime,
         user=args.user, password=args.password,
-        drop_duplicates=True, skip_na=args.skip_na, vars=cols, chunked=True,
+        drop_duplicates=True,
+        skip_na=args.skip_na,
+        skip_qc=args.skip_qc,
+        vars=cols,
+        chunked=True,
         steps=args.steps, chunk_size=args.chunk_size)
 
     if args.stats :
 
-        stats = defaultdict(lambda : Stat())
-        for chunk in chunks :
-            for col in chunk.columns :
-                series = chunk[col]
-                stats[col].accumulate(series)
-
-        table = Table()
-        for name in ["column", "count", "min", "max", "mean"] :
-            table.add_column(name)
-
-        for colname, stat in stats.items() :
-            table.add_row(
-                colname,
-                "%d" % stat.count,
-                "%.05g" % stat.min,
-                "%.05g" % stat.max,
-                "%.05g" % (stat.sum / stat.count))
-
-        console = Console()
-        console.print(table)
+        show_stats(chunks)
 
     else:
-        header = True
-        formatters = None
-        for chunk in chunks :
 
-            if len(chunk) == 0 :
+        print_data(chunks, args)
+
+def print_data(chunks, args) :
+    header = True
+    formatters = None
+    for chunk in chunks:
+
+        if len(chunk) == 0:
+            continue
+
+        chunk = format_QC(chunk, args.qc_format)
+
+        if header and args.header:
+            print_meta(chunk)
+
+        if formatters is None:
+            formatters = build_formatters(chunk)
+
+        if args.no_data:
+            break
+
+        if args.type == "text" :
+            chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
+            print("")
+        elif args.type == "csv" :
+            df_to_csv(chunk, index_label="time", header=header)
+
+        header = False
+
+def show_stats(chunks) :
+
+    console = Console()
+
+    stats = defaultdict(lambda : Stat())
+    for chunk in chunks :
+
+        chunk = format_QC(chunk, QC_EXPAND)
+
+        for col in chunk.columns :
+            series = chunk[col]
+            stats[col].accumulate(series)
+
+    # Data vars stats
+    table = Table("column", "count", "min", "max", "mean")
+
+    has_qc = False
+
+    for colname, stat in stats.items() :
+
+        if colname.startswith(QC_FLAGS_VAR) :
+            has_qc = True
+            continue
+
+        table.add_row(
+            colname,
+            "%d" % stat.count,
+            "%.05g" % stat.min,
+            "%.05g" % stat.max,
+            "%.05g" % (stat.sum / stat.count))
+
+    console.print(table)
+
+    if has_qc :
+
+        table = Table("QC flag", "fail", "%")
+        for colname, stat in stats.items() :
+
+            if not colname.startswith(QC_FLAGS_VAR) :
                 continue
 
-            if header and args.header :
-                print_meta(chunk)
+            table.add_row(
+                colname.strip(QC_FLAGS_VAR + "."),
+                "%d" % stat.sum,
+                "%.02f" % (stat.sum / stat.count * 100))
 
-            if formatters is None :
-                formatters = build_formatters(chunk)
+        console.print(table)
 
-            if args.no_data :
-                break
-
-            if args.type == "text" :
-                chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
-                print("")
-            elif args.type == "csv" :
-                df_to_csv(chunk, index_label="time", header=header)
+    # QC stats
 
 
-            header = False
+
+def format_QC(df, qc_format) :
+
+    if not QC_FLAGS_VAR in df.columns :
+        return df
+
+    qc_col = df[QC_FLAGS_VAR]
+
+    qc_attrs = df.attrs["variables"][QC_FLAGS_VAR]
+    flags = qc_attrs["flag_meanings"].split()
+    masks = qc_attrs["flag_masks"]
+
+    if qc_format == QC_MASK :
+        res = Series(data="", index = df.index, dtype=str)
+        col_names = []
+        for idx, (flag, mask) in enumerate(zip(flags, masks)) :
+            letter = chr(97+idx)
+            col_names.append("%s:%s" % (flag, letter))
+            res += np.where(qc_col.values & mask != 0, letter, ".")
+
+        df[QC_FLAGS_VAR] = res
+
+        # Rename column to provide details
+        col_name = "%s[%s]" % (QC_FLAGS_VAR, ";".join(col_names))
+        df = df.rename(columns={QC_FLAGS_VAR: col_name})
+
+    elif qc_format == QC_EXPAND :
+
+        for flag, mask in zip(flags, masks):
+            colname = "%s.%s" % (QC_FLAGS_VAR, flag)
+            df[colname] = np.where(qc_col & mask == 0, 0, 1)
+        del df[QC_FLAGS_VAR]
+
+    elif qc_format == QC_NAMES :
+        res = Series(data="", index=df.index, dtype=np.object)
+        for flag, mask in zip(flags, masks):
+            res += np.where(
+                qc_col & mask == 0,
+                "",
+                np.where(
+                    res == "",
+                    flag ,
+                    ";" + flag))
+        df[QC_FLAGS_VAR] = res
+
+    elif qc_format == QC_NONE :
+        del df[QC_FLAGS_VAR]
+
+    else:
+        raise Exception("Unkown QC format : %s" % qc_format)
+
+    return df
 
 if __name__ == '__main__':
     main()

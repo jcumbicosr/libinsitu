@@ -1,3 +1,4 @@
+from collections import defaultdict
 from concurrent.futures.thread import ThreadPoolExecutor
 from csv import DictReader
 from datetime import datetime, timedelta
@@ -32,6 +33,7 @@ HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
+QC_FLAGS_VAR = "QC"
 
 # Columns for station info, in order of apparition
 VALID_COLS = [
@@ -71,6 +73,9 @@ VALID_COLS = [
 # Variable attributes
 VALID_MIN_ATTR = "_valid_min"
 VALID_MAX_ATTR = "_valid_max"
+FILL_VALUE_ATTR = "_FillValue"
+
+DEFAULT_FILL_VALUE = -999
 
 # Alternate names often found for variables
 ALTERNATE_NAMES = {
@@ -84,6 +89,8 @@ LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 
+# Columns no included in Skip_na
+COL_NOSKIP=["QC"]
 
 # Global attrs
 GLOBAL_TIME_RESOLUTION_ATTR = "time_coverage_resolution"
@@ -240,17 +247,28 @@ def parse_value(val) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
     if not isinstance(val, str) :
         return val
-    elif val is None or val == "":
+
+    if val is None or val == "":
         return None
+
+    val = val.strip()
+
+    # String
+    if val.startswith('"'):
+        return val.strip('"')
+
+    # List of things
+    if "," in val :
+        return list(parse_value(item) for item in val.split(","))
+
     try :
         return int(val)
     except:
         try:
             return float(val)
         except:
-            if val.startswith('"') :
-                val = val.strip('"')
             return val
+
 
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
@@ -369,17 +387,19 @@ def nc2df(
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
         drop_duplicates=True,
         skip_na=False,
+        skip_qc=False,
         vars=None,
         user=None,
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
         steps=1,
-        rename=False) :
+        rename_cols=False) :
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
 
-        :param rename: If True (default) rename solar irradiance columns to proper names
+        :param skip_qc: If True, skip lines with bad QC (at least one failing)
+        :param rename_cols: If True (default) rename solar irradiance columns to proper names
         :param ncfile: NetCDF Dataset or filename, or URL
         :param drop_duplicates: If true (default), duplicate rows with same time are droppped
         :param skip_na : If True, drop rows containing only nan values
@@ -394,8 +414,19 @@ def nc2df(
         """
 
     chunks = __nc2df(
-        ncfile, start_time, end_time,
-        drop_duplicates, skip_na, vars, user, password, chunked, chunk_size, steps, rename)
+        ncfile=ncfile,
+        start_time=start_time,
+        end_time=end_time,
+        drop_duplicates=drop_duplicates,
+        skip_na=skip_na,
+        vars=vars,
+        user=user,
+        password=password,
+        chunked=chunked,
+        chunk_size=chunk_size,
+        steps=steps,
+        rename=rename_cols,
+        skip_qc=skip_qc)
 
     # Handling either single result or chunked generator
     if not chunked :
@@ -438,6 +469,7 @@ def __nc2df(
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
         drop_duplicates=True,
         skip_na=False,
+        skip_qc=False,
         vars=None,
         user=None,
         password=None,
@@ -491,11 +523,15 @@ def __nc2df(
 
         # Drop NA ?
         if skip_na :
-            df = df.dropna(axis=0, how='all')
+            subset = list(col for col in df.columns if col not in COL_NOSKIP)
+            df = df.dropna(axis=0, how='all', subset=subset)
+
+        if skip_qc and QC_FLAGS_VAR in df.columns :
+            df = df[df[QC_FLAGS_VAR] == 0]
 
         # Rename variables
         if rename :
-            for dest, sources in  ALTERNATE_NAMES.items():
+            for dest, sources in ALTERNATE_NAMES.items():
                 for source in sources :
                     if source in df.columns :
                         warning("Renaming %s -> %s" % (source, dest))
@@ -665,3 +701,9 @@ def df_to_json(df, out=sys.stdout, **args) :
     df.to_json(output, **args)
     output.seek(0)
     out.write(output.read())
+
+class DefaultDict(defaultdict) :
+    """Default awnsering 'True' to X in dict """
+
+    def __contains__(self, item):
+        return True

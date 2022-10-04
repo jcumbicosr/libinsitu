@@ -1,0 +1,162 @@
+ID,Region,Country,City,UID,Name,StartDate,EndDate,Institude,Latitude,Longitude,Elevation,TimeResolution,Comment
+ADE,Australia,Australia,Adelaide,adelaide_airport,adelaide_airport (Australia),2015-01-01,2020-08-27,BoM,-34.9524,138.5196,2,1M,Excellent coherence between solar components
+ADR,Africa,Algeria,Adrar,,"Adrar, CDER",2015-01-01,2018-04-06,Enermena,27.88,-0.274,262,1M,After September 2015
+ALB,North America,USA (NM),,ABQ,Albuquerque,2015-01-01,2019-01-01,NOAA,35.03796,-106.62211,1617,1M,
+ALE,Africa,South Africa,Alexander Bay,RVD,"GIZ Richtersveld (Alexander Bay, South Africa)",2015-01-01,2020-08-27,SAURAN,-28.5608,16.7615,141,1M,
+ALI,Australia,Australia,,asp,Alice Springs (Macdonnell Ranges Northern Territory Australia),2015-01-01,2020-08-27,BSRN,-23.798,133.888,547,1M,
+ARA,Africa,Namibia,Arandis,,Arandis,2015-01-01,2019-02-01,NamPower,-22.3657,15.045,697,1M,
+ARI,North America,USA,,NREL_6UA,SOLRMAP University of Arizona (OASIS),2015-01-01,2019-10-31,NREL,32.2297,-110.9553,786,1M,
+AUA,Africa,Namibia,Auas,,Auas,2015-01-01,2019-02-01,NamPower,-22.5882,17.3635,1880,1M,
+BAC,Asia,Vietnam,,VNHAN,Bac Ninh,2015-01-01,2019-01-01,ESMAP,21.2015,160.063,42,1M,data quality very good
+BAH,Asia,Pakistan,,,"Bahawalpur, Quaid-e-Azam Solar Park",2015-01-01,2020-04-01,ESMAP,29.325,71.819,75,1M,
+BAR,North America,USA (AK),,BRW,Barrow,2015-01-01,2017-01-01,NOAA,71.323,-156.6114,11,1M,
+BIS,North America,USA (ND),,BIS,Bismarck,2015-01-01,2019-01-01,NOAA,46.77179,-100.75955,503,1M,
+BLO,Africa,South Africa,Bloemfontein,CUT,"Central Univ. of Technology (Bloemfontein, South Africa)",2015-01-01,2020-08-27,SAURAN,-29.1213,26.2159,1397,1M,
+BON,North America,USA,Bondville,BON,Bondville,2015-01-01,2019-01-31,BSRN,40.0667,-88.3667,213,1M,Excellent coherence between solar components
+BOU,North America,USA,"Boulder, SURFRAD",BOS,"Boulder, SURFRAD",2015-01-01,2019-01-31,BSRN,40.125,-105.237,1689,1M,Excellent coherence between solar components
+BRA,South America,Brazil,Brasilia,BRB,Brasilia,2015-01-01,2019-04-30,BSRN,-15.601,-47.713,1023,1M,BSRN station. Only initial calibration constants were given (2014). All data is missing for 2017 and 2018. Overall very little data - consider not using station at all!
+BRO,Australia,Australia,Broome,broome_airport,broome_airport (Australia),2015-01-01,2020-08-27,BoM,-17.9475,122.2353,7.42,1M,Excellent coherence between solar components
+BUR,North America,USA (OR),,,Burns,2015-01-01,2018-01-01,SRML,43.519197,-119.021623,1265,1M,Tier 2 station
+CAB,Europe,Netherlands,Cabauw,CAB,Cabauw,2015-01-01,2019-09-30,BSRN,51.9711,4.9267,0,1M,
+CAC,South America,Brazil,Cachoeira Paulista,CPA,Cachoeira Paulista,2015-01-01,2020-04-30,Sonda,-22.6896,-45.0062,574,1M,K&Z tracker
+CAH,Asia,Japan,,,Cape Hedo,2015-01-01,2019-01-01,SKYNET,26.867,128.248,65,1M,
+CAI,Africa,Egypt,Cairo,,Cairo University,2015-01-01,2020-08-27,Enermena,30.036,31.009,104,1M,
+CAP,Australia,Australia,"Woolnorth,Tasmania",cape_grim_radiation,cape_grim_airport (Australia),2015-01-01,2020-08-27,BoM,-40.6817,144.6892,95,1M,High horizon line
+CAR,Europe,France,Carpentras,CAR,Carpentras,2015-01-01,2018-12-31,BSRN,44.083,5.059,100,1M,Excellent coherence between solar components
+CAS,Europe,Italy,Casaccia-Rome,,Casaccia-Rome,2015-01-01,2020-11-18,ENEA,42.04167,12.30667,150,1M,no metadata (temperature etc) avaliable. 2015 to End of April 2016 large offset in the DHI
+CEH,Asia,Vietnam,,VNCEH,Central Highlands,2015-01-01,2019-01-01,ESMAP,12.7534,107.8763,277,1M,very good data quality. Larger data gaps in October and November 2019
+CEN,Europe,Spain,Cener,CNR,Cener,2015-01-01,2019-02-28,BSRN,42.816,-1.601,471,1M,
+CHB,Asia,Japan,,,Chiba,2015-01-01,2019-01-01,SKYNET,35.625,140.104,21,1M,
+CHI,Africa,Malawi,,,Chileka,2015-01-01,2018-01-01,ESMAP,-15.67984,34.97229,769,1M,2016 Quality ok. 2017 and 2018 good quality
+CHL,Africa,Zambia,,,Chilanga,2015-01-01,2017-01-01,ESMAP,-15.5483,28.24817,1226,1M,dew in the morning in winter. Flagged manually
+CHO,Africa,Zambia,,,Choma,2015-01-01,2017-01-01,ESMAP,-16.83828,27.07046,1284,1M,dew in the morning in winter. Flagged manually
+COC,Australia,Cocos Islands,Cocos Island,COC,Cocos Island,2015-01-01,2018-12-31,BSRN,-12.193,96.835,6,1M,Excellent coherence between solar components
+COI,Australia,Cocos Islands,Cocos Island,cocos_island_airport,cocos_island (Australia),2015-01-01,2020-08-27,BoM,-12.1892,96.8344,3,1M,Excellent coherence between solar components
+CON,Antarctica,Antarctica,,dom,Concordia Station Dome C (Antarctica),2015-01-01,2019-02-28,BSRN,-75.1,123.383,3233,1M,
+DAN,Asia,Vietnam,,VNDAN,Da Nang,2015-01-01,2019-01-01,ESMAP,16.01257,108.18649,11,1M,data quality good in 2017 and 2019. in 2018 data quality ok with many small data gaps
+DAO,Europe,Switzerland,,DAV,Davos,2015-01-01,2020-09-18,PMOD,46.813,9.844,1610,1M,
+DAR,Africa,Tanzania,,,Dar Es Salaam,2015-01-01,2017-01-01,ESMAP,-6.78,39.2,122,1M,2015: Medium quality of data. Data gap between mid September and December and in May and June 2015. 2016 and 2017: medium quality of data
+DAV,Europe,Switzerland,,DAV,Davos,2015-01-01,2019-01-01,MeteoSwiss,46.813,9.844,1610,1M,
+DEA,Africa,South Africa,De Aar,DAA,De Aar,2015-01-01,2019-09-30,BSRN,-30.6667,23.993,1287,1M,
+DES,North America,USA,Desert Rock,DRA,Desert Rock,2015-01-01,2019-01-31,BSRN,36.626,-116.018,1007,1M,Excellent coherence between solar components
+DHA,Asia,Nepal,,,Dharan,2015-01-01,2020-09-01,ESMAP,26.7929,87.2926,312,1M,
+DLA,Africa,South Africa,KwaDlangezwa,UNZ,"Univ. of Zululand (KwaDlangezwa, South Africa)",2015-01-01,2020-03-09,SAURAN,-28.8529,31.8516,90,1M,
+DRW,Australia,Australia,Darwin,darwin_airport,darwin_airport (Australia),2015-01-01,2020-08-27,BoM,-12.4239,130.8925,30.4,1M,Excellent coherence between solar components
+DUR,Africa,South Africa,Durban,KZW,"Uni.of KwaZulu-Natal Westville (Durban, South Africa)",2015-01-01,2020-03-07,SAURAN,-29.817,30.945,200,1M,
+DWN,Australia,Australia,,dwn,Darwin Met Office (Australia),2015-01-01,2018-12-31,BSRN,-12.424,130.8925,32,1M,Excellent coherence between solar components
+ESK,Africa,South Africa,Sutherland,,Eskom Sutherland SALT,2015-01-01,2020-07-10,SAURAN,-32.378,20.812,1761,1M,
+FEN,Asia,Bangladesh,,BDFE2,Feni,2015-01-01,2019-01-01,ESMAP,22.80029,91.35819,7,1M,good data quality
+FLO,South America,Brazil,Florianopolis,FLO,Florianopolis,2015-01-01,2019-08-31,BSRN,-27.6047,-48.5227,11,1M,BSRN station. Only initial calibration constants were given (2012). Periods during 2018 removed due to suspecion of tilted sensor (see in DNI_meas-DNI_calc plot).
+FOP,North America,USA,Fort Peck,FPE,Fort Peck,2015-01-01,2019-01-31,BSRN,48.3167,-105.1,634,1M,Excellent coherence between solar components
+FOR,Africa,South Africa,Alice,FRH,"USAid Univ. of Fort Hare (Alice, South Africa)",2015-01-01,2020-08-27,SAURAN,-32.7846,26.8452,540,1M,
+FUK,Asia,Japan,Fukuoka,FUA,Fukuoka,2015-01-01,2019-01-31,BSRN,33.5822,130.3764,3,1M,
+FUU,Asia,Japan,,,Fukue,2015-01-01,2019-01-01,SKYNET,32.752,128.682,80,1M,
+GAB,Africa,Botswana,Gaborone,UBG,"USAid Gaborone (Gaborone, Botswana)",2015-01-01,2020-07-04,SAURAN,-24.661,25.934,1014,1M,
+GAD,Asia,India,,gan,Gandhinagar (India),2015-01-01,2019-01-31,BSRN,23.1101,72.6276,65,1M,2016 and 2017 are missing
+GAN,Asia,Maldives,,GAN,Gan,2015-01-01,2018-01-01,ESMAP,-0.6906,73.15,5,1M,2016: GHI from pyranometer
+GER,Australia,Australia,Geraldton,geraldton_airport,geraldton_airport (Australia),2015-01-01,2020-08-27,BoM,-28.8047,114.6989,29.7,1M,Excellent coherence between solar components. Difference between measured and calculated DNI < 0.1 W/m2  almost always
+GHA,Africa,Algeria,Ghardaia,,"Ghardaia, Algeria CDER",2015-01-01,2018-02-05,Enermena,32.386,3.78,463,1M,After September 2015
+GOB,Africa,Namibia,Gobabeb,GOB,Gobabeb,2015-01-01,2019-07-31,BSRN,-23.5614,15.042,407,1M,
+GOL,North America,USA,,NREL_GOL_fromChris,Golden (USA),2015-01-01,2017-12-31,NREL,39.742,-105.18,1829,1M,
+GOO,North America,USA,Goodwin Creek,GCR,Goodwin Creek,2015-01-01,2019-01-31,BSRN,34.2547,-89.8729,98,1M,Excellent coherence between solar components. Difference between measured and calculated DNI < 0.1 W/m2  almost always
+GUR,Asia,India,,gur,Gurgaon (India),2015-01-01,2019-01-31,BSRN,28.4249,77.156,259,1M,2016 and 2017 are missing
+HAF,North America,USA (CA),,HNX,Hanford,2015-01-01,2019-01-01,NOAA,36.31357,-119.63164,73,1M,
+HAN,Asia,Maldives,,HAQ,Hanimaadhoo,2015-01-01,2018-01-01,ESMAP,6.74823,73.16961,4,1M,2016: GHI from pyranometer
+HER,North America,USA (OR),,,Hermiston,2015-01-01,2019-01-01,SRML,45.818441,-119.284721,188,1M,Tier 2 station
+HOW,Asia,India,,how,Howrah (India),2015-01-01,2019-01-31,BSRN,22.5535,88.3064,51,1M,2017 is missing
+HYD,Asia,Pakistan,Hyderabad (Jamshoro),,Hyderabad (Jamshoro),2015-01-01,2020-04-01,ESMAP,25.4134,68.2595,60,1M,
+ISH,Asia,Japan,Ishigakijima,ISH,Ishigakijima,2015-01-01,2019-08-31,BSRN,24.3367,124.1644,5.7,1M,
+ISL,Asia,Pakistan,,,Islamabad,2015-01-01,2020-04-01,ESMAP,33.642,72.984,495,1M,excluded March to Mid June 2015 due to severe Tracker issues
+IZA,Africa,Canary Islands Spain,Izana,IZA,Izana,2015-01-01,2019-09-30,BSRN,28.3093,-16.4993,2372.9,1M,
+JAE,Europe,Spain,,,Jaen,2015-01-01,2018-01-01,U.Jaen,37.787767,-3.778132,459,1M,
+JOR,Asia,Jordan,Ma'an,,University of Jordan,2015-01-01,2020-08-27,Enermena,30.172,35.818,1012,1M,2016: Last calibration of all irradiance sensors in November 2014. 2017: Installation of freshly calibrated irradiance sensors in Jan 2017. Sensor maintenance/cleaning poor throughout the year.. 2018: Most of the data missing due to broken tracker. Year sorted out. 2019: Installation of freshly calibrated pyrheliometer in March 2019 and BSRN calibration of pyranometers. Tracker broken during most of the year. Year sorted out.
+JUM,Asia,Nepal,,,Jumla,2015-01-01,2020-09-01,ESMAP,29.2724,82.1935,2385,1M,
+KAA,Africa,Zambia,,,Kasama,2015-01-01,2017-01-01,ESMAP,-10.17165,31.22558,1381,1M,dew in the morning in winter. Flagged manually
+KAL,Australia,Australia,Kalgoorlie_Boulder,kalgoorlie_boulder_airport,kalgoorlie_boulder_airport (Australia),2015-01-01,2020-08-27,BoM,-30.7847,121.4533,365.3,1M,Excellent coherence between solar components. Difference between measured and calculated DNI < 0.5 W/m2  almost always
+KAO,Africa,Zambia,,,Kaoma,2015-01-01,2017-01-01,ESMAP,-14.839,24.931,1172,1M,dew in the morning in winter. Flagged manually
+KAR,Asia,Pakistan,Karachi,,Karachi,2015-01-01,2020-04-01,ESMAP,24.9334,67.1116,40,1M,
+KAS,Africa,Malawi,,,Kasungu,2015-01-01,2018-01-01,ESMAP,-13.0153,33.4684,1067,1M,quality ok
+KAT,Asia,Nepal,,,Kathmandu,2015-01-01,2020-09-01,ESMAP,27.6816,85.3187,1322,1M,
+KAZ,Europe,Austria,,KSO,Kanzelhöhe,2015-01-01,2017-01-01,ZAMG-ARAD,46.68,13.9,1520,1M,
+KDO,Asia,Maldives,,KDO,Kadhdhoo,2015-01-01,2018-01-01,ESMAP,1.8599,73.5203,2,1M,2016: GHI from pyranometer
+KHU,Asia,Pakistan,Khuzdar,,Khuzdar,2015-01-01,2020-04-01,ESMAP,27.8178,66.6294,1260,1M,
+KIR,Europe,Sweden,Kiruna,Kiruna,Kiruna,2015-01-01,2019-12-31,SMHI,67.842,20.41,424,1M,excluded February 2017 to May 2017 from Benchmark because of suspected sensor tilt
+KWA,Africa,South Africa,Durban,,University of KwaZulu-Natal Howard College,2015-01-01,2020-08-27,SAURAN,-29.871,30.977,150,1M,
+LAH,Asia,Pakistan,Lahore,,Lahore,2015-01-01,2020-04-01,ESMAP,31.6944,74.2442,220,1M,
+LAN,North America,USA,Langley Research Center,LRC,Langley Research Center,2015-01-01,2019-09-30,BSRN,37.1038,-76.3872,3,1M,
+LAS,North America,USA,,NREL_8UNLV,University of Nevada - Las Vegas,2015-01-01,2019-10-31,NREL,36.107,-115.1425,615,1M,
+LAU,Australia,New Zealand,Lauder,LAU,Lauder,2015-01-01,2018-12-31,BSRN,-45.045,169.689,350,1M,Removed a suspicious period (oct - dec 2018) with a sudden increase in clearness sky index
+LEA,Australia,Australia,Learmonth Airport,learmonth_airport,learmonth_airport (Australia),2015-01-01,2020-08-27,BoM,-22.2406,114.0967,5,1M,Excellent coherence between solar components. Clear sky index constant
+LOC,Europe,Switzerland,,OTL,Locarno,2015-01-01,2019-01-01,MeteoSwiss,46.18,8.783,366,1M,
+LOY,North America,USA,,NREL_7LMU,SOLRMAP Loyola Marymount University (RSR),2015-01-01,2019-10-31,NREL,33.9667,-118.4226,27,1M,
+LUM,Asia,Nepal,,,Lumle,2015-01-01,2020-09-01,ESMAP,28.2966,83.8179,1742,1M,
+LUS,Africa,Zambia,,,Lusaka,2015-01-01,2017-01-01,ESMAP,-15.39463,28.33722,1264,1M,dew in the morning in winter. Flagged manually
+LYN,Europe,Denmark,,DTU,Lyngby,2015-01-01,2020-09-18,DTU,55.79065,12.52509,40,1M,
+MAD,North America,USA (WI),,MSN,Madison,2015-01-01,2019-01-01,NOAA,43.0725,-89.41133,271,1M,
+MAR,Africa,South Africa,Mariendal,HLO,"Mariendal (Mariendal, South Africa)",2015-01-01,2020-07-26,SAURAN,-33.8541,18.8244,178,1M,
+MAS,Asia,UAE,,,Masdar (Abu Dhabi),2015-01-01,2017-01-01,Masdar,24.4418,54.6166,6,1M,Calibration: GHI(2018)
+MBO,Africa,Senegal,,,M'Bour,2015-01-01,2018-01-01,LOA,14.394,-16.958,21,1M,Tier 2 station
+MEL,Australia,Australia,Melbourne,melbourne_airport,melbourne_airport (Australia),2015-01-01,2020-08-27,BoM,-37.6655,144.8321,113.4,1M,Slight assymetry in GHI AM/PM at high SZA
+MIL,Europe,Italy,Milan,,Milan RSE Site,2015-01-01,2020-09-20,RSE,45.476179,9.254559,150,1M,
+MIN,Asia,Markus Island Pacific Ocean,Minamitorishima,MNM,Minamitorishima,2015-01-01,2019-08-31,BSRN,24.2883,153.9833,7.1,1M,
+MIS,Africa,Morocco,Missour,,"Missour Morocco, IRESEN",2015-01-01,2020-08-27,Enermena,32.86,-4.107,1107,1M,2015: Last calibration of all irradiance sensors in June 2013. 2016: Installation of freshly calibrated irradiance sensors in March 2016. 2018: Tracker off most of the time after Mid-March 2018. Data quality low the rest of the year. 2019:  Tracker off until October 2019. Installation of freshly calibrated pyrheliometer in July 2019 and DHI pyranometer in October 2019. Data quality from October to December 2019 ok. 2020: Only GHI pyranometer calibration out of date. Many small data gaps throughout the whole period. Data quality bad.
+MIY,Asia,Japan,,,Miyako,2015-01-01,2018-01-01,SKYNET,24.737,125.327,50,1M,
+MLE,Asia,Maldives,,MLE,Male,2015-01-01,2018-01-01,ESMAP,4.19274,73.52811,10,1M,2016: GHI from pyranometer
+MUL,Asia,Pakistan,Multan,,Multan,2015-01-01,2020-04-01,ESMAP,30.1654,71.4978,95,1M,
+MUR,Africa,South Africa,Murraysburg,MRB,"GIZ Murraysburg (Murraysburg, South Africa)",2015-01-01,2019-10-22,SAURAN,-31.8901,24.0562,1548,1M,
+MUT,Africa,Zambia,,,Mutanda,2015-01-01,2017-01-01,ESMAP,-12.423,26.215,1318,1M,dew in the morning in winter. Flagged manually
+MZU,Africa,Malawi,,,Mzuzu,2015-01-01,2018-01-01,ESMAP,-11.4199,33.9953,1287,1M,quality ok
+NAT,South America,Brazil,Natal,NAT,Natal,2015-01-01,2020-04-30,Sonda,-5.8367,-35.2064,58,1M,Tier 2 station
+NEU,Antarctica,Antarctica,Neumayer Station,GVN,Neumayer Station,2015-01-01,2019-01-31,BSRN,-70.65,-8.25,42,1M,Excellent coherence between solar components. Difference between measured and calculated DNI < 0.75 W/m2  (but with a slight right-sided distribution). Excellent assymetry in GHI AM/PM plot
+NOR,Europe,Sweden,Norrköping,Norrköping,Norrköping,2015-01-01,2019-12-31,SMHI,58.582,16.148,53,1M,
+NPG,Asia,Nepal,,,Nepalgunj,2015-01-01,2020-09-01,ESMAP,28.113,81.589,152,1M,
+NYA,Europe,Svalbard,Ny-Aesund,NYA,Ny-Aesund,2015-01-01,2019-03-31,BSRN,78.925,11.93,11,1M,
+OAK,North America,USA,,NREL_9ORNL,Oak Ridge National Laboratory (RSR),2015-01-01,2019-10-31,NREL,35.93,-84.3095,245,1M,Tier 2 station
+ODE,Europe,France,,ODE,Odeillo,2015-01-01,2020-09-18,CNRS,42.494,2.029,1600,1M,
+ORE,North America,USA,,NREL_4UO,University of Oregon (SRML),2015-01-01,2019-10-31,NREL,44.0467,-123.0743,133.8,1M,
+OUJ,Africa,Morocco,Oujda,,University of Oujda,2015-01-01,2020-08-27,Enermena,34.65,-1.9,617,1M,2015: Last pyranometer calibration in June 2013. 2016: All irradiance sensors exchanged in April 2016. After exchange pyranometers might be a little inclined. Data quality ok. 2017: Pyranometers might be a little inclined.. 2018: Calibration of irradiance sensors longer than 3 years ago after April 2018. Pyranometers might be a little inclined. 2019: Pyrheliometer exchanged with freshly calibrated one in July 2019
+PAL,Europe,France,Palaiseau,PAL,Palaiseau,2015-01-01,2019-02-28,BSRN,48.713,2.208,156,1M,
+PAN,North America,USA,,NREL_10UTPSRL,University of Texas Panamerican Solar Radiation Lab (UTPA),2015-01-01,2019-10-31,NREL,26.3059,-98.1716,45.4,1M,
+PAR,Asia,Usbekistan,Tashkent,Parkent,Parkent,2015-01-01,2019-05-09,IMS,41.32,69.74,1081,1M,
+PAY,Europe,Switzerland,Payerne,PAY,Payerne,2015-01-01,2019-07-31,BSRN,46.815,6.944,491,1M,
+PES,Asia,Pakistan,Peshawar,,Peshawar,2015-01-01,2019-06-13,ESMAP,34.0017,71.4854,370,1M,
+PET,South America,Brazil,Petrolina,PTR,Petrolina,2015-01-01,2019-01-31,BSRN,-9.068,-40.319,387,1M,BSRN station. Only initial calibration constants were given (2014). Overall poor quality. All years have large scatter in GHIcalc vs GHImeas plot - reason could not be identified.
+PHI,Asia,Thailand,,,Phimai,2015-01-01,2019-01-01,SKYNET,15.184,102.564,212,1M,
+POR,Africa,South Africa,Port Elizabeth,NMU,"Nelson Mandela Univ. (Port Elizabeth, South Africa)",2015-01-01,2020-08-27,SAURAN,-34.0086,25.6653,35,1M,
+PRE,Africa,South Africa,Pretoria,UPR,"GIZ Uni. Pretoria (Pretoria, South Africa)",2015-01-01,2020-08-27,SAURAN,-25.7531,28.2286,1410,1M,
+PRT,Africa,South Africa,Pretoria,CSIR,"CSIR Energy Centre (Pretoria, South Africa)",2015-01-01,2020-07-27,SAURAN,-25.7465,28.2787,1400,1M,
+QUE,Asia,Pakistan,Quetta,,Quetta,2015-01-01,2020-04-01,ESMAP,30.2708,66.9398,1590,1M,
+ROC,Australia,Australia,Rockhampton,rockhampton_aero,rockhampton (Australia),2015-01-01,2020-08-27,BoM,-23.3753,150.4775,10.4,1M,Symmetric GHI AM/PM
+ROS,North America,USA,Rock Springs,PSU,Rock Springs,2015-01-01,2019-01-31,BSRN,40.72,-77.9333,376,1M,Slight assymetry in GHI AM/PM at high SZA
+SAL,North America,USA (UT),,SLC,Salt Lake City,2015-01-01,2019-01-01,NOAA,40.7722,-111.95495,1288,1M,
+SAO,South America,Brazil,Sao Martinho da Serra,SMS,Sao Martinho da Serra,2015-01-01,2019-04-30,BSRN,-29.4428,-53.8231,489,1M,BSRN station. Only initial calibration constants were given. From 2017 and onwards the data is useless.
+SAP,Asia,Japan,Sapporo,SAP,Sapporo,2015-01-01,2019-08-31,BSRN,43.06,141.3286,17.2,1M,
+SEA,North America,USA (WA),,SEA,Seattle,2015-01-01,2019-01-01,NOAA,47.68685,-122.25667,20,1M,
+SEN,Asia,Japan,,,Sendai,2015-01-01,2019-01-01,SKYNET,38.26,140.84,153,1M,
+SET,North America,USA (WA),,STW,Seattle,2015-01-01,2018-01-01,SRML,47.65387,-122.30948,70,1M,Tier 2 station
+SHA,Asia,Kuwait,Shagaya,shagaya,Shagaya (Kuwait),2015-01-01,2017-12-31,KISR,29.2099,47.0603,241.3,1M,2015: Data quality very good. But many data gaps. Maybe already QCed before. 2016: Data quality good. But many data gaps. Data available after April 2016. Maybe already QCed before. 2017: Data quality good. But many data gaps. Maybe already QCed before.
+SIL,North America,USA (OR),,,Silver Lake,2015-01-01,2019-01-01,SRML,43.11896,-121.05879,1324,1M,RSP shadow band radiometer. Clear horizon view.
+SIO,North America,USA,Sioux Falls,SXF,Sioux Falls,2015-01-01,2019-01-31,BSRN,43.73,-96.62,473,1M,Slightly asymmetric GHI AM/PM
+SOD,Europe,Finland,,,Sodankylä,2015-01-01,2020-09-18,FMI,67.36664,26.628253,195,1M,
+SOL,North America,USA,,NREL_3STAC,Solar Technology Acceleration Center (SolarTAC),2015-01-01,2019-10-31,NREL,39.7569,-104.6203,1674,1M,DIF (Eppley 8-48)
+SON,Asia,Vietnam,,VNSOB,Song Binh,2015-01-01,2019-01-01,ESMAP,11.264,108.3452,61,1M,
+SRR,North America,USA,,NREL_1SRRL,NREL Solar Radiation Research Laboratory (BMS),2015-01-01,2019-10-31,NREL,39.742,-105.18,1828.8,1M,
+STE,Africa,South Africa,Stellenbosch,SUN,"Stellenbosch Univ. (Stellenbosch, South Africa)",2015-01-01,2020-07-27,SAURAN,-33.9281,18.8654,119,1M,
+STR,North America,USA (VA),,STE,Sterling,2015-01-01,2019-01-01,NOAA,38.97203,-77.4869,85,1M,
+SYO,Antarctica,Antarctica,Syowa,SYO,Syowa,2015-01-01,2018-08-31,BSRN,-69.005,39.589,18,1M,Excellent coherence between solar components
+TAB,Europe,Spain,Tabernas,PSA,Plataforma Solar,2015-01-01,2019-12-31,CIEMAT,37.0909,-2.3581,500,1M,2015: Exchange of DHI pyranometer in Jan 2015
+TAM,Africa,Algeria,Tamanrasset,TAM,Tamanrasset,2015-01-01,2019-09-30,BSRN,22.7903,5.5292,1385,1M,missing DNI and DIF in 2019
+TAN,Africa,Morocco,Tan-Tan,,"Tan-Tan, Morocco IRESEN",2015-01-01,2017-06-16,Enermena,28.498,-11.322,75,1M,2015: Last calibration of all irradiance sensors in 2013 Many data gaps due to tracker failure
+TAT,Africa,Tunisia,Tataouine,,"Tataouin, Tunisia CRTEn",2015-01-01,2020-08-27,Enermena,32.974,10.485,210,1M,2015: All irradiance sensors freshly calibrated in April 2015. 2017: Data quality ok
+TIK,Asia,Russia,Tiksi,TIK,Tiksi,2015-01-01,2018-03-31,BSRN,71.5862,128.9188,48,1M,Excellent coherence between solar radiation components (differences between measurred and calculated DNI is < 0.3 W/m2). Excellent GHI AM/PM symmetry
+TIR,Asia,India,Tiruvallur,TIR,Tiruvallur,2015-01-01,2019-01-31,BSRN,13.0923,79.9738,36,1M,2017 is missing
+TOR,Europe,Estonia,Toravere,TOR,Toravere,2015-01-01,2019-08-31,BSRN,58.254,26.462,70,1M,
+TOW,Australia,Australia,Townsville,townsville_aero,townsville (Australia),2015-01-01,2020-08-27,BoM,-19.2483,146.7661,4.34,1M,Excellent coherence between solar components. Difference between measured and calculated DNI < 0.4 W/m2  almost always
+TRI,Asia,Vietnam,,VNTRA,Tri An,2015-01-01,2019-01-01,ESMAP,11.1024,107.0378,59,1M,
+UML,Africa,South Africa,Umlazi,STA,"Mangosuthu Univ. of Technology (Umlazi, South Africa)",2015-01-01,2020-07-21,SAURAN,-29.9702,30.9149,95,1M,Serious issues with the data
+VAN,Africa,South Africa,Vanrhynsdorp,VAN,"GIZ Vanrhynsdorp (Vanrhynsdorp, South Africa)",2015-01-01,2019-07-10,SAURAN,-31.6175,18.7383,130,1M,
+VAR,North America,Canada,,,Varennes,2015-01-01,2020-09-18,CanmetÉNERGIE,45.626,-73.382,22,1M,DIF calibrated in late 2015 and mid 2019. DNI calibrated in 2016
+VIS,Europe,Sweden,Visby,Visby,Visby,2015-01-01,2019-12-31,SMHI,57.673,18.345,49,1M,change in 2016 in Dni_meas - calc stems from sensor change and not from soiling. Still within the bounds - > no exclusion
+VUW,Africa,South Africa,Vuwani,UNV,"USAid Venda (Vuwani, South Africa)",2015-01-01,2020-08-27,SAURAN,-23.131,30.424,628,1M,
+WAG,Australia,Australia,,wagga_amo,wagga (Australia),2015-01-01,2020-08-27,BoM,-35.1583,147.4575,212,1M,Excellent coherence between solar components
+WIN,Africa,Namibia,Windhoek,NUST,"USAid Namibian Univ. of Science and Technology (Windhoek, Namibia)",2015-01-01,2020-07-28,SAURAN,-22.565,17.075,1683,1M,
