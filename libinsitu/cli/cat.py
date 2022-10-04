@@ -10,6 +10,7 @@ from rich.table import Table
 from six import StringIO
 from datetime import datetime
 
+from libinsitu import df_to_csv
 from libinsitu.log import debug
 from libinsitu.common import nc2df, CHUNK_SIZE
 
@@ -174,10 +175,8 @@ def main() :
                 chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
                 print("")
             elif args.type == "csv" :
-                output = StringIO()
-                chunk.to_csv(output, index_label="time", header=header)
-                output.seek(0)
-                sys.stdout.write(output.read())
+                df_to_csv(chunk, index_label="time", header=header)
+
 
             header = False
 

@@ -24,3 +24,6 @@ HANDLERS = {
     "SKYNET" : SkyNetHandler
 }
 
+def listNetworks() :
+    return sorted(list(HANDLERS.keys()))
+
