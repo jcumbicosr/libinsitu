@@ -68,7 +68,7 @@ print("entry points :", entry_points)
 packages = find_packages()
 
 print("Packages : %s"%  str(packages))
-print("Extra URLs : %s" % str(extra_urls))
+print("Extra URLs : %s" % extra_urls)
 
 setup(
     name = name,
