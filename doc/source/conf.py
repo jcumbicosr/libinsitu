@@ -2,6 +2,7 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import sys, os
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -11,10 +12,14 @@ copyright = '2022, Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 author = 'Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 release = '1.2'
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser']
+extensions = [
+    'myst_parser',
+    'sphinxarg.ext']
 
 templates_path = ['_templates']
 exclude_patterns = []

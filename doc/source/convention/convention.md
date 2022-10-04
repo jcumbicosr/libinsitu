@@ -1,4 +1,4 @@
-# Data format convention for in situ measurements of solar irradiance
+# Conventions
 
 This document is a proposed convention for the formatting and distribution of in situ solar radiation measurement data. 
 The goal is to apply best practices for standardizing data and improve interoperability. 
