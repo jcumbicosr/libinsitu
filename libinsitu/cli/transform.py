@@ -315,18 +315,24 @@ def dir_path(path):
         raise argparse.ArgumentTypeError(f"{path} is not a valid folder")
 
 
-def main():
-
+def parser() :
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True, choices=list(HANDLERS.keys()))
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--incremental', '-i',  default=False, action='store_true', help="Incremental mode, skipping input files having a '.done' status files")
-    parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true', help="Skip chunks having a different resulution")
+    parser.add_argument('--incremental', '-i', default=False, action='store_true',
+                        help="Incremental mode, skipping input files having a '.done' status files")
+    parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true',
+                        help="Skip chunks having a different resulution")
     parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")
-    parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path, help='Separate folder for .done/.err files')
-    args = parser.parse_args()
+    parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path,
+                        help='Separate folder for .done/.err files')
+    return parser
+
+def main():
+
+    args = parser().parse_args()
 
     network = args.network
     station_id  = args.station_id

@@ -1,5 +1,5 @@
-import os, sys
-from setuptools import setup
+import os
+from setuptools import setup, find_packages
 import subprocess
 from datetime import datetime
 import pkg_resources
@@ -38,11 +38,23 @@ if curr_branch == "dev" :
 
     version += "." + str(min_diff) + "-dev"
 
+
+extra_urls= []
 with open("requirements.txt", "r") as f :
+
+    def extract_extra_index(strs) :
+        for line in strs :
+            if line.startswith("--extra-index-url") :
+                _, url, rest = line.split(" ")
+                extra_urls.append(url)
+                yield rest
+            else:
+                yield line
+
     requirements = [
             str(requirement).replace("==", ">=")
             for requirement
-            in pkg_resources.parse_requirements(f)]
+            in pkg_resources.parse_requirements(extract_extra_index(f))]
 
 
 
@@ -52,6 +64,11 @@ entry_points = []
 for importer, modname, ispkg in pkgutil.iter_modules(libinsitu.cli.__path__):
     entry_points.append('ins-%s = libinsitu.cli.%s:main' % (modname, modname))
 print("entry points :", entry_points)
+
+packages = find_packages()
+
+print("Packages : %s"%  str(packages))
+print("Extra URLs : %s" % str(extra_urls))
 
 setup(
     name = name,
@@ -64,9 +81,10 @@ setup(
     license = "BSD",
     keywords = "in-situ, solar, pv, irradiation, NetCDF, FAIR, meta-data",
     url = "https://git.sophia.mines-paristech.fr/oie/libinsitu",
-    packages=['libinsitu'],
+    packages=packages,
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
+    dependency_links=extra_urls,
     include_package_data=True,
     classifiers=[],
     install_requires=requirements,
