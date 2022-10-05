@@ -1,0 +1,14 @@
+1.2 :
+* Fixed bug in date filtering of nc2df with start date different from origin date
+* Migrated to new conventions
+* Added QC flags and ins-qc (cli) to generate visual QC images and add flags in NetCDF files
+* Added handler for IEA_PVPS, ESMAP, SKYNET, ISE_PVLIVE
+* Added CLI ins-info to dump CSV meta data
+* Added stats and header to cat.py (formely dump.py)
+
+1.1 :
+* Separate start date from date-origin
+* Set date origin to a fixed value : 1970-01-01 UTC
+
+1.0 :
+* First release on PyPI

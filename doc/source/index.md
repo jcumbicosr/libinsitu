@@ -1,7 +1,13 @@
-# libinsitu
+# Introduction
+
+*libinsitu* blabla ...
+
 
 ```{toctree}
-Home <self>
-convention/convention
+---
+maxdepth: 2
+---
+Introduction <self>
+convention
 cli
 ```

@@ -6,136 +6,136 @@ dimensions:
 variables:
 
 	string station_name;
-	    station_name:standard_name = "platform_name" ;
-		station_name:long_name = "station_name" ;
-		station_name:cf_role = "timeseries_id" ;
+	    *:standard_name = "platform_name" ;
+		*:long_name = "station_name" ;
+		*:cf_role = "timeseries_id" ;
 
     float latitude ;
-		latitude:long_name = "station latitude" ;
-		latitude:standard_name = "latitude" ;
-		latitude:units = "degrees_north" ;
-		latitude:_CoordinateAxisType = "Lat" ;
-		latitude:axis = "Y" ;
+		*:long_name = "station latitude" ;
+		*:standard_name = "latitude" ;
+		*:units = "degrees_north" ;
+		*:_CoordinateAxisType = "Lat" ;
+		*:axis = "Y" ;
 
 	float longitude ;
-		longitude:long_name = "station longitude" ;
-		longitude:standard_name = "longitude" ;
-		longitude:units = "degrees_east" ;
-		longitude:_CoordinateAxisType = "Lon" ;
-		longitude:axis = "X" ;
+		*:long_name = "station longitude" ;
+		*:standard_name = "longitude" ;
+		*:units = "degrees_east" ;
+		*:_CoordinateAxisType = "Lon" ;
+		*:axis = "X" ;
 
 	float elevation;
-		elevation:long_name = "Elevation above mean seal level" ;
-		elevation:standard_name = "height_above_mean_sea_level" ;
-		elevation:units = "m" ;
-		elevation:axis = "Z" ;
+		*:long_name = "Elevation above mean seal level" ;
+		*:standard_name = "height_above_mean_sea_level" ;
+		*:units = "m" ;
+		*:axis = "Z" ;
 
 	double crs ;
-		crs:grid_mapping_name = "latitude_longitude" ;
-		crs:longitude_of_prime_meridian = "0.0" ;
-		crs:semi_major_axis = "6378137.0" ;
-		crs:inverse_flattening = "298.257223563" ;
-		crs:epsg_code = "EPSG:4326";
+		*:grid_mapping_name = "latitude_longitude" ;
+		*:longitude_of_prime_meridian = "0.0" ;
+		*:semi_major_axis = "6378137.0" ;
+		*:inverse_flattening = "298.257223563" ;
+		*:epsg_code = "EPSG:4326";
 
 	uint Time(time) ;
-		Time:long_name = "Time of measurement" ;
-		Time:standard_name = "time" ;
-		Time:units = "seconds since 1970-01-01 00:00:00";
-		Time:time_origin = "1970-01-01 00:00:00" ;
-		Time:time_zone= "UTC"
-		Time:abbreviation = "Date/Time" ;
-		Time:axis = "T" ;
-		Time:calendar = "gregorian" ;
+		*:long_name = "Time of measurement" ;
+		*:standard_name = "time" ;
+		*:units = "seconds since 1970-01-01 00:00:00";
+		*:time_origin = "1970-01-01 00:00:00" ;
+		*:time_zone= "UTC"
+		*:abbreviation = "Date/Time" ;
+		*:axis = "T" ;
+		*:calendar = "gregorian" ;
 
     float GHI(time) ;
-		GHI:long_name = "Global Horizontal Irradiance" ;
-		GHI:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
-		GHI:abbreviation = "SWD" ;
-		GHI:units = "W m-2" ;
-		GHI:_valid_min=0.0 ;
-		GHI:_valid_max=3000 ;
-		GHI:grid_mapping = "crs" ;
-		GHI:least_significant_digit=1;
+		*:long_name = "Global Horizontal Irradiance" ;
+		*:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
+		*:abbreviation = "SWD" ;
+		*:units = "W m-2" ;
+		*:_valid_min=0.0 ;
+		*:_valid_max=3000 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
 
 	float DHI(time) ;
-		DHI:long_name = "Diffuse horizontal radiation" ;
-		DHI:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
-		DHI:abbreviation = "DHI" ;
-		DHI:units = "W m-2" ;
-		DHI:_valid_min=0.0 ;
-		DHI:_valid_max=3000 ;
-		DHI:grid_mapping = "crs" ;
-		DHI:least_significant_digit=1;
+		*:long_name = "Diffuse horizontal radiation" ;
+		*:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
+		*:abbreviation = "DHI" ;
+		*:units = "W m-2" ;
+		*:_valid_min=0.0 ;
+		*:_valid_max=3000 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
 
 	float BNI(time) ;
-		BNI:long_name = "Beam (or direct) normal radiation" ;
-		BNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
-		BNI:abbreviation = "BNI" ;
-		BNI:units = "W m-2" ;
-		BNI:_valid_min=0.0 ;
-		BNI:_valid_max=3000 ;
-		BNI:grid_mapping = "crs" ;
-		BNI:least_significant_digit=1;
+		*:long_name = "Beam (or direct) normal radiation" ;
+		*:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
+		*:abbreviation = "BNI" ;
+		*:units = "W m-2" ;
+		*:_valid_min=0.0 ;
+		*:_valid_max=3000 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
 
 	float T2(time) ;
-		T2:long_name = "Air temperature at 2 m height" ;
-		T2:standard_name = "air_temperature" ;
-		T2:abbreviation = "T2" ;
-		T2:units = "K" ;
-		T2:_valid_min=123.0 ;
-		T2:_valid_max=372.9 ;
-		T2:grid_mapping = "crs" ;
-		T2:least_significant_digit=1;
+		*:long_name = "Air temperature at 2 m height" ;
+		*:standard_name = "air_temperature" ;
+		*:abbreviation = "T2" ;
+		*:units = "K" ;
+		*:_valid_min=123.0 ;
+		*:_valid_max=372.9 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
 
 	float RH(time) ;
 
-		RH:long_name = "Relative humidity" ;
-		RH:standard_name = "relative_humidity" ;
-		RH:abbreviation = "RH" ;
-		RH:units = "1" ;
-		RH:_valid_min=0.0 ;
-		RH:_valid_max=1.0 ;
-		RH:grid_mapping = "crs" ;
-		RH:least_significant_digit=3;
+		*:long_name = "Relative humidity" ;
+		*:standard_name = "relative_humidity" ;
+		*:abbreviation = "RH" ;
+		*:units = "1" ;
+		*:_valid_min=0.0 ;
+		*:_valid_max=1.0 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=3;
 
 	float WS(time) ;
 
-		WS:long_name = "Wind speed" ;
-		WS:standard_name = "wind_speed" ;
-		WS:abbreviation = "windspd" ;
-		WS:units = "m s-1" ;
-		WS:_valid_min=0.0;
-		WS:_valid_max=100.0;
-		WS:grid_mapping = "crs" ;
-		WS:least_significant_digit=2;
+		*:long_name = "Wind speed" ;
+		*:standard_name = "wind_speed" ;
+		*:abbreviation = "windspd" ;
+		*:units = "m s-1" ;
+		*:_valid_min=0.0;
+		*:_valid_max=100.0;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=2;
 
 	float WD(time) ;
 
-		WD:long_name = "Wind direction, clockwise from north" ;
-		WD:standard_name = "wind_direction" ;
-		WD:abbreviation = "winddir" ;
-		WD:units = "degrees";
-		WD:_valid_min=0.0;
-		WD:_valid_max=360.0;
-		WD:grid_mapping = "crs" ;
-		WD:least_significant_digit=1;
+		*:long_name = "Wind direction, clockwise from north" ;
+		*:standard_name = "wind_direction" ;
+		*:abbreviation = "winddir" ;
+		*:units = "degrees";
+		*:_valid_min=0.0;
+		*:_valid_max=360.0;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
 
 	float P(time) ;
-		P:parameter = "Station pressure" ;
-		P:long_name = "Air pressure at station height" ;
-		P:standard_name = "air_pressure" ;
+		*:parameter = "Station pressure" ;
+		*:long_name = "Air pressure at station height" ;
+		*:standard_name = "air_pressure" ;
 
-		P:units = "Pa" ;
-		P:_valid_min=0.0 ;
-		P:_valid_max=120000.0;
-		P:grid_mapping = "crs" ;
-		P:least_significant_digit=0;
+		*:units = "Pa" ;
+		*:_valid_min=0.0 ;
+		*:_valid_max=120000.0;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=0;
 
 	uint QC(time) ;
-	    QC:long_name = "QC flag status";
-	    QC:comment = "Flag=1 means QC test failed";
-	    QC:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
-	    QC:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+	    *:long_name = "QC flag status";
+	    *:comment = "Flag=1 means QC test failed";
+	    *:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
+	    *:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
 
 # Global attributes
 

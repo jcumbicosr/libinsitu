@@ -15,5 +15,4 @@ Unidecode==1.3.2
 python-dotenv
 diskcache
 appdirs
-
---extra-index-url https://pip.oie-lab.net/python/ sg2
+sg2

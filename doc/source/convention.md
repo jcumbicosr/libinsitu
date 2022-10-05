@@ -10,7 +10,7 @@ This convention is implemented by the python library [**libinsitu**](../README.m
 * A workflow for transforming in situ measurements from various networks into standardized datasets
 * Python functions and command line (CLI) tools to explore and extract data from files following this convention
 
-This library embeds a [Common Data Langage (CDL) template](../libinsitu/res/base.cdl), describing a NetCDF file format, 
+This library embeds a {gitref}`Common Data Langage (CDL) template <libinsitu/res/base.cdl>`, describing a NetCDF file format, 
 filled at runtime with metadata gathered for several [networks](../libinsitu/res/networks.csv) and [their stations](../libinsitu/res/station-info). 
 
 

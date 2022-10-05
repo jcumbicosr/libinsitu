@@ -4,6 +4,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import sys, os
 
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -12,19 +13,25 @@ copyright = '2022, Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 author = 'Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 release = '1.2'
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '_deps'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+import custom_gitlab
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
     'myst_parser',
-    'sphinxarg.ext']
+    'sphinxarg.ext',
+    'sphinx_gitref']
 
 templates_path = ['_templates']
 exclude_patterns = []
 source_suffix = ['.rst', '.md']
 
+gitref_remote_url = "https://git.sophia.mines-paristech.fr/oie/libinsitu.git"
+gitref_branch = "main"
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -32,3 +39,6 @@ source_suffix = ['.rst', '.md']
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
+
+
+
