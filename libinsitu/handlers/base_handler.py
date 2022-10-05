@@ -120,7 +120,7 @@ class InSituHandler :
         # Finer filter on each name
         def filter_f(filename) :
             basename = os.path.basename(filename)
-            return True if self.match_pattern(basename) else False
+            return self.match_pattern(basename) is not False
 
         res =  list(filename for filename in filenames if filter_f(filename))
 
