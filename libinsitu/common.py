@@ -585,9 +585,14 @@ def get_periods(time_s) :
 def parseTimezone(val) :
     """Parse timezone UTC+HH:MM to timedelta"""
     val = val.strip("UTC")
-    hh, mm = val.split(":")
-    hh= int(hh)
-    mm = int(mm)
+
+    if ":" in val :
+        hh, mm = val.split(":")
+        hh= int(hh)
+        mm = int(mm)
+    else :
+        hh = int(val)
+        mm = 0
 
     if hh < 0 :
         mm = -mm

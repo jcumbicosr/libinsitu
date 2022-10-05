@@ -8,9 +8,8 @@ import sys
 
 def main() :
 
-    parser = argparse.ArgumentParser(description='Prints meta data about networks and stations')
+    parser = argparse.ArgumentParser(description='Prints / export meta data about networks and stations')
     parser.add_argument('--format', '-f', metavar='<format>', help="Output format", choices=["txt", "csv", "json"], default="txt")
-    parser.add_argument('--network', '-n', metavar='<network-id>', help="Network id")
     parser.add_argument('--no-header', '-nh', action="store_true", help="Disable printing of header for txt and csv output", default=False)
     parser.add_argument('--columns', '-c', metavar='<col1>,<col2>,...', help="Columns to show. All by default.")
 
@@ -18,7 +17,7 @@ def main() :
     parser_networks = sub_parsers.add_parser("networks", help="Show networks meta-data")
 
     parser_stations = sub_parsers.add_parser("stations", help="Show networks meta-data")
-
+    parser_stations.add_argument('--network', '-n', metavar='<network-id>', help="Only show stations for the selected network")
 
     args = parser.parse_args()
 
@@ -26,10 +25,10 @@ def main() :
         data = getNetworksInfo().values()
     else :
 
-        data = []
         if args.network :
             data = [attrs for attrs in getStationsInfo(args.network).values()]
         else:
+            data = []
             for network in listNetworks():
                 data += [dict(network=network, **val) for val in getStationsInfo(network).values()]
 

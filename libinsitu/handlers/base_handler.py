@@ -6,6 +6,7 @@ from glob import glob
 from gzip import GzipFile
 from io import TextIOWrapper
 from pathlib import PurePath
+from typing import Dict
 from zipfile import ZipFile
 
 from pandas import DataFrame
@@ -96,10 +97,12 @@ class InSituHandler :
         """Transforms the pattern to a glob pattern"""
         def subf(match) :
             key = match.group(0).replace("{", "").replace("}", "")
-            if key in ["YY", "M", "MM", "YYYY", "DDD"] :
+            if key in self.properties:
+                return str(self.properties[key])
+            elif key in ["YY", "M", "MM", "YYYY", "DDD"] :
                 return "?" * len(key)
             else :
-                return '*'
+                raise Exception("Unsupported pattern : %s" % key)
 
         return re.sub(r'\{\w+\}', subf, self.pattern())
 
@@ -202,3 +205,4 @@ def _zip_glob(pattern) :
             if PurePath(entry).match(entries_pattern) :
                 res.append(zipfile + '!' + entry)
     return res
+

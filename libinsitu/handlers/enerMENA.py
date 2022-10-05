@@ -95,7 +95,7 @@ class EnerMENAHandler(InSituHandler) :
             tz = parseTimezone(metadata['timezone'])
 
         if tz != timedelta(hours=0) :
-            info("Applying timezone : %d", tz)
+            info("Applying timezone : %s", tz)
             data.index = data.index - tz
 
         # Convertions
