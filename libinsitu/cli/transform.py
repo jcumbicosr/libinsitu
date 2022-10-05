@@ -219,6 +219,9 @@ def process_chunck(handler, infile, ncfile, args, properties):
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
+    # Drop duplicates
+    data = data[~data.index.duplicated(keep="last")]
+
     # Reshape : regular time is faster to write in NetCDF (as slice)
     data = data.asfreq("%dS" % resolution_s)
 
