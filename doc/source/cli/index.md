@@ -2,12 +2,12 @@
 
 *libinsitu* provides a set of useful command line utilities (CLI), all starting with `ins-`
 
-## ins-transform
-
-```{argparse}
+```{toctree}
 ---
-module: libinsitu.cli.transform
-func: parser
-prog: ins-transform
+maxdepth: 2
 ---
+ins-transform
+ins-cat
+ins-info
+ins-qc
 ```

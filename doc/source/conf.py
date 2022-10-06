@@ -16,15 +16,15 @@ release = '1.2'
 sys.path.append(os.path.join(os.path.dirname(__file__), '_deps'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-import custom_gitlab
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'sphinx.ext.autodoc',
     'myst_parser',
     'sphinxarg.ext',
-    'sphinx_gitref']
+    'gitrep2']
 
 templates_path = ['_templates']
 exclude_patterns = []

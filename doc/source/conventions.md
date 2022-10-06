@@ -1,22 +1,22 @@
-# Conventions
+# NetCDF Conventions
 
 This document is a proposed convention for the formatting and distribution of in situ solar radiation measurement data. 
 The goal is to apply best practices for standardizing data and improve interoperability. 
 This allows to develop generic tools such as vizualization, QC, statistics, ... 
 
-It should be considered as a **DRAFT**, open for discussions.
+It should be considered as a **DRAFT**, [open for discussions](https://groupes.minesparis.psl.eu/wws/info/solar-insitu).
 
-This convention is implemented by the python library [**libinsitu**](../README.md), which provides : 
-* A workflow for transforming in situ measurements from various networks into standardized datasets
-* Python functions and command line (CLI) tools to explore and extract data from files following this convention
+This convention is implemented `libinsitu` which provides Python and CLI tools to :  
+* Transform in situ measurements from various networks into standardized datasets
+* Explore and extract data from files following this convention
+* Apply quality checks on NetCDF files and embed resulting flags 
 
-This library embeds a {gitref}`Common Data Langage (CDL) template <libinsitu/res/base.cdl>`, describing a NetCDF file format, 
-filled at runtime with metadata gathered for several [networks](../libinsitu/res/networks.csv) and [their stations](../libinsitu/res/station-info). 
+*libinsitu* embeds a {gitref}`Common Data Langage (CDL) template <libinsitu/res/base.cdl>`, describing a NetCDF file format, 
+filled at runtime with metadata gathered for several {gitref}`networks <libinsitu/res/networks.csv>` and {gitref}`their stations <libinsitu/res/station-info>`.
 
 
 
 ---
-
 ## File format 
 
 We propose to format the data into [**NetCDF** files](https://www.unidata.ucar.edu/software/netcdf/).
@@ -42,7 +42,6 @@ We recommend to distribute one file per station of measurements.
 Providers can split the data into yearly or monthly subsets but should also provide aggregated datasets for easier requesting / subsetting.
 
 ---
-
 ## Compression  
 
 We recommend to activate lossless [zlib compression](https://unidata.github.io/netcdf4-python/#efficient-compression-of-netcdf-variables).
@@ -51,14 +50,12 @@ Optionally we recommend of use lossly compression by truncating data values to p
 For this purpose we use the attribute **least_significant_digit** supported by the Python driver of **NetCDF**.  
 
 ---
-
 ## Dimensions
 
 Each file should have only one dimension  :
 - Unlimited dimension for time, named **time**
 
 ---
-
 ## Variables
 
 We propose to include a subset of [standard CF variables](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html).
