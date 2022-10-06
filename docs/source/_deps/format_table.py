@@ -23,7 +23,7 @@ def transform(row) :
 
     if row["TdsName"] :
         res["data"] = "[TDS](http://tds.webservice-energy.org/thredds/catalog/%s/catalog.html)" % row["TdsName"]
-        if not row["IsOpenData"] != "Yes" :
+        if row["IsOpenData"] != "Yes" :
             res["data"] += "🔒"
 
     return  res
