@@ -243,7 +243,7 @@ def read_res(path, encoding="utf8") :
     """
     return get_data(__name__, os.path.join("res", path)).decode(encoding).splitlines()
 
-def parse_value(val) :
+def parse_value(val, split=False) :
     """Parse string value, trying first int, then float. return str value if none are correct"""
     if not isinstance(val, str) :
         return val
@@ -258,7 +258,7 @@ def parse_value(val) :
         return val.strip('"')
 
     # List of things
-    if "," in val :
+    if split and "," in val :
         return list(parse_value(item) for item in val.split(","))
 
     try :

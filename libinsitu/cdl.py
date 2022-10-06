@@ -58,7 +58,7 @@ def parse_cdl(lines, attributes=dict()) :
             line = line.strip(";")
             key, val = line.split("=", 1)
             key = key.strip()
-            val = parse_value(val.strip())
+            val = parse_value(val.strip(), split=True)
 
             if section == "dimensions" :
 
