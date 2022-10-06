@@ -24,7 +24,6 @@ def main() :
     # Required to load CAMS email
     load_dotenv()
 
-
     args = parser().parse_args()
 
     # Open in read or update mode

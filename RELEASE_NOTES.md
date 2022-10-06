@@ -1,3 +1,8 @@
+1.2.1 :
+* Fixed bug splitting meta data with "," to lists
+* Added CLI utile ins-update-meta, to only update metadata for NetCDF files without recomputing data
+
+
 1.2 :
 * Fixed bug in date filtering of nc2df with start date different from origin date
 * Migrated to new conventions

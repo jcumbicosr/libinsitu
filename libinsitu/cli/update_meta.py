@@ -22,7 +22,7 @@ def update_times(outds, start_date64, dry_run=False) :
         info("First time value was corect : no update required")
 
 
-def update_meta(input, output, network, dry_run=False, delete=False, update_range=False, update_time=False) :
+def update_meta(input, output, network=None, dry_run=False, delete=False, update_time=False) :
 
     if output is None :
         output = input
@@ -44,6 +44,12 @@ def update_meta(input, output, network, dry_run=False, delete=False, update_rang
         inds = outds
     else:
         inds = Dataset(input, mode="r")
+
+    # Guess network
+    if network is None :
+        network = getattr(inds, "network_id", None)
+        if network is None :
+            raise Exception("Unable to guess network name. Please provide it")
 
 
     station_id = read_str(inds.variables[STATION_NAME_VAR])
@@ -79,17 +85,15 @@ def update_meta(input, output, network, dry_run=False, delete=False, update_rang
 def main() :
 
     parser = argparse.ArgumentParser(description='Update meta attributes in NetCDF file')
-    parser.add_argument('network', metavar='<NETWORK>', type=str, help='Network')
-    parser.add_argument('input', metavar='<input.nc>', type=str, help='NetCDF files to update')
-    parser.add_argument('--output', '-o', metavar='<output.nc>', type=str, help='NetCDF files to update', default=None, required=False)
+    parser.add_argument('input', metavar='<input.nc>', type=str, help='NetCDF file to update')
+    parser.add_argument('--output', '-o', metavar='<output.nc>', type=str, help='NetCDF files to update', default=None)
+    parser.add_argument('--network', metavar='<network_id>', type=str, help='Network. Guessed from reading the file if not provided')
     parser.add_argument('--dry-run', '-n', help='Do not update anything. Just look what would be done', action='store_true', default=False)
     parser.add_argument('--update-ranges', '-ur', help='Update data time ranges for each variable', action='store_true', default=False)
-    parser.add_argument('--update-time', '-ut', help='Update time variable', action='store_true',
-                        default=False)
     parser.add_argument('--delete', '-d', help='Delete extra attributes', action='store_true', default=False)
     args = parser.parse_args()
 
-    update_meta(args.input, args.output, args.network, args.dry_run, args.delete, args.update_ranges, args.update_time)
+    update_meta(args.input, args.output, args.network, args.dry_run, args.delete, args.update_ranges)
 
 if __name__ == '__main__':
     main()

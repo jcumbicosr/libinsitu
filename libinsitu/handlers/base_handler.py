@@ -174,8 +174,8 @@ class InSituHandler :
 
 
     def data_vars(self):
-        """Should return the list of data variables supported by the network."""
-        raise Exception("Should return the list of supported VARS")
+        # By default, return the list of available data from the CSV files
+        return self.properties["Network_AvailableData"].split(",")
 
     @abstractmethod
     def _read_chunk(self, stream) -> DataFrame:
