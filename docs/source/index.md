@@ -12,18 +12,24 @@ It provides :
 * A set of {gitref}`formatted and enriched metadata<libinsitu/res/station-info>` for several networks and their stations.
 * A [proposed convention](conventions.md) for solar data, on top of CF conventions.
 
+In addition, we process input data for many networks and [make them available](data) 
+through a [Thredds data server](http://tds.webservice-energy.org/thredds/catalog.html) and 
+a [web interface](http://viewer.webservice-energy.org/in-situ/). For more details, see the [data](data) section.
+
+```{image} _static/img/web-interface.png
+---
+target: http://viewer.webservice-energy.org/in-situ/
+alt: Preview of web interface
+---
+```
+
+
 ## Installation
 
 libinsitu is available via *pip* :
 ```bash
 pip install libinsitu
 ```
-
-## Data availability
-
-
-
-## Networks
 
 ## Authors
 
@@ -35,8 +41,6 @@ from the research center [O.I.E of Mines-Paristech](https://www.oie.minesparis.p
 Please subscribe to the mailing list :<br/>
 [solar-insitu@groupes.mines-paristech.fr](https://groupes.minesparis.psl.eu/wws/info/solar-insitu)
 
-
-
 ## Licence
 
 *libinsitu* is distributed under the {gitref}`BSD 2-Clause License <LICENSE>`
@@ -46,13 +50,15 @@ Please subscribe to the mailing list :<br/>
 The source code is available of our {gitref}`gitlab </>`
 
 
+## Summary 
+
 ```{toctree}
 ---
 maxdepth: 2
 ---
 Introduction <self>
-installation
 api
 cli/index
+data
 conventions
 ```

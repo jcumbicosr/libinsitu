@@ -26,6 +26,15 @@ extensions = [
     'sphinxarg.ext',
     'gitrep2']
 
+# These folders are copied to the documentation's HTML output
+html_static_path = ['_static']
+
+# These paths are either relative to html_static_path
+# or fully qualified paths (eg. https://...)
+html_css_files = [
+    'css/custom.css',
+]
+
 templates_path = ['_templates']
 exclude_patterns = []
 source_suffix = ['.rst', '.md']
