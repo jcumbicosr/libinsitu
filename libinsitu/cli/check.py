@@ -1,10 +1,10 @@
-from libinsitu.common import nc2df, get_periods
+from libinsitu.common import netcdf_to_dataframe, get_periods
 from libinsitu.log import *
 import numpy as np
 
 def check_time(filename) :
 
-    df = nc2df(filename)
+    df = netcdf_to_dataframe(filename)
     station_id = df.attrs["StationInfo_Abbreviation"]
     network = df.attrs["source"]
     if " " in network :

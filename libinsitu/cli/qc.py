@@ -3,16 +3,12 @@ import argparse
 from datetime import datetime
 
 from libinsitu import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, openNetCDF, GLOBAL_TIME_RESOLUTION_ATTR
-from libinsitu.common import nc2df
+from libinsitu.common import netcdf_to_dataframe
 from libinsitu.qc_utils import SolarRadVisualControl, flagData, wps_Horizon_SRTM, sun_position, get_cams, \
     write_flags, cleanup_data
 from dotenv import load_dotenv
 
-def main() :
-
-    # Required to load CAMS email
-    load_dotenv()
-
+def parser() :
     parser = argparse.ArgumentParser(description='Perform QC analysis on input file. It can fill QC flags in it and / or generate visual QC image')
     parser.add_argument('input', metavar='<file.nc|odap_url>', type=str, help='Input local file or URL')
     parser.add_argument('--output', '-o', metavar='<out.png>', type=str, help='Output image')
@@ -21,15 +17,22 @@ def main() :
     parser.add_argument('--to-date', '-t', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='End date of analysis', default=None)
     parser.add_argument('--no-mc-clear', '-nc', action="store_true", help='Disable mcClear', default=False)
     parser.add_argument('--no-horizons', '-nh', action="store_true", help='Disable horizons', default=False)
+    return parser
 
-    args = parser.parse_args()
+def main() :
+
+    # Required to load CAMS email
+    load_dotenv()
+
+
+    args = parser().parse_args()
 
     # Open in read or update mode
     mode = 'a' if args.update else 'r'
     ncfile = openNetCDF(args.input, mode=mode)
 
     # Load NetCDF timeseries as pandas Dataframe
-    df = nc2df(
+    df = netcdf_to_dataframe(
         ncfile,
         start_time=args.from_date,
         end_time=args.to_date,

@@ -11,7 +11,7 @@ from rich.table import Table
 from datetime import datetime
 
 from libinsitu.log import debug
-from libinsitu.common import nc2df, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
+from libinsitu.common import netcdf_to_dataframe, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
 
 QC_NONE = "none"
 QC_MASK = "masks"
@@ -99,7 +99,8 @@ def build_formatters(df) :
             res[varname] = float_to_str(var_attrs["least_significant_digit"])
     return res
 
-def main() :
+
+def parser() :
 
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
     parser.add_argument('filename', metavar='<file.nc> or <http://opendap-url/.nc>', type=str, help='Input file or URL')
@@ -118,7 +119,11 @@ def main() :
                         default=os.environ.get("TDS_PASS", None))
     parser.add_argument('--steps', '-st', help='Downsampling', type=int, default=1)
     parser.add_argument('--chunk_size', '-cs', help='Size of chunks', type=int, default=CHUNK_SIZE)
-    args = parser.parse_args()
+    return parser
+
+def main() :
+
+    args = parser().parse_args()
     cols = args.cols.split(",") if args.cols else None
 
     fromTime=None
@@ -138,7 +143,7 @@ def main() :
         else :
             args.qc_format = QC_NAMES
 
-    chunks = nc2df(
+    chunks = netcdf_to_dataframe(
         args.filename,
         fromTime, toTime,
         user=args.user, password=args.password,

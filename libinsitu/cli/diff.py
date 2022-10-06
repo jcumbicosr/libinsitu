@@ -3,7 +3,7 @@ import argparse
 from netCDF4 import Dataset
 
 from libinsitu import getStationId, getNetworkId
-from libinsitu.common import nc2df, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
+from libinsitu.common import netcdf_to_dataframe, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, PRESSURE_VAR, \
     HUMIDITY_VAR, TEMP_VAR
 from libinsitu.log import *
 import numpy as np
@@ -21,7 +21,7 @@ CHUNK_SIZE = 100
 
 def file2df(filename) :
     nc = Dataset(filename, mode='r')
-    df = nc2df(nc)
+    df = netcdf_to_dataframe(nc)
     nc.close()
     return df
 

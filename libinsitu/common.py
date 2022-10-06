@@ -382,7 +382,7 @@ def match_pattern(pattern, value, properties=dict()) :
     return res
 
 
-def nc2df(
+def netcdf_to_dataframe(
         ncfile : Union[Dataset, str],
         start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
         drop_duplicates=True,
@@ -396,21 +396,22 @@ def nc2df(
         steps=1,
         rename_cols=False) :
     """
-        Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index
+        Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index.
 
+        :param ncfile: NetCDF Dataset or filename, or OpenDAP URL
+        :param rename_cols: If True (default) rename solar irradiance columns as per convention (GHI, BNI, DHI)
+        :param drop_duplicates: If true (default), duplicate rows are droppped
         :param skip_qc: If True, skip lines with bad QC (at least one failing)
-        :param rename_cols: If True (default) rename solar irradiance columns to proper names
-        :param ncfile: NetCDF Dataset or filename, or URL
-        :param drop_duplicates: If true (default), duplicate rows with same time are droppped
-        :param skip_na : If True, drop rows containing only nan values
-        :param start_time: Start time (first one by default) : Datetime or datetime64
-        :param end_time: End time (last one by default) : Datetile or datetime64
-        :param vars: List of columns names to  convert (all by default)
-        :param user: Optional login for URL
-        :param password: Optional password for URL
-        :param chunk_size Size of chunks for chunked data
-        :param steps Downsampling (1 by default)
-        :return: Dataframe or Iterator (yield) of Dataframes
+        :param skip_na: If True, drop rows containing only nan values
+        :param start_time: Start time (first record by default) : Datetime or datetime64
+        :param end_time: End time (last record by default) : Datetile or datetime64
+        :param vars: List of columns names to convert (all by default)
+        :param user: Optional login for OpenDAP URL
+        :param password: Optional password OpenDAP URL
+        :param chunked: If True, does not load the whole file in memory at once : returns an iterator on Dataframe chunks.
+        :param chunk_size: Size of chunks for chunked data
+        :param steps: Downsampling (1 by default)
+        :return: Pandas Dataframe, or iterator on Dataframes is chunk is activated
         """
 
     chunks = __nc2df(

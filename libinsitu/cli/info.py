@@ -6,8 +6,7 @@ from libinsitu import getProperties, getNetworksInfo, getStationInfo, getStation
 from libinsitu.handlers import listNetworks
 import sys
 
-def main() :
-
+def parser() :
     parser = argparse.ArgumentParser(description='Prints / export meta data about networks and stations')
     parser.add_argument('--format', '-f', metavar='<format>', help="Output format", choices=["txt", "csv", "json"], default="txt")
     parser.add_argument('--no-header', '-nh', action="store_true", help="Disable printing of header for txt and csv output", default=False)
@@ -18,8 +17,13 @@ def main() :
 
     parser_stations = sub_parsers.add_parser("stations", help="Show networks meta-data")
     parser_stations.add_argument('--network', '-n', metavar='<network-id>', help="Only show stations for the selected network")
+    return parser
 
-    args = parser.parse_args()
+
+def main() :
+
+
+    args = parser().parse_args()
 
     if args.command == "networks" :
         data = getNetworksInfo().values()
