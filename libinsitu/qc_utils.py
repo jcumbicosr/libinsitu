@@ -14,7 +14,7 @@ from pandas import DataFrame
 from pandas._libs.internals import defaultdict
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
-    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
+    DefaultDict, datetime64_to_int, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning, LogContext
 import os
@@ -926,10 +926,9 @@ def cleanup_data(df, freq):
 
     return df
 
-@cache.memoize()
+#@cache.memoize()
 def sun_position(lat, lon, alt, start_time, end_time, freq_sec=60) :
 
-    info("Computing sun position")
     if alt == np.nan:
         alt = 0
 
@@ -966,7 +965,6 @@ def sun_position(lat, lon, alt, start_time, end_time, freq_sec=60) :
     df['SR_h'] = SR_TOD
     df['SS_h'] = SS_TOD
 
-    info("end of sun position")
     return df
 
 
@@ -1052,7 +1050,7 @@ def write_flags(ncfile, flags_df) :
 
     # Compute IDX
     dates = flags_df.index.values
-    times_sec = datetime64_to_sec(ncfile, dates)
+    times_sec = datetime64_to_int(ncfile, dates)
     time_idx = seconds_to_idx(ncfile, times_sec)
 
     # Assign flags

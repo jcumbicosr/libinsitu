@@ -40,7 +40,7 @@ def parse_cdl(lines, attributes=dict()) :
     res = CDL()
 
     section = None
-    curr_var = None;
+    curr_var = None
 
     for line in lines :
         line = line.strip()
@@ -60,9 +60,12 @@ def parse_cdl(lines, attributes=dict()) :
             key = key.strip()
             val = parse_value(val.strip(), split=True)
 
+            if isinstance(val, str):
+                val = replace_placeholders(val.strip(), attributes)
+
+            # Defining dimension
             if section == "dimensions" :
 
-                # Defining dimension
                 dim = 0 if val == "UNLIMITED" else int(val)
                 res.dimensions[key] = dim
 
@@ -71,8 +74,7 @@ def parse_cdl(lines, attributes=dict()) :
 
                 if varname == "*" :
                     varname = curr_var
-                if isinstance(val, str) :
-                    val = replace_placeholders(val, attributes)
+
                 if varname == "" :
                     res.global_attributes[attrname] = val
                 else :
@@ -103,6 +105,8 @@ def parse_cdl(lines, attributes=dict()) :
                 type="f4"
             elif type == "int" :
                 type="i4"
+            elif type == "short":
+                type = "i2"
             elif type == "uint":
                 type = "u4"
 
@@ -174,7 +178,7 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False) :
 
     ncfile.createVariable(
         vardef.name, vardef.type, vardef.dimensions,
-        zlib=True,
+        zlib=vardef.type is not str,
         complevel=9,
         least_significant_digit=least_significant_digit,
         fill_value=fill_value)
@@ -230,9 +234,6 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
         if "time" in var.dimensions and not key in data_vars + [TIME_VAR] :
             continue
         filtered_cdl.variables[key] = var
-
-
-
 
     cdl2netcdf(netcdf, filtered_cdl, dry_run, delete_attrs)
 

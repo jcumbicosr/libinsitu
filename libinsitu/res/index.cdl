@@ -1,0 +1,51 @@
+netcdf base {
+
+dimensions:
+    station = {NbStations} ;
+	time = UNLIMITED ; # Main dimension
+
+variables:
+
+	string station_name(station);
+	    *:standard_name = "platform_name" ;
+		*:long_name = "station_name" ;
+		*:cf_role = "timeseries_id" ;
+
+    float latitude(station) ;
+		*:long_name = "station latitude" ;
+		*:standard_name = "latitude" ;
+		*:units = "degrees_north" ;
+		*:_CoordinateAxisType = "Lat" ;
+		*:axis = "Y" ;
+
+	float longitude(station) ;
+		*:long_name = "station longitude" ;
+		*:standard_name = "longitude" ;
+		*:units = "degrees_east" ;
+		*:_CoordinateAxisType = "Lon" ;
+		*:axis = "X" ;
+
+	float elevation(station);
+		*:long_name = "Elevation above mean seal level" ;
+		*:standard_name = "height_above_mean_sea_level" ;
+		*:units = "m" ;
+		*:axis = "Z" ;
+
+	double crs;
+		*:grid_mapping_name = "latitude_longitude" ;
+		*:longitude_of_prime_meridian = "0.0" ;
+		*:semi_major_axis = "6378137.0" ;
+		*:inverse_flattening = "298.257223563" ;
+		*:epsg_code = "EPSG:4326";
+
+	uint Time(time) ;
+		*:long_name = "Time of measurement" ;
+		*:standard_name = "time" ;
+		*:units = "days since 1970-01-01 00:00:00";
+		*:time_origin = "1970-01-01 00:00:00" ;
+		*:time_zone= "UTC"
+		*:abbreviation = "Date/Time" ;
+		*:axis = "T" ;
+		*:calendar = "gregorian" ;
+
+}

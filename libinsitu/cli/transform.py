@@ -228,7 +228,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
     # Transform time to seconds since start date and time idx
     chunk_dates = data.index.values
 
-    times_sec = datetime64_to_sec(ncfile, chunk_dates)
+    times_sec = datetime64_to_int(ncfile, chunk_dates)
 
     columns = list(data.columns)
 
@@ -255,7 +255,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     chunk_start = min(chunk_dates)
     chunk_end = max(chunk_dates)
-    chunk_end_int = datetime64_to_sec(ncfile, chunk_end)
+    chunk_end_int = datetime64_to_int(ncfile, chunk_end)
 
     info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(data.index))
 
@@ -282,7 +282,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     # Fill Time variable
     if len(ncfile.variables[TIME_VAR]) == 0 :
-        next_time_sec =  datetime64_to_sec(ncfile, start_date64(ncfile))
+        next_time_sec =  datetime64_to_int(ncfile, start_date64(ncfile))
     else:
         next_time_sec = ncfile.variables[TIME_VAR][-1] + resolution_s
 

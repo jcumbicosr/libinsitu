@@ -2,8 +2,10 @@ import matplotlib.pyplot as plt
 import argparse
 from datetime import datetime
 
-from libinsitu import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, openNetCDF, GLOBAL_TIME_RESOLUTION_ATTR
+from libinsitu import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, openNetCDF, GLOBAL_TIME_RESOLUTION_ATTR, getNetworkId, \
+    readShortname, info
 from libinsitu.common import netcdf_to_dataframe
+from libinsitu.log import LogContext
 from libinsitu.qc_utils import SolarRadVisualControl, flagData, wps_Horizon_SRTM, sun_position, get_cams, \
     write_flags, cleanup_data
 from dotenv import load_dotenv
@@ -30,62 +32,75 @@ def main() :
     mode = 'a' if args.update else 'r'
     ncfile = openNetCDF(args.input, mode=mode)
 
-    # Load NetCDF timeseries as pandas Dataframe
-    df = netcdf_to_dataframe(
-        ncfile,
-        start_time=args.from_date,
-        end_time=args.to_date,
-        rename_cols=True)
+    # try to read network and station id from file
+    network_id = getNetworkId(ncfile)
+    station_id = readShortname(ncfile)
 
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
 
-    resolution_sec = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
-    if args.output :
-        # Resample to the minute to produce graph
-        resolution_sec = 60
+    with LogContext(network=network_id, station_id=station_id, file=args.input) :
 
-    # Clean data
-    df = cleanup_data(df, resolution_sec)
+        info("Start of QC")
 
-    # Compute geom & theoretical irradiance
-    sp_df = sun_position(lat, lon, alt, df.index.min(), df.index.max(), freq_sec=resolution_sec)
+        # Load NetCDF timeseries as pandas Dataframe
+        df = netcdf_to_dataframe(
+            ncfile,
+            start_time=args.from_date,
+            end_time=args.to_date,
+            rename_cols=True)
 
-    # Compute QC flags
-    flag_df = flagData(df, sp_df)
+        lat = float(df.attrs[LATITUDE_VAR])
+        lon = float(df.attrs[LONGITUDE_VAR])
+        alt = float(df.attrs[ELEVATION_VAR])
 
-    if args.update :
-        write_flags(ncfile, flag_df)
+        resolution_sec = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
-    if args.output :
+        if args.output :
+            # Resample to the minute to produce graph
+            resolution_sec = 60
 
-        # Fetch horizons
-        if args.no_horizons :
-            horizons = None
-        else:
-            horizons = wps_Horizon_SRTM(lat, lon, alt)
+        # Clean data
+        df = cleanup_data(df, resolution_sec)
 
-        if  args.no_mc_clear :
-            cams_df = None
-        else:
-            cams_df = get_cams(
-                start_date=df.index.min(),
-                end_date=df.index.max(),
-                lat=lat, lon=lon,
-                altitude=alt)
-            cams_df = cams_df.reindex(df.index)
+        # Compute geom & theoretical irradiance
+        sp_df = sun_position(lat, lon, alt, df.index.min(), df.index.max(), freq_sec=resolution_sec)
 
-        # Draw figures
-        SolarRadVisualControl(
-            df,
-            sp_df,
-            flag_df,
-            cams_df,
-            horizons,
-            ShowFlag=0)
+        # Compute QC flags
+        flag_df = flagData(df, sp_df)
 
-        # Save to output file
-        plt.savefig(args.output)
-        plt.close()
+        if args.update :
+            write_flags(ncfile, flag_df)
+
+        if args.output :
+
+            visual_output(alt, args, df, flag_df, lat, lon, sp_df)
+
+        info("End of QC")
+
+
+def visual_output(alt, args, df, flag_df, lat, lon, sp_df):
+    # Fetch horizons
+    if args.no_horizons:
+        horizons = None
+    else:
+        horizons = wps_Horizon_SRTM(lat, lon, alt)
+    if args.no_mc_clear:
+        cams_df = None
+    else:
+        cams_df = get_cams(
+            start_date=df.index.min(),
+            end_date=df.index.max(),
+            lat=lat, lon=lon,
+            altitude=alt)
+        cams_df = cams_df.reindex(df.index)
+    # Draw figures
+    SolarRadVisualControl(
+        df,
+        sp_df,
+        flag_df,
+        cams_df,
+        horizons,
+        ShowFlag=0)
+    # Save to output file
+    plt.savefig(args.output)
+    plt.close()

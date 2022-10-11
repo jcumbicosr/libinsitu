@@ -9,7 +9,7 @@ import argparse
 def update_times(outds, start_date64, dry_run=False) :
     time_var = getTimeVar(outds)
     resolution_s = getTimeResolution(outds)
-    start_sec = datetime64_to_sec(outds, start_date64)
+    start_sec = datetime64_to_int(outds, start_date64)
 
     if time_var[0] != start_sec :
         if dry_run :

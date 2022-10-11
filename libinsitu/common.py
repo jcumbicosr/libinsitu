@@ -202,10 +202,10 @@ def to_int(vals) :
     else:
         return int(vals)
 
-def datetime64_to_sec(ncfile, dates : NDArray[datetime64]) -> NDArray[int] :
+def datetime64_to_int(ncfile, dates : NDArray[datetime64], unit='s') -> NDArray[int] :
     """Transform datetime64 to number of seconds since origin date """
     origin = get_origin_time(ncfile)
-    return to_int((dates - origin) / SECOND)
+    return to_int((dates - origin) / timedelta64(1, unit))
 
 def str_to_date64(datestr) :
     for format in [TIME_FORMAT_SEC, TIME_FORMAT_MIN, DATE_FORMAT] :
@@ -229,7 +229,7 @@ def start_date64(ncfile) :
 def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
     resolution_s = getTimeResolution(ncfile)
-    start_sec = datetime64_to_sec(ncfile, start_date64(ncfile))
+    start_sec = datetime64_to_int(ncfile, start_date64(ncfile))
     return to_int((dates - start_sec) / resolution_s)
 
 def sec_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
@@ -310,7 +310,7 @@ def date_to_timeidx(nc, date) :
     """Transform date to NetCDF index along Time dimension"""
     if isinstance(date, datetime) :
         date = datetime64(date)
-    time_sec = datetime64_to_sec(nc, date)
+    time_sec = datetime64_to_int(nc, date)
     return seconds_to_idx(nc, time_sec)
 
 
@@ -648,24 +648,22 @@ def readShortname(ncfile) :
     # Then read the content of the dedicated var
     return read_str(ncfile.variables[STATION_NAME_VAR])
 
-def getStationId(attrs) :
-    # First try standard attributes
-    for key in STATION_ID_ATTRS :
-        if key in attrs :
-            return attrs[key]
+def getMult(attrs, keys):
+    """Get value of dict or attribute in NCfile, looking several possbilities"""
 
+    if isinstance(attrs, Dataset) :
+        attrs  = dict((attr, getattr(attrs, attr)) for attr in attrs.ncattrs())
+
+    for name in keys:
+        if name in attrs:
+            return attrs[name]
     return None
 
+def getNetworkId(attributes_or_ncfile) :
+    return getMult(attributes_or_ncfile, NETWORK_ID_ATTRS)
 
-def getNetworkId(attributes) :
-    # First try standard attributes
-    for name in NETWORK_ID_ATTRS :
-        if name in attributes :
-            return attributes[name]
-    raise Exception("Network name not found. Tried the following attributes : %s" % str(NETWORK_ID_ATTRS))
-
-
-
+def getStationId(attributes_or_ncfile) :
+    return getMult(attributes_or_ncfile, STATION_ID_ATTRS)
 
 def getProperties(network_id, station_id) :
     """Gather Network_ and Station_ properties """
