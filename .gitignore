@@ -8,7 +8,7 @@ out
 test.*
 inter
 status
-*.ipynb
+*tst*.ipynb
 in
 cron
 dist
