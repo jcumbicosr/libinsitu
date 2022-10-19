@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 from datetime import datetime
 
+from libinsitu import qc_masks
 from libinsitu.log import debug
 from libinsitu.common import netcdf_to_dataframe, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
 
@@ -248,14 +249,12 @@ def format_QC(df, qc_format) :
 
     qc_col = df[QC_FLAGS_VAR]
 
-    qc_attrs = df.attrs["variables"][QC_FLAGS_VAR]
-    flags = qc_attrs["flag_meanings"].split()
-    masks = qc_attrs["flag_masks"]
+    masks_dict = qc_masks(df)
 
     if qc_format == QC_MASK :
         res = Series(data="", index = df.index, dtype=str)
         col_names = []
-        for idx, (flag, mask) in enumerate(zip(flags, masks)) :
+        for idx, (flag, mask) in enumerate(masks_dict.items()) :
             letter = chr(97+idx)
             col_names.append("%s:%s" % (flag, letter))
             res += np.where(qc_col.values & mask != 0, letter, ".")
@@ -268,14 +267,14 @@ def format_QC(df, qc_format) :
 
     elif qc_format == QC_EXPAND :
 
-        for flag, mask in zip(flags, masks):
+        for flag, mask in masks_dict.items():
             colname = "%s.%s" % (QC_FLAGS_VAR, flag)
             df[colname] = np.where(qc_col & mask == 0, 0, 1)
         del df[QC_FLAGS_VAR]
 
     elif qc_format == QC_NAMES :
         res = Series(data="", index=df.index, dtype=np.object)
-        for flag, mask in zip(flags, masks):
+        for flag, mask in masks_dict.items():
             res += np.where(
                 qc_col & mask == 0,
                 "",

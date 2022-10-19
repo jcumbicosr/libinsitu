@@ -1022,7 +1022,7 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 def write_flags(ncfile, flags_df) :
 
     # Parse CDL : use defaultdict to avoid warning
-    # XXX try to not parse it twise and get it from above
+    # XXX try to not parse it twice and get it from above
     cdl = parse_cdl(read_res(CDL_PATH), attributes=DefaultDict(lambda : "-"))
 
     # Create var if not present yet

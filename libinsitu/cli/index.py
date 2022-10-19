@@ -7,7 +7,7 @@ import sg2
 from netCDF4 import Dataset
 
 from libinsitu import read_res, info, netcdf_to_dataframe, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, \
-    datetime64_to_int, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR
+    datetime64_to_int, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR, qc_masks
 from libinsitu.cdl import cdl2netcdf, parse_cdl
 import pandas as pd
 import numpy as np
@@ -20,6 +20,7 @@ WRITE_LOCK = Lock()
 
 EXPECTED_COUNT_VAR = "expected_daylight_count"
 VALID_COUNT_SUFFIX = "_valid_daylight_count"
+QC_COUNT_PATTTERN = QC_FLAGS_VAR + "_%s_daylight_count"
 
 def parser() :
 
@@ -57,6 +58,14 @@ def main() :
     for varname in data_vars:
         create_count_var(out_nc, varname + VALID_COUNT_SUFFIX)
 
+    # Init QC flags if any
+    for input_nc in input_ncs :
+        if QC_FLAGS_VAR in input_nc.variables:
+            qc_var = input_nc.variables[QC_FLAGS_VAR]
+            for flag in qc_var.flag_meanings.split() :
+                create_count_var(out_nc, QC_COUNT_PATTTERN % flag)
+            break
+
     start_time = min_time(input_ncs)
     start_day = datetime64_to_int(out_nc, start_time, 'D')
 
@@ -89,7 +98,7 @@ def process_station(start_day, outfile, istation, infile) :
         # Use chunked processing to reduce memory usage
         for ichunk, in_df in enumerate(in_dfs):
 
-            chunk_id = "#%d/%d %s -> %s" % (ichunk, in_df.index.min(), in_df.index.max())
+            chunk_id = "#%d %s -> %s" % (ichunk, in_df.index.min(), in_df.index.max())
 
             info("Processing %s. Chunk %s" % (infile, chunk_id))
 
@@ -121,13 +130,19 @@ def process_station(start_day, outfile, istation, infile) :
 
                 valid_daylight = not_na & is_daylight
 
-                if "QC" in in_df :
+                if QC_FLAGS_VAR in in_df :
                     valid_daylight = valid_daylight & (in_df.QC == 0)
 
                 valid_daily = valid_daylight.resample('D').sum()
 
                 #write_series(out_nc, istation, col + "_valid_daylight_count", valid_daily, start_day)
                 data_dic[col + VALID_COUNT_SUFFIX] = valid_daily
+
+            # QC
+            if QC_FLAGS_VAR in in_df :
+                qc_col = in_df[QC_FLAGS_VAR]
+                for flag, mask in qc_masks(in_df).items() :
+                    data_dic[QC_COUNT_PATTTERN % flag] = is_daylight & ((qc_col & mask) != 0)
 
             with WRITE_LOCK :
 

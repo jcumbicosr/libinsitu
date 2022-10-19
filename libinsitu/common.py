@@ -677,11 +677,16 @@ def getProperties(network_id, station_id) :
     return properties
 
 
-
+def qc_masks(df) :
+    """Parse metadata of a QC bitmap and returns dict of meaning => mask"""
+    attrs = df.attrs["variables"][QC_FLAGS_VAR]
+    return {meaning: mask for meaning, mask in zip(
+        attrs["flag_meanings"].split(),
+        attrs["flag_masks"]
+    )}
 
 def parse_bool(value) :
     return value in ["true", "True", "1", "yes", "Yes"]
-
 
 def parallel_map(fn, iterable, parallel, max_workers=None) :
     """Helper util to map either seuquentially or in parallel """
