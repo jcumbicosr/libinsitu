@@ -910,19 +910,23 @@ def cleanup_data(df, freq):
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
     for varname in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
-        var = df[varname]
-        df.loc[var > MAX_VAL, varname] = np.nan
-        df.loc[var < MIN_VAL, varname] = np.nan
+        if varname in df :
+            var = df[varname]
+            df.loc[var > MAX_VAL, varname] = np.nan
+            df.loc[var < MIN_VAL, varname] = np.nan
+        else:
+            warning("Missing var %s, adding NaNs" % varname)
+            df[varname] = np.nan
 
-    freq_min = freq // 60
+    freq_s = str(freq) + "S"
 
-    df = df.resample(str(freq_min) + "Min").ffill()
-    df = df.asfreq(str(freq_min) + "Min")
+    df = df.resample(freq_s).ffill()
+    df = df.asfreq(freq_s)
 
     start_date = df.index.min().normalize()
     end_date = df.index.max().normalize() + np.timedelta64(24 * 60 - 1, "m")
 
-    df = df.reindex(pd.date_range(start_date, end_date, freq=str(freq_min) + "min"))
+    df = df.reindex(pd.date_range(start_date, end_date, freq=freq_s))
 
     return df
 
