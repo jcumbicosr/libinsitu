@@ -252,6 +252,10 @@ def SolarRadVisualControl(
 
         x = mdates.date2num(ratios.index[Filteridx])
         y = ratios.values[Filteridx]
+
+        if len(x) == 0 :
+            return
+
         hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
                                               range=[[x[0], x[-1]], [0.25, 1.75]])
         if int((x[-1] - x[0])) > 10 * len(h2):
@@ -877,31 +881,28 @@ def qc_stats(meas_df, sp_df, flag_df) :
 
     TOA = sp_df.TOA
 
+    def percent(flags, *components) :
+        filt = TOA > 0
+        for component in components :
+            filt = filt & (component > -2)
+
+        tot = sum(filt)
+        if tot == 0 :
+            return np.nan
+        else:
+            return sum(flags & filt) / tot * 100
+
     return  {
-        'T1C_erl_GHI': sum(flag_df.T1C_erl_GHI & (TOA > 0) & (GHI > -2)) / sum(
-            (TOA > 0) & (GHI > -2)) * 100,
-        'T1C_ppl_GHI': sum(flag_df.T1C_ppl_GHI & (TOA > 0) & (GHI > -2)) / sum(
-            (TOA > 0) & (GHI > -2)) * 100,
-        'T1C_erl_DIF': sum(flag_df.T1C_erl_DIF & (TOA > 0) & (DIF > -2)) / sum(
-            (TOA > 0) & (DIF > -2)) * 100,
-        'T1C_ppl_DIF': sum(flag_df.T1C_ppl_DIF & (TOA > 0) & (DIF > -2)) / sum(
-            (TOA > 0) & (DIF > -2)) * 100,
-        'T1C_erl_DNI': sum(flag_df.T1C_erl_DNI & (TOA > 0) & (DNI > -2)) / sum(
-            (TOA > 0) & (DNI > -2)) * 100,
-        'T1C_ppl_DNI': sum(flag_df.T1C_ppl_DNI & (TOA > 0) & (DNI > -2)) / sum(
-            (TOA > 0) & (DNI > -2)) * 100,
-        'T2C_bsrn_kt': sum(flag_df.T2C_bsrn_kt & (TOA > 0) & (GHI > -2)) / sum(
-            (TOA > 0) & (GHI > -2)) * 100,
-        'T2C_seri_knkt': sum(
-            flag_df.T2C_seri_kn_kt & (TOA > 0) & (DNI > -2) & (GHI > -2)) / sum(
-            (TOA > 0) & (DNI > -2) & (GHI > -2)) * 100,
-        'T2C_seri_kkt': sum(
-            flag_df.T2C_seri_k_kt & (TOA > 0) & (DIF > -2) & (GHI > -2)) / sum(
-            (TOA > 0) & (DIF > -2) & (GHI > -2)) * 100,
-        'T3C_bsrn': sum(
-            flag_df.T3C_bsrn_3cmp & (TOA > 0) & (GHI > -2) & (DIF > -2) & (
-                    DNI > -2)) / sum(
-            (TOA > 0) & (GHI > -2) & (DIF > -2) & (DNI > -2)) * 100}
+        'T1C_erl_GHI': percent(flag_df.T1C_erl_GHI, GHI),
+        'T1C_ppl_GHI': percent(flag_df.T1C_ppl_GHI, GHI),
+        'T1C_erl_DIF': percent(flag_df.T1C_erl_DIF, DIF),
+        'T1C_ppl_DIF': percent(flag_df.T1C_ppl_DIF, DIF),
+        'T1C_erl_DNI': percent(flag_df.T1C_erl_DNI, DNI),
+        'T1C_ppl_DNI': percent(flag_df.T1C_ppl_DNI, DNI),
+        'T2C_bsrn_kt': percent(flag_df.T2C_bsrn_kt, GHI),
+        'T2C_seri_knkt': percent(flag_df.T2C_seri_kn_kt, DNI, GHI),
+        'T2C_seri_kkt': percent(flag_df.T2C_seri_k_kt, DIF, GHI),
+        'T3C_bsrn': percent(flag_df.T3C_bsrn_3cmp, GHI, DIF, DNI)}
 
 
 def cleanup_data(df, freq):
