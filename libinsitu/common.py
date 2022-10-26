@@ -202,7 +202,7 @@ def to_int(vals) :
     else:
         return int(vals)
 
-def datetime64_to_int(ncfile, dates : NDArray[datetime64], unit='s') -> NDArray[int] :
+def datetime64_to_sec(ncfile, dates : NDArray[datetime64], unit='s') -> NDArray[int] :
     """Transform datetime64 to number of seconds since origin date """
     origin = get_origin_time(ncfile)
     return to_int((dates - origin) / timedelta64(1, unit))
@@ -221,15 +221,17 @@ def start_date64(ncfile) :
     if  hasattr(ncfile, STATION_START_DATA_ATTR) :
         return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
     else:
-        res = sec_to_datetime64(ncfile, ncfile[TIME_VAR][0])
+        res = sec_to_datetime64(ncfile, getTimeVar(ncfile)[0])[()]
         warning("No start date set in meta data : taking the first value of ncfile : %s" % res)
         return res
 
+def end_date64(ncfile):
+    return sec_to_datetime64(ncfile, getTimeVar(ncfile)[-1])[()]
 
 def seconds_to_idx(ncfile, dates : NDArray[int], ) -> NDArray[int] :
     """Transform seconds since origin to time idx, taking into account resolution and start date"""
     resolution_s = getTimeResolution(ncfile)
-    start_sec = datetime64_to_int(ncfile, start_date64(ncfile))
+    start_sec = datetime64_to_sec(ncfile, start_date64(ncfile))
     return to_int((dates - start_sec) / resolution_s)
 
 def sec_to_datetime64(ncfile, times_s: NDArray[int]) ->  NDArray[datetime64]:
@@ -310,7 +312,7 @@ def date_to_timeidx(nc, date) :
     """Transform date to NetCDF index along Time dimension"""
     if isinstance(date, datetime) :
         date = datetime64(date)
-    time_sec = datetime64_to_int(nc, date)
+    time_sec = datetime64_to_sec(nc, date)
     return seconds_to_idx(nc, time_sec)
 
 
@@ -383,7 +385,10 @@ def match_pattern(pattern, value, properties=dict()) :
 
 def netcdf_to_dataframe(
         ncfile : Union[Dataset, str],
-        start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
+        start_time: Union[datetime, datetime64]=None,
+        end_time:Union[datetime, datetime64]=None,
+        rel_start_time=None, # Start time, relative to actual end
+        rel_end_time=None, # End time, relative to actual start
         drop_duplicates=True,
         skip_na=False,
         skip_qc=False,
@@ -397,6 +402,7 @@ def netcdf_to_dataframe(
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index.
 
+
         :param ncfile: NetCDF Dataset or filename, or OpenDAP URL
         :param rename_cols: If True (default) rename solar irradiance columns as per convention (GHI, BNI, DHI)
         :param drop_duplicates: If true (default), duplicate rows are droppped
@@ -404,6 +410,8 @@ def netcdf_to_dataframe(
         :param skip_na: If True, drop rows containing only nan values
         :param start_time: Start time (first record by default) : Datetime or datetime64
         :param end_time: End time (last record by default) : Datetile or datetime64
+        :param rel_end_time: End time, relative to actual start time : relativedelta
+        :param rel_start_time: Start time, relatie to actual end time : relativedelta
         :param vars: List of columns names to convert (all by default)
         :param user: Optional login for OpenDAP URL
         :param password: Optional password OpenDAP URL
@@ -417,6 +425,8 @@ def netcdf_to_dataframe(
         ncfile=ncfile,
         start_time=start_time,
         end_time=end_time,
+        rel_start_time=rel_start_time,
+        rel_end_time=rel_end_time,
         drop_duplicates=drop_duplicates,
         skip_na=skip_na,
         vars=vars,
@@ -466,7 +476,10 @@ def __all_attributes(ncfile) :
 
 def __nc2df(
         ncfile : Union[Dataset, str],
-        start_time: Union[datetime, datetime64]=None, end_time:Union[datetime, datetime64]=None,
+        start_time: Union[datetime, datetime64]=None,
+        end_time:Union[datetime, datetime64]=None,
+        rel_start_time=None,
+        rel_end_time=None,
         drop_duplicates=True,
         skip_na=False,
         skip_qc=False,
@@ -484,6 +497,11 @@ def __nc2df(
     timeVar = getTimeVar(ncfile)
 
     size = len(timeVar)
+
+    if rel_start_time is not None :
+        start_time = end_date64(ncfile).astype(datetime) + rel_start_time
+    if rel_end_time is not None :
+        end_time = start_date64(ncfile).astype(datetime) + rel_end_time
 
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
     end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size

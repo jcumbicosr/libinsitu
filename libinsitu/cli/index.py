@@ -7,7 +7,7 @@ import sg2
 from netCDF4 import Dataset
 
 from libinsitu import read_res, info, netcdf_to_dataframe, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, \
-    datetime64_to_int, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR, qc_masks
+    datetime64_to_sec, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR, qc_masks
 from libinsitu.cdl import cdl2netcdf, parse_cdl
 import pandas as pd
 import numpy as np
@@ -67,7 +67,7 @@ def main() :
             break
 
     start_time = min_time(input_ncs)
-    start_day = datetime64_to_int(out_nc, start_time, 'D')
+    start_day = datetime64_to_sec(out_nc, start_time, 'D')
 
     # Close output to allow multi process
     out_nc.close()
@@ -191,8 +191,8 @@ def write_series(out_nc, istation, var_name, series, ref_day) :
 
     nb_times = len(time_var)
 
-    start_day = datetime64_to_int(out_nc, series.index.min(), 'D')
-    end_day = datetime64_to_int(out_nc, series.index.max(), 'D')
+    start_day = datetime64_to_sec(out_nc, series.index.min(), 'D')
+    end_day = datetime64_to_sec(out_nc, series.index.max(), 'D')
     end_idx = end_day - ref_day
 
     if end_idx >= nb_times :

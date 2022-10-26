@@ -14,7 +14,7 @@ from pandas import DataFrame
 from pandas._libs.internals import defaultdict
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
-    DefaultDict, datetime64_to_int, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
+    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning, LogContext
 import os
@@ -136,10 +136,7 @@ def SolarRadVisualControl(
     fig = plt.figure(figsize=(19.2, 9.93))
 
     # % % Part 1 (column 1): time series and 2D plots of the three different components
-    if cams_df is not None:
-        gs1a = GridSpec(9, 6)
-    else:
-        gs1a = GridSpec(8, 6)
+    gs1a = GridSpec(8 if cams_df is None else 9, 6)
 
     gs1a.update(left=0.035, right=0.97, bottom=0.03, top=0.98, hspace=0.02, wspace=0.05)
 
@@ -649,7 +646,14 @@ def SolarRadVisualControl(
     ax31c.set_xlabel('DIF/GHI')
     ax31c.set_yticks([])
 
-    gs3 = GridSpec(9, 3)
+
+    if cams_df is None :
+        gs3 = GridSpec(7, 3)
+        shadow_row = 3
+    else:
+        gs3 = GridSpec(9, 3)
+        shadow_row = 5
+
     gs3.update(left=0.0, right=0.99, bottom=0.05, top=0.875, hspace=0.1, wspace=0.2)
 
     # print(str(dt.datetime.now())+": --> QC: planarity check")
@@ -729,7 +733,7 @@ def SolarRadVisualControl(
 
     SELMax = 45
 
-    ax32 = plt.subplot(gs3[5:7, 2])
+    ax32 = plt.subplot(gs3[shadow_row:shadow_row+2, 2])
     vKT = GHI[idxSC] / TOA[idxSC]
     idx_sort = np.argsort(vKT.values)
     im32 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKT[idx_sort], cmap=cmShading,
@@ -750,7 +754,7 @@ def SolarRadVisualControl(
     plt.colorbar(im32, label='GHI/TOA (-)')
 
     print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
-    ax33 = plt.subplot(gs3[7:9, 2])
+    ax33 = plt.subplot(gs3[shadow_row+2:shadow_row+4, 2])
     vKN = DNI[idxSC] / TOANI[idxSC]
     idx_sort = np.argsort(vKN.values)
     im33 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKN[idx_sort], cmap=cmShading,
@@ -1055,7 +1059,7 @@ def write_flags(ncfile, flags_df) :
 
     # Compute IDX
     dates = flags_df.index.values
-    times_sec = datetime64_to_int(ncfile, dates)
+    times_sec = datetime64_to_sec(ncfile, dates)
     time_idx = seconds_to_idx(ncfile, times_sec)
 
     # Assign flags

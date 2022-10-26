@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import argparse
 from datetime import datetime
 
+from dateutil.relativedelta import relativedelta
+
 from libinsitu import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, openNetCDF, GLOBAL_TIME_RESOLUTION_ATTR, getNetworkId, \
     readShortname, info
 from libinsitu.common import netcdf_to_dataframe
@@ -15,10 +17,10 @@ def parser() :
     parser.add_argument('input', metavar='<file.nc|odap_url>', type=str, help='Input local file or URL')
     parser.add_argument('--output', '-o', metavar='<out.png>', type=str, help='Output image')
     parser.add_argument('--update', '-u', action="store_true", help='Update QC flags on input file', default=False)
-    parser.add_argument('--from-date', '-f', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='Start date on analysis', default=None)
+    parser.add_argument('--from-date', '-f', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='Start date on analysis (last 5 years of data by default for graph output)', default=None)
     parser.add_argument('--to-date', '-t', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='End date of analysis', default=None)
-    parser.add_argument('--no-mc-clear', '-nc', action="store_true", help='Disable mcClear', default=False)
-    parser.add_argument('--no-horizons', '-nh', action="store_true", help='Disable horizons', default=False)
+    parser.add_argument('--with-mc-clear', '-wmc', action="store_true", help='Enable display of mcClear', default=False)
+    parser.add_argument('--with-horizons', '-wh', action="store_true", help='Enable display of horizons', default=False)
     return parser
 
 def main() :
@@ -36,18 +38,21 @@ def main() :
     network_id = getNetworkId(ncfile)
     station_id = readShortname(ncfile)
 
-
-
     with LogContext(network=network_id, station_id=station_id, file=args.input) :
 
         info("Start of QC")
 
-        # Load NetCDF timeseries as pandas Dataframe
-        df = netcdf_to_dataframe(
-            ncfile,
+        params = dict(
             start_time=args.from_date,
             end_time=args.to_date,
             rename_cols=True)
+
+        if args.from_date is None and args.output is not None :
+            # By default, show 5 years of data in graph ouptput
+            params["rel_start_time"] = relativedelta(years=-5)
+
+        # Load NetCDF timeseries as pandas Dataframe
+        df = netcdf_to_dataframe(ncfile, **params)
 
         lat = float(df.attrs[LATITUDE_VAR])
         lon = float(df.attrs[LONGITUDE_VAR])
@@ -80,19 +85,21 @@ def main() :
 
 def visual_output(alt, args, df, flag_df, lat, lon, sp_df):
     # Fetch horizons
-    if args.no_horizons:
-        horizons = None
-    else:
+    if args.with_horizons:
         horizons = wps_Horizon_SRTM(lat, lon, alt)
-    if args.no_mc_clear:
-        cams_df = None
     else:
+        horizons = None
+
+    if args.with_mc_clear:
         cams_df = get_cams(
             start_date=df.index.min(),
             end_date=df.index.max(),
             lat=lat, lon=lon,
             altitude=alt)
         cams_df = cams_df.reindex(df.index)
+    else:
+        cams_df = None
+
     # Draw figures
     SolarRadVisualControl(
         df,
