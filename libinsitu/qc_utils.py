@@ -909,8 +909,12 @@ def qc_stats(meas_df, sp_df, flag_df) :
         'T3C_bsrn': percent(flag_df.T3C_bsrn_3cmp, GHI, DIF, DNI)}
 
 
-def cleanup_data(df, freq):
-    """Adds sg2, cams and horizon data"""
+def cleanup_data(df, freq=None):
+    """Cleanup and resample data"""
+
+    # Default resolution : take the one from the source
+    if freq is None:
+        freq = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
@@ -936,12 +940,10 @@ def cleanup_data(df, freq):
     return df
 
 #@cache.memoize()
-def sun_position(lat, lon, alt, start_time, end_time, freq_sec=60) :
+def sun_position(lat, lon, alt, start_time, end_time, freq="60S") :
 
     if alt == np.nan:
         alt = 0
-
-    freq=str(freq_sec) + "S"
 
     times = pd.date_range(start_time, end_time, freq=freq)
 
@@ -1073,4 +1075,71 @@ def write_flags(ncfile, flags_df) :
         out_masks = out_masks[~out_idx]
 
     qc_var[time_idx] = out_masks
+
+def compute_sun_pos(df) :
+    """Call sg2 on data"""
+
+    # Get meta data
+    lat = float(df.attrs[LATITUDE_VAR])
+    lon = float(df.attrs[LONGITUDE_VAR])
+    alt = float(df.attrs[ELEVATION_VAR])
+
+    # Compute geom & theoretical irradiance
+    sp_df = sun_position(
+        lat, lon, alt,
+        df.index.min(),
+        df.index.max(),
+        freq=pd.infer_freq(df.index))
+
+    return sp_df
+
+def visual_qc(df, with_horizons=False, with_mc_clear=False):
+    """
+    Generates matplotlib graphs for visual QC
+
+    :param df: Dataframe of input irradiance (GHI, DHI, BNI), obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param with_horizons: True to compute horizons (requires network)
+    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network)
+    """
+    # Resample to the minute to produce graph
+    resolution_sec = 60
+
+    # Clean data
+    df = cleanup_data(df, resolution_sec)
+
+    # Get meta data
+    lat = float(df.attrs[LATITUDE_VAR])
+    lon = float(df.attrs[LONGITUDE_VAR])
+    alt = float(df.attrs[ELEVATION_VAR])
+
+    # Compute geom & theoretical irradiance
+    sp_df = compute_sun_pos(df)
+
+    # Compute QC flags
+    flags_df = flagData(df, sp_df)
+
+    # Fetch horizons
+    if with_horizons:
+        horizons = wps_Horizon_SRTM(lat, lon, alt)
+    else:
+        horizons = None
+
+    if with_mc_clear:
+        cams_df = get_cams(
+            start_date=df.index.min(),
+            end_date=df.index.max(),
+            lat=lat, lon=lon,
+            altitude=alt)
+        cams_df = cams_df.reindex(df.index)
+    else:
+        cams_df = None
+
+    # Draw figures
+    SolarRadVisualControl(
+        df,
+        sp_df,
+        flags_df,
+        cams_df,
+        horizons,
+        ShowFlag=0)
 
