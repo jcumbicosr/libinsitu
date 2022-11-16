@@ -4,19 +4,18 @@ Created on Thu Jun 23 10:09:54 2022
 
 @author: y-m.saint-drenan
 """
-import hashlib
-from logging import warn
 from urllib.request import urlopen
 
 import sg2
 from appdirs import user_cache_dir
+from matplotlib.pyplot import gca
 from pandas import DataFrame
-from pandas._libs.internals import defaultdict
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
     DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
-from libinsitu.log import info, warning, LogContext
+from libinsitu.log import info, warning
+
 import os
 
 from matplotlib.gridspec import GridSpec
@@ -30,6 +29,7 @@ import matplotlib as mpl
 import pvlib
 from matplotlib import cm
 
+
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
 from diskcache import Cache
 
@@ -40,8 +40,10 @@ MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
+NB_MIN_IN_DAY = 24 * 60
+FONT_SIZE = 8
 
-
+MC_CLEAR_COLOR = 'mediumseagreen'
 
 def _get_meta(df, keys) :
     """Try several keys to get Meta data"""
@@ -50,7 +52,178 @@ def _get_meta(df, keys) :
             return df.attrs[key]
     return "-"
 
+def get_version() :
+    # TODO
+    #return metadata.metadata('libinsitu')['Version']
+    return "1.2"
 
+def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
+    import numpy as np
+    from matplotlib.colors import ListedColormap
+    cmpGrey = ColorGrey * np.ones((1, 3))
+    cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
+    M0 = np.hstack((np.ones((NGrey, 1)) @ cmpGrey + (np.expand_dims((np.linspace(0, 1, NGrey)), axis=0).T) @ (
+                cmpColor[0, 0:3] - cmpGrey), np.ones((NGrey, 1))))
+    cmWGC = ListedColormap(np.vstack((np.ones((NWhite, 4)), M0, cmpColor)), name='jet_ymsd')
+    return cmWGC
+
+COLORMAP_PLOTS = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
+COLORMAP_DENSITY = makeCustomColormap(NWhite=1, ColorGrey=0.8, NGrey=50, cmColor='viridis', NColor=200)
+COLORMAP_SHADING = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
+
+def conv2(v1, v2, m, mode='same'):
+    tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
+    return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
+
+
+def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
+
+    info("plotting timeseries for %s" % label)
+
+    if ShowFlag == -1:
+        idxPlot = (TOA > 0) & (data.values > -50 & (QCfinal == 0))
+    else:
+        idxPlot = (TOA > 0) & (data.values > -50)
+
+    index = data.index
+    axe = gca()
+
+    axe.plot(
+        data.index[idxPlot],
+        data.values[idxPlot],
+        color='b',
+        alpha=0.8,
+        label='meas.',
+        lw=0.2)
+
+    plt.ylim((0, ymax))
+    plt.xlim((
+        index.values[0],
+        index.values[-1]))
+
+    axe.set_ylabel(label + " (W/m2)", size=8)
+    plt.setp(axe.get_xticklabels(), visible=False)
+
+
+def plot_heatmap_timeseries(label, data, sunrise, sunset, cmax, longitude, ShowFlag, QCFinal):
+
+    info("plotting heatmap timeseries for %s " % label)
+
+    index = data.index
+    axe = gca()
+
+    nb_days = np.int64(len(index) / NB_MIN_IN_DAY)
+    values = copy.deepcopy(data.values)
+    M2D = np.reshape(values, (nb_days, NB_MIN_IN_DAY)).T
+    deltaT = int(np.round(longitude / 360 * 24 * 60))
+    M2D2 = np.roll(M2D, deltaT, axis=0)
+    M2D2[M2D2 < -100] = np.nan
+
+    x_min, x_max = mdates.date2num([index[0].date(), index[-1].date()])
+
+    im00 = axe.imshow(
+        M2D2,
+        extent=[x_min, x_max, 24, 0],
+        aspect='auto', cmap=COLORMAP_PLOTS, alpha=1)
+
+    axe.xaxis_date()
+
+    plt.setp(axe.get_xticklabels(), visible=False)
+    axe.set_yticks(np.arange(0, 23, 6))
+    axe.set_ylabel('Time of the day', fontsize=FONT_SIZE)
+
+    # Plot sunrise and sunset
+    def plot_limit(limit) :
+        h_lt = limit + float(deltaT) / 60
+        h_lt[h_lt > 24] = h_lt[h_lt > 24] - 24
+        h_lt[h_lt < 0] = h_lt[h_lt < 0] + 24
+        axe.plot(mdates.date2num(index), h_lt, 'k--', linewidth=0.75, alpha=0.8)
+
+    plot_limit(sunrise)
+    plot_limit(sunset)
+
+    im00.set_clim(0, cmax)
+    axe.text(mdates.date2num(index)[0] + 5, 21, label, size=10)
+
+    mpl.rcParams['ytick.labelsize'] = FONT_SIZE
+    plt.xlim((index.values[0], index.values[-1]))
+    plt.ylim((0, 24))
+
+    if ShowFlag == 1:
+
+        timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
+        day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
+        TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
+
+        plt.plot(day[QCFinal], TOD[QCFinal], 'rs', markersize=1, alpha=0.8, label='flag')
+
+        axe.legend(loc='lower right')
+
+def plot_ratio_heatmap(ratios, filter, h1, h2, TOA, ylimit, title, y_label, ShowFlag, QCfinal, Ratio4C=0.5, bgColor=None, hlines=[]) :
+
+    axe = gca()
+    axe.set_yticks(np.arange(0.2, 2, 0.1))
+
+    index = ratios.index
+
+    if ShowFlag == -1:
+        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0) & (
+                QCfinal == 0)
+    else:
+        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
+
+    x = mdates.date2num(ratios.index[Filteridx])
+    y = ratios.values[Filteridx]
+
+    if len(x) == 0 :
+        return
+
+    hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
+                                          range=[[x[0], x[-1]], [0.25, 1.75]])
+    if int((x[-1] - x[0])) > 10 * len(h2):
+        hist = conv2(h1, h2, hist)
+    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
+    im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=COLORMAP_DENSITY)
+    im00.set_clim(0, Ratio4C * max(hist.flatten()))
+
+
+    plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
+
+    plt.ylim((1 - ylimit, 1 + ylimit))
+
+    axe.set_ylabel(y_label, fontsize=FONT_SIZE)
+    plt.xlim((index.values[0], index.values[-1]))
+    mpl.rcParams['xtick.labelsize'] = FONT_SIZE
+    mpl.rcParams['ytick.labelsize'] = FONT_SIZE
+    axe.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    axe.xaxis_date()
+
+    for (delta_y, width) in hlines :
+        plt.plot([ratios.index[0], ratios.index[-1]], [1-delta_y, 1-delta_y], 'k-.', alpha=0.4, linewidth=width)
+        plt.plot([ratios.index[0], ratios.index[-1]], [1+delta_y, 1+delta_y], 'k-.', alpha=0.4, linewidth=width)
+
+    if ShowFlag == 1:
+        plt.plot(mdates.date2num(ratios.index[QCfinal]),
+                 ratios.values[QCfinal], 'rs', markersize=1, alpha=0.8, label='flag')
+        axe.legend(loc='lower right')
+
+    if bgColor:
+
+        axe.xaxis.label.set_color(bgColor)  # setting up X-axis label color to yellow
+        axe.yaxis.label.set_color(bgColor)  # setting up Y-axis label color to blue
+
+        axe.tick_params(axis='y', colors=bgColor)  # setting up Y-axis tick color to black
+
+        axe.spines['left'].set_color(bgColor)  # setting up Y-axis tick color to red
+        axe.spines['right'].set_color(bgColor)
+        axe.spines['top'].set_color(bgColor)  # setting up above X-axis tick color to red
+        axe.spines['bottom'].set_color(bgColor)
+        axe.text(mdates.date2num(index.values[0]) + 10, 1 + ylimit * 0.75, title, color=bgColor)
+
+    else:
+        axe.text(mdates.date2num(index.values[0]) + 10, 1 + ylimit * 0.75, title)
+
+    return axe
 
 def SolarRadVisualControl(
         meas_df,
@@ -68,8 +241,8 @@ def SolarRadVisualControl(
     CodeInfo = {
         "project": "CAMS2-73",
         "author": 'ARMINES, DLR',
-        "name": 'Visual plausibility control',
-        "vers": 'v0.5 (2022-08-05)'}
+        "name": 'libinsitu - Visual plausibility control',
+        "vers": get_version()}
 
     # Get meta data
     latitude = meas_df.attrs[LATITUDE_VAR]
@@ -82,7 +255,6 @@ def SolarRadVisualControl(
     station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
     # Aliases
-    shape = meas_df.shape
     index = meas_df.index
     GHI = meas_df.GHI
     DIF = meas_df.DHI
@@ -94,34 +266,13 @@ def SolarRadVisualControl(
     THETA_Z = sp_df.THETA_Z
     ALPHA_S = sp_df.ALPHA_S
     SZA = sp_df.SZA
-    SR_h = sp_df.SR_h
-    SS_h = sp_df.SS_h
+
+    QCfinal = flag_df.QCfinal
 
     GHI_est = DIF + DNI * np.cos(THETA_Z)
 
+    info("QC: visual plot preparation")
 
-    def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
-        import numpy as np
-        from matplotlib.colors import ListedColormap
-        cmpGrey = ColorGrey * np.ones((1, 3))
-        cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
-        M0 = np.hstack((np.ones((NGrey, 1)) @ cmpGrey + (np.expand_dims((np.linspace(0, 1, NGrey)), axis=0).T) @ (
-                    cmpColor[0, 0:3] - cmpGrey), np.ones((NGrey, 1))))
-        cmWGC = ListedColormap(np.vstack((np.ones((NWhite, 4)), M0, cmpColor)), name='jet_ymsd')
-        return cmWGC
-
-    def conv2(v1, v2, m, mode='same'):
-        import numpy as np
-        tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
-        return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
-
-    FSZ = 8
-
-    cm2DPlots = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
-    cmDensity = makeCustomColormap(NWhite=1, ColorGrey=0.8, NGrey=50, cmColor='viridis', NColor=200)
-    cmShading = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
-
-    print(str(dt.datetime.now()) + ": --> QC: visual plot preparation")
     NbDays = len(index[GHI > 0].normalize().unique())
     AvgGHI = sum(GHI[GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
     AvgDHI = sum(DIF[DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
@@ -129,182 +280,50 @@ def SolarRadVisualControl(
     AvailGHI = sum((GHI > -2) & (TOA > 0)) / sum((TOA > 0)) * 100
     AvailDHI = sum((DIF > -2) & (TOA > 0)) / sum(TOA > 0) * 100
     AvailDNI = sum((DNI > -2) & (TOA > 0)) / sum(TOA > 0) * 100
+
     DateStrStart = index[GHI > 0][0].strftime("%Y-%m-%d")
     DateStrEnd = index[GHI > 0][-1].strftime("%Y-%m-%d")
-
 
     fig = plt.figure(figsize=(19.2, 9.93))
 
     # % % Part 1 (column 1): time series and 2D plots of the three different components
-    gs1a = GridSpec(8 if cams_df is None else 9, 6)
 
-    gs1a.update(left=0.035, right=0.97, bottom=0.03, top=0.98, hspace=0.02, wspace=0.05)
-
-    x_lims = mdates.date2num([index[0].date(), index[-1].date()])
-    y_lims = [0, 24]
-    nb_min = 24 * 60
-    nb_days = np.int64(shape[0] / nb_min)
-    PrmCell = ['GHI', 'DNI', 'DIF']
-    PrmData = [GHI, DNI, DIF]
 
     # =====================================================================
-    # plot of the times series of GHI, DNI and DIF
+    # First column : time series + heatmaps + ratios
     # =====================================================================
 
-    YlimMax = [1400, 1400, 1000]
-    for ii, (Prm, data) in enumerate(zip(PrmCell, PrmData)):
-        # ax_2Di = plt.subplot(gs1a[2*ii, 0:2])
-        ax_2Di = plt.subplot(gs1a[ii, 0:2])
-        if ShowFlag == -1:
-            idxPlot = (TOA > 0) & (data.values > -50 & (flag_df.QCfinal == 0))
-        else:
-            idxPlot = (TOA > 0) & (data.values > -50)
+    # Draw grid, only use 1 column
+    grid = GridSpec(8 if cams_df is None else 9, 3)
+    grid.update(
+        left=0.035, right=0.97,
+        bottom=0.03, top=0.98,
+        hspace=0.02, wspace=0.05)
 
-        ax_2Di.plot(data.index[idxPlot], data.values[idxPlot], color='b', alpha=0.8, label='meas.', lw=0.2)
+    # -- Plot time series
 
-        plt.ylim((0, YlimMax[ii]))
-        plt.xlim((index.values[0], index.values[-1]))
-        ax_2Di.set_ylabel(Prm + " (W/m2)", size=8)
-        plt.setp(ax_2Di.get_xticklabels(), visible=False)
+    # GHI
+    def plot_ts(row_idx, label, data, xmax):
+        plt.subplot(grid[row_idx, 0])
+        plot_timeseries(label, data, TOA, xmax, ShowFlag, QCfinal)
 
-        if ShowFlag == 1:
-            timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
-            day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
-            TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
+    plot_ts(0, "GHI", GHI, 1400)
+    plot_ts(1, "DNI", DNI, 1400)
+    plot_ts(2, "DIF", DIF, 1000)
 
-            plt.plot(day[flag_df['QCfinal']], TOD[flag_df['QCfinal']], 'rs', markersize=1, alpha=0.8, label='flag')
-            plt.setp(ax_2Di.get_xticklabels(), visible=False)
+    # -- Plot Heatmaps
 
-        # ax_2Di.text(mdates.date2num(QC_df.index)[0]+5,0.8*YlimMax[ii],Prm,size=10)
+    def plot_heatmap(row_idx, label, data, xcmax):
+        plt.subplot(grid[row_idx, 0])
+        plot_heatmap_timeseries(label, data, sp_df.SR_h, sp_df.SS_h, xcmax, longitude, ShowFlag, QCfinal)
 
-    # plot of the 2D heatmaps of GHI, DNI and DIF
-    ClimMax = [700, 900, 700]
-    for ii, (Prm, data) in enumerate(zip(PrmCell, PrmData)):
+    plot_heatmap(3, "GHI", GHI, 700)
+    plot_heatmap(4, "DNI", DNI, 900)
+    plot_heatmap(5, "DIF", DIF, 700)
 
-        print(str(dt.datetime.now()) + ": --> QC: 2D plot" + Prm)
-        # ax_2Di = plt.subplot(gs1a[2*ii+1, 0:2])
-        ax_2Di = plt.subplot(gs1a[3 + ii, 0:2])
+    # -- Plot ratios
 
-        if ShowFlag == -1:
-            idxPlot = (TOA > 0) & (flag_df.QCfinal == 0)
-        else:
-            idxPlot = (TOA > 0)
-
-        Val4Plot = copy.deepcopy(data.values)
-        # Val4Plot[idxPlot==0]=np.nan
-        M2D = np.reshape(Val4Plot, (nb_days, nb_min)).T
-        deltaT = int(np.round(longitude / 360 * 24 * 60))
-        M2D2 = np.roll(M2D, deltaT, axis=0)
-        M2D2[M2D2 < -100] = np.nan
-
-        im00 = ax_2Di.imshow(M2D2,
-                             extent=[x_lims[0], x_lims[1], y_lims[1], y_lims[0]],
-                             aspect='auto', cmap=cm2DPlots, alpha=1)
-        ax_2Di.xaxis_date()
-        plt.setp(ax_2Di.get_xticklabels(), visible=False)
-        ax_2Di.set_yticks(np.arange(0, 23, 6))
-        ax_2Di.set_ylabel('Time of the day', fontsize=FSZ)
-        SR_h_lt = SR_h + float(deltaT) / 60
-        SR_h_lt[SR_h_lt > 24] = SR_h_lt[SR_h_lt > 24] - 24
-        SR_h_lt[SR_h_lt < 0] = SR_h_lt[SR_h_lt < 0] + 24
-        SS_h_lt = SS_h + float(deltaT) / 60
-        SS_h_lt[SS_h_lt > 24] = SS_h_lt[SS_h_lt > 24] - 24
-        SS_h_lt[SS_h_lt < 0] = SS_h_lt[SS_h_lt < 0] + 24
-
-        ax_2Di.plot(mdates.date2num(index), SR_h_lt, 'k--', linewidth=0.75, alpha=0.8)
-        ax_2Di.plot(mdates.date2num(index), SS_h_lt, 'k--', linewidth=0.75, alpha=0.8)
-        im00.set_clim(0, ClimMax[ii])
-        ax_2Di.text(mdates.date2num(index)[0] + 5, 21, Prm, size=10)
-
-        mpl.rcParams['ytick.labelsize'] = FSZ
-        plt.xlim((index.values[0], index.values[-1]))
-        plt.ylim((0, 24))
-        # plt.gca().invert_yaxis()
-
-        if ShowFlag == 1:
-            timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
-            day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
-            TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
-
-            plt.plot(day[flag_df['QCfinal']], TOD[flag_df['QCfinal']], 'rs', markersize=1, alpha=0.8, label='flag')
-            ax_2Di.legend(loc='lower right')
-
-    # =====================================================================
-    # % % Part3 (column 1): time series of ratios for verifying sensors' calibration
-    # =====================================================================
-
-    McClearcolor = 'mediumseagreen'
-
-    def ratio_graph(pos, ratios, filter, dYL, title, y_label, ChangeBackground, Ratio4C=0.5):
-
-        graph = plt.subplot(gs1a[6 + pos, 0:2])
-
-        graph.set_yticks(np.arange(0.2, 2, 0.1))
-
-        if ShowFlag == -1:
-            Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0) & (
-                    flag_df.QCfinal == 0)
-        else:
-            Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
-
-        x = mdates.date2num(ratios.index[Filteridx])
-        y = ratios.values[Filteridx]
-
-        if len(x) == 0 :
-            return
-
-        hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
-                                              range=[[x[0], x[-1]], [0.25, 1.75]])
-        if int((x[-1] - x[0])) > 10 * len(h2):
-            hist = conv2(h1, h2, hist)
-        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
-        im00.set_clim(0, Ratio4C * max(hist.flatten()))
-
-
-        plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
-
-        plt.ylim((1 - dYL, 1 + dYL))
-        graph.set_ylabel(y_label, fontsize=FSZ)
-        plt.xlim((index.values[0], index.values[-1]))
-        mpl.rcParams['xtick.labelsize'] = FSZ
-        mpl.rcParams['ytick.labelsize'] = FSZ
-        graph.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        graph.xaxis_date()
-
-        if pos == 1:
-            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 - 0.15), [1, 1]), 'k-.', alpha=0.4,
-                     linewidth=1.0)
-            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 - 0.08), [1, 1]), 'k--', alpha=0.4,
-                     linewidth=0.8)
-            plt.plot([ratios.index[0], ratios.index[-1]], [1, 1], 'k--', alpha=0.4, linewidth=0.8)
-            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 + 0.08), [1, 1]), 'k--', alpha=0.4,
-                     linewidth=0.8)
-            plt.plot([ratios.index[0], ratios.index[-1]], np.dot((1 + 0.15), [1, 1]), 'k-.', alpha=0.4,
-                     linewidth=1.0)
-        if (ii == 1) & (ShowFlag == 1):
-            plt.plot(mdates.date2num(ratios.index[flag_df.QCfinal]),
-                     ratios.values[flag_df.QCfinal], 'rs', markersize=1, alpha=0.8, label='flag')
-            graph.legend(loc='lower right')
-
-        if ChangeBackground:
-
-            graph.xaxis.label.set_color(McClearcolor)  # setting up X-axis label color to yellow
-            graph.yaxis.label.set_color(McClearcolor)  # setting up Y-axis label color to blue
-
-            graph.tick_params(axis='y', colors=McClearcolor)  # setting up Y-axis tick color to black
-
-            graph.spines['left'].set_color(McClearcolor)  # setting up Y-axis tick color to red
-            graph.spines['right'].set_color(McClearcolor)
-            graph.spines['top'].set_color(McClearcolor)  # setting up above X-axis tick color to red
-            graph.spines['bottom'].set_color(McClearcolor)
-            graph.text(mdates.date2num(index.values[0]) + 10, 1 + dYL * 0.75, title, color=McClearcolor)
-
-        else:
-            graph.text(mdates.date2num(index.values[0]) + 10, 1 + dYL * 0.75, title)
-
-        return graph
-
+    # XXX ? What does this do ?
     Smth = [1, 1]
     if Smth[0] < 1:
         xx = 0
@@ -321,41 +340,39 @@ def SolarRadVisualControl(
         h2 = np.exp(-0.5 * (xx / Smth[1]) ** 2)
         h2 = h2 / sum(h2)
 
-    # DIF vs GHI
-    ratio_graph(
-        pos=0,
-        ratios=DIF / GHI,
-        filter=(DIF > 0) & (DNI > 0) & (GHI > 0),
-        y_label='DIF/GHI (-)',
-        title='Comparison of DIF and GHI for DNI<10W/m2. Should be close to 1.',
-        dYL=0.25,
-        ChangeBackground=False)
+    def plot_ratio(row_idx, ratios, filter, y_label, title, ylimit=0.25, bg_color=None, hlines=[]) :
+        plt.subplot(grid[row_idx, 0])
+        plot_ratio_heatmap(y_label=y_label, ratios=ratios, filter=filter, title=title, ylimit=ylimit, bgColor=bg_color,
+            QCfinal=QCfinal, TOA=TOA, h1=h1, h2=h2, ShowFlag=ShowFlag, hlines=hlines)
 
-    # GHI vs GHI est
-    ratio_graph(
-        pos=1,
-        ratios=GHI / GHI_est,
+    # DIF / GHI
+    plot_ratio(
+        row_idx=6, ratios=DIF / GHI,
+        filter=(DIF > 0) & (DNI > 0) & (GHI > 0),
+        y_label='DIF/GHI (-)', title='Comparison of DIF and GHI for DNI<10W/m2. Should be close to 1.')
+
+    # GHI / estimated GHI
+    plot_ratio(
+        row_idx=7, ratios=GHI / GHI_est,
         filter=(DNI > 0) & (GHI > 0) & (DNI < 5),
         y_label='GHI/(DNI*cSZA+DIF) (-)',
         title='Ratio of global to the sum of its components. Should be close to 1.',
-        dYL=0.25,
-        ChangeBackground=False)
+    hlines=[(0.08, 0.8), (0.15, 1.0)]) # (position relative to 1, linewidth)
 
+    # GHI / Clear sky
     if cams_df is not None:
 
-        ratio_graph(
-            pos=2,
-            ratios=GHI / cams_df.CLEAR_SKY_GHI,
+        plot_ratio(
+            row_idx=8, ratios=GHI / cams_df.CLEAR_SKY_GHI,
             filter=(DNI > 0) & (GHI > 0),
             y_label='GHI/GHIcs (-)',
             title='Evaluation of McClear(*): Ratio of GHI to clear-sky GHI (GHIcs).',
-            dYL=0.75,
-            ChangeBackground=True)
+            ylimit=0.75, bg_color=MC_CLEAR_COLOR)
 
         plt.annotate(
             '(*) not a plausibility control: the scatter points represent the joint effect of McClear and measurement errors.',
             (5, 2), xycoords='figure pixels',
-            fontsize=6, fontstyle='italic', color=McClearcolor)
+            fontsize=6, fontstyle='italic', color=MC_CLEAR_COLOR)
 
     # ********************** Second column ***********************************
 
@@ -391,7 +408,7 @@ def SolarRadVisualControl(
         hist, xedges, yedges = np.histogram2d(x=x[Filteridx], y=y[Filteridx], bins=[200, 200],
                                               range=[[0, 1500], [0, 1500]])
         yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=cmDensity)
+        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=COLORMAP_DENSITY)
         im00.set_clim(0, 0.25 * max(hist[(xedges > 5) & (yedges > 5)]))
 
         idx0 = (TOA > 0)
@@ -419,10 +436,10 @@ def SolarRadVisualControl(
 
         plt.ylim((0, 1600))
         plt.xlim((0, 1400))
-        plt.xlabel(PrmXilbl[jj] + " (W/m2)", fontsize=FSZ)
-        plt.ylabel(PrmYi[jj] + " (W/m2)", fontsize=FSZ)
-        # mpl.rcParams['xtick.labelsize'] = FSZ-1
-        # mpl.rcParams['ytick.labelsize'] = FSZ-1
+        plt.xlabel(PrmXilbl[jj] + " (W/m2)", fontsize=FONT_SIZE)
+        plt.ylabel(PrmYi[jj] + " (W/m2)", fontsize=FONT_SIZE)
+        # mpl.rcParams['xtick.labelsize'] = FONT_SIZE-1
+        # mpl.rcParams['ytick.labelsize'] = FONT_SIZE-1
 
     # =====================================================================
     # % % Part5: BSRN 2C, 3C,SERI-QC tests
@@ -439,7 +456,7 @@ def SolarRadVisualControl(
     hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
                                           range=[[10, 95], [0, 1.25]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
     im00.set_clim(0, 0.8 * max(hist.flatten()))
     if ShowFlag == 1:
         plt.plot(SZA[flag_df.T2C_bsrn_kt], flag_df.K[flag_df.T2C_bsrn_kt], 'rs', markersize=1,
@@ -447,8 +464,8 @@ def SolarRadVisualControl(
         ax22.legend(loc='lower left')
     # plt.plot(SZA[T2C_bsrn_kd],KT[T2C_bsrn_kd],'r.',markersize=1,label="Flagged data")
     plt.plot([0, 75, 75, 100], [1.05, 1.05, 1.1, 1.1], 'k--', alpha=0.4, linewidth=0.8)
-    plt.xlabel('Solar zenith angle (°)', fontsize=FSZ)
-    plt.ylabel('DIF/GHI (-)', fontsize=FSZ)
+    plt.xlabel('Solar zenith angle (°)', fontsize=FONT_SIZE)
+    plt.ylabel('DIF/GHI (-)', fontsize=FONT_SIZE)
     plt.xlim((10, 95))
     plt.ylim((0, 1.4))
 
@@ -465,15 +482,15 @@ def SolarRadVisualControl(
     hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.Kn[idxPlot], bins=[200, 200],
                                           range=[[0, 1.25], [0, 1]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     plt.plot([0, 0.8, 1.35, 1.35], [0, 0.8, 0.8, 0], 'k--', alpha=0.4, linewidth=0.8)
     if ShowFlag == 1:
         plt.plot(flag_df.KT[flag_df.T2C_seri_kn_kt], flag_df.Kn[flag_df.T2C_seri_kn_kt], 'r.',
                  markersize=0.9, label='SERI-kn')
         ax24.legend(loc='upper right')
-    plt.xlabel('GHI/TOA (-)', fontsize=FSZ)
-    plt.ylabel('DNI/TOANI (-)', fontsize=FSZ)
+    plt.xlabel('GHI/TOA (-)', fontsize=FONT_SIZE)
+    plt.ylabel('DNI/TOANI (-)', fontsize=FONT_SIZE)
     plt.xlim((0, 1.5))
     plt.ylim((0, 1.))
 
@@ -488,15 +505,15 @@ def SolarRadVisualControl(
     hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
                                           range=[[0, 1.2], [0, 1.2]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     plt.plot([0, 0.6, 0.6, 1.35, 1.35], [1.1, 1.1, 0.95, 0.95, 0], 'k--', alpha=0.4, linewidth=0.8)
     if ShowFlag == 1:
         plt.plot(flag_df.KT[flag_df.T2C_seri_k_kt], flag_df.K[flag_df.T2C_seri_k_kt], 'r.',
                  markersize=0.9, label='seri-kkt')
         ax26.legend(loc='upper right')
-    plt.xlabel('GHI/TOA (-)', fontsize=FSZ)
-    plt.ylabel('DIF/GHI (-)', fontsize=FSZ)
+    plt.xlabel('GHI/TOA (-)', fontsize=FONT_SIZE)
+    plt.ylabel('DIF/GHI (-)', fontsize=FONT_SIZE)
     plt.xlim((0, 1.5))
     plt.ylim((0, 1.45))
 
@@ -510,7 +527,7 @@ def SolarRadVisualControl(
     hist, xedges, yedges = np.histogram2d(x=GHI[idxPlot], y=GHI_est[idxPlot], bins=[500, 500],
                                           range=[[0, 1500], [0, 1500]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
     im00.set_clim(0, 0.1 * max(hist.flatten()))
     if ShowFlag == 1:
         ax27.plot(GHI[flag_df.T3C_bsrn_3cmp], GHI_est[flag_df.T3C_bsrn_3cmp], 'r.',
@@ -520,8 +537,8 @@ def SolarRadVisualControl(
     plt.plot(np.array([0, 1400]), 0.92 * np.array([0, 1400]), 'k--', alpha=0.4, linewidth=0.8)
     plt.plot(np.array([0, 1400]), 1.08 * np.array([0, 1400]), 'k--', alpha=0.4, linewidth=0.8)
     plt.plot(np.array([0, 1400]), 1.15 * np.array([0, 1400]), 'k-.', alpha=0.4, linewidth=1.0)
-    plt.xlabel('GHI (W/m2)', fontsize=FSZ)
-    plt.ylabel('DIF+DNI*CSZA (W/m2)', fontsize=FSZ)
+    plt.xlabel('GHI (W/m2)', fontsize=FONT_SIZE)
+    plt.ylabel('DIF+DNI*CSZA (W/m2)', fontsize=FONT_SIZE)
     plt.ylim((0, 1400))
     plt.xlim((0, 1400))
 
@@ -535,7 +552,7 @@ def SolarRadVisualControl(
     hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=GHI[idxPlot] / GHI_est[idxPlot],
                                           bins=[200, 200], range=[[0, 90], [0, 2]])
     yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=cmDensity)
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
     im00.set_clim(0, 0.5 * max(hist.flatten()))
     if ShowFlag == 1:
         plt.plot(SZA[flag_df.T3C_bsrn_3cmp],
@@ -544,8 +561,8 @@ def SolarRadVisualControl(
         ax28.legend(loc='lower right')
     plt.plot([10, 75, 75, 90, 90, 75, 75, 10], [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92], 'k--', alpha=0.4,
              linewidth=0.8)
-    ax28.set_xlabel('Solar zenith angle (°)', fontsize=FSZ)
-    ax28.set_ylabel('GHI/(DIF+DNI*CSZA) (-)', fontsize=FSZ)
+    ax28.set_xlabel('Solar zenith angle (°)', fontsize=FONT_SIZE)
+    ax28.set_ylabel('GHI/(DIF+DNI*CSZA) (-)', fontsize=FONT_SIZE)
     ax28.set_yticks(np.arange(0.2, 2, 0.2))
     ax28.set_ylim((0.5, 1.5))
 
@@ -562,30 +579,30 @@ def SolarRadVisualControl(
     gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
 
     ax01 = plt.subplot(gs0[0, 8])
-    ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FSZ)
-    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FSZ)  # 'ID/ Station'
-    ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FSZ)
-    ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FSZ)
-    ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FSZ)
-    ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(country), size=FSZ)
-    ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(climate), size=FSZ)
+    ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
+    ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(country), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(climate), size=FONT_SIZE)
     ax01.axis('off')
 
     ax02 = plt.subplot(gs0[0, 10])
-    ax02.text(0.01, Y0 - 1 * dY, '.         Period:  {} - {}'.format(DateStrStart, DateStrEnd), size=FSZ)
-    ax02.text(0.01, Y0 - 2 * dY, '  Annual sums:', size=FSZ)
-    ax02.text(0.01, Y0 - 3 * dY, 'GHI:   {0:.0f} kWh/m2'.format(AvgGHI), size=FSZ)
-    ax02.text(0.01, Y0 - 4 * dY, 'DIF:   {0:.0f} kWh/m2'.format(AvgDHI), size=FSZ)
-    ax02.text(0.01, Y0 - 5 * dY, 'DNI:   {0:.0f} kWh/m2'.format(AvgDNI), size=FSZ)
-    ax02.text(0.01, Y0 - 6 * dY, CodeInfo["name"] + ' ' + CodeInfo["vers"] + '', size=FSZ)
+    ax02.text(0.01, Y0 - 1 * dY, '.         Period:  {} - {}'.format(DateStrStart, DateStrEnd), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 2 * dY, '  Annual sums:', size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 3 * dY, 'GHI:   {0:.0f} kWh/m2'.format(AvgGHI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 4 * dY, 'DIF:   {0:.0f} kWh/m2'.format(AvgDHI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 5 * dY, 'DNI:   {0:.0f} kWh/m2'.format(AvgDNI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 6 * dY, CodeInfo["name"] + ' ' + CodeInfo["vers"] + '', size=FONT_SIZE)
     ax02.axis('off')
 
     ax03 = plt.subplot(gs0[0, 11])
-    ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FSZ)
-    # ax03.text(0.01,Y0-2*dY,'# Flagged: {0:.1f}% '.format(Stat_FlaggedQCFinal),size=FSZ)
-    ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FSZ)
-    ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FSZ)
-    ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FSZ)
+    ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FONT_SIZE)
+    # ax03.text(0.01,Y0-2*dY,'# Flagged: {0:.1f}% '.format(Stat_FlaggedQCFinal),size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
     ax03.axis('off')
 
     # ax2XXX = plt.axes([0.75, 0.88, 0.08, 0.07])
@@ -715,10 +732,10 @@ def SolarRadVisualControl(
         plt.xlim((0 - dxx, 360 - dxx))
         ax31.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
         yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=cmDensity)
+        im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
         im00.set_clim(0, 0.7 * max(hist.flatten()))
-        plt.ylabel('kc/kc_daily (-)', fontsize=FSZ)
-        plt.xlabel('Solar azimuth angle (°)', fontsize=FSZ)
+        plt.ylabel('kc/kc_daily (-)', fontsize=FONT_SIZE)
+        plt.xlabel('Solar azimuth angle (°)', fontsize=FONT_SIZE)
         ax31.set_ylim(YYL)
         plt.colorbar(im00, label='point density (-)')
 
@@ -736,10 +753,10 @@ def SolarRadVisualControl(
     ax32 = plt.subplot(gs3[shadow_row:shadow_row+2, 2])
     vKT = GHI[idxSC] / TOA[idxSC]
     idx_sort = np.argsort(vKT.values)
-    im32 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKT[idx_sort], cmap=cmShading,
+    im32 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKT[idx_sort], cmap=COLORMAP_SHADING,
                        marker='s', alpha=.5)
-    plt.ylabel('Solar elevation angle [°]', fontsize=FSZ)
-    plt.xlabel('Solar azimuth angle [°]', fontsize=FSZ)
+    plt.ylabel('Solar elevation angle [°]', fontsize=FONT_SIZE)
+    plt.xlabel('Solar azimuth angle [°]', fontsize=FONT_SIZE)
     if horizons is not None:
         plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
         plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
@@ -757,10 +774,10 @@ def SolarRadVisualControl(
     ax33 = plt.subplot(gs3[shadow_row+2:shadow_row+4, 2])
     vKN = DNI[idxSC] / TOANI[idxSC]
     idx_sort = np.argsort(vKN.values)
-    im33 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKN[idx_sort], cmap=cmShading,
+    im33 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKN[idx_sort], cmap=COLORMAP_SHADING,
                        marker='s', alpha=.5)
-    plt.ylabel('Solar elevation angle [°]', fontsize=FSZ)
-    plt.xlabel('Solar azimuth angle [°]', fontsize=FSZ)
+    plt.ylabel('Solar elevation angle [°]', fontsize=FONT_SIZE)
+    plt.xlabel('Solar azimuth angle [°]', fontsize=FONT_SIZE)
     if horizons is not None :
         plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
         plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
