@@ -15,7 +15,7 @@ from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, 
     DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning
-
+from libinsitu.qc.graphs import FONT_SIZE, COLORMAP_DENSITY, COLORMAP_SHADING, MC_CLEAR_COLOR, plot_qc_flags
 import os
 
 from matplotlib.gridspec import GridSpec
@@ -23,15 +23,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime as dt
-import matplotlib.dates as mdates
-import copy
-import matplotlib as mpl
 import pvlib
-from matplotlib import cm
 
 
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
 from diskcache import Cache
+
+from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -40,10 +38,7 @@ MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
-NB_MIN_IN_DAY = 24 * 60
-FONT_SIZE = 8
 
-MC_CLEAR_COLOR = 'mediumseagreen'
 
 def _get_meta(df, keys) :
     """Try several keys to get Meta data"""
@@ -57,23 +52,7 @@ def get_version() :
     #return metadata.metadata('libinsitu')['Version']
     return "1.2"
 
-def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
-    import numpy as np
-    from matplotlib.colors import ListedColormap
-    cmpGrey = ColorGrey * np.ones((1, 3))
-    cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
-    M0 = np.hstack((np.ones((NGrey, 1)) @ cmpGrey + (np.expand_dims((np.linspace(0, 1, NGrey)), axis=0).T) @ (
-                cmpColor[0, 0:3] - cmpGrey), np.ones((NGrey, 1))))
-    cmWGC = ListedColormap(np.vstack((np.ones((NWhite, 4)), M0, cmpColor)), name='jet_ymsd')
-    return cmWGC
 
-COLORMAP_PLOTS = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
-COLORMAP_DENSITY = makeCustomColormap(NWhite=1, ColorGrey=0.8, NGrey=50, cmColor='viridis', NColor=200)
-COLORMAP_SHADING = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
-
-def conv2(v1, v2, m, mode='same'):
-    tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
-    return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
 
 
 def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
@@ -104,126 +83,6 @@ def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
     axe.set_ylabel(label + " (W/m2)", size=8)
     plt.setp(axe.get_xticklabels(), visible=False)
 
-
-def plot_heatmap_timeseries(label, data, sunrise, sunset, cmax, longitude, ShowFlag, QCFinal):
-
-    info("plotting heatmap timeseries for %s " % label)
-
-    index = data.index
-    axe = gca()
-
-    nb_days = np.int64(len(index) / NB_MIN_IN_DAY)
-    values = copy.deepcopy(data.values)
-    M2D = np.reshape(values, (nb_days, NB_MIN_IN_DAY)).T
-    deltaT = int(np.round(longitude / 360 * 24 * 60))
-    M2D2 = np.roll(M2D, deltaT, axis=0)
-    M2D2[M2D2 < -100] = np.nan
-
-    x_min, x_max = mdates.date2num([index[0].date(), index[-1].date()])
-
-    im00 = axe.imshow(
-        M2D2,
-        extent=[x_min, x_max, 24, 0],
-        aspect='auto', cmap=COLORMAP_PLOTS, alpha=1)
-
-    axe.xaxis_date()
-
-    plt.setp(axe.get_xticklabels(), visible=False)
-    axe.set_yticks(np.arange(0, 23, 6))
-    axe.set_ylabel('Time of the day', fontsize=FONT_SIZE)
-
-    # Plot sunrise and sunset
-    def plot_limit(limit) :
-        h_lt = limit + float(deltaT) / 60
-        h_lt[h_lt > 24] = h_lt[h_lt > 24] - 24
-        h_lt[h_lt < 0] = h_lt[h_lt < 0] + 24
-        axe.plot(mdates.date2num(index), h_lt, 'k--', linewidth=0.75, alpha=0.8)
-
-    plot_limit(sunrise)
-    plot_limit(sunset)
-
-    im00.set_clim(0, cmax)
-    axe.text(mdates.date2num(index)[0] + 5, 21, label, size=10)
-
-    mpl.rcParams['ytick.labelsize'] = FONT_SIZE
-    plt.xlim((index.values[0], index.values[-1]))
-    plt.ylim((0, 24))
-
-    if ShowFlag == 1:
-
-        timeLMT = index.values + np.timedelta64(int(longitude / 360 * 24 * 60 * 60), 's')
-        day = timeLMT.astype('datetime64[D]').astype(index.values.dtype)
-        TOD = 1 + (timeLMT - day).astype('timedelta64[s]').astype('double') / 60 / 60
-
-        plt.plot(day[QCFinal], TOD[QCFinal], 'rs', markersize=1, alpha=0.8, label='flag')
-
-        axe.legend(loc='lower right')
-
-def plot_ratio_heatmap(ratios, filter, h1, h2, TOA, ylimit, title, y_label, ShowFlag, QCfinal, Ratio4C=0.5, bgColor=None, hlines=[]) :
-
-    axe = gca()
-    axe.set_yticks(np.arange(0.2, 2, 0.1))
-
-    index = ratios.index
-
-    if ShowFlag == -1:
-        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0) & (
-                QCfinal == 0)
-    else:
-        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
-
-    x = mdates.date2num(ratios.index[Filteridx])
-    y = ratios.values[Filteridx]
-
-    if len(x) == 0 :
-        return
-
-    hist, xedges, yedges = np.histogram2d(x, y, bins=[int((x[-1] - x[0])), 400],
-                                          range=[[x[0], x[-1]], [0.25, 1.75]])
-    if int((x[-1] - x[0])) > 10 * len(h2):
-        hist = conv2(h1, h2, hist)
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, Ratio4C * max(hist.flatten()))
-
-
-    plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
-
-    plt.ylim((1 - ylimit, 1 + ylimit))
-
-    axe.set_ylabel(y_label, fontsize=FONT_SIZE)
-    plt.xlim((index.values[0], index.values[-1]))
-    mpl.rcParams['xtick.labelsize'] = FONT_SIZE
-    mpl.rcParams['ytick.labelsize'] = FONT_SIZE
-    axe.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    axe.xaxis_date()
-
-    for (delta_y, width) in hlines :
-        plt.plot([ratios.index[0], ratios.index[-1]], [1-delta_y, 1-delta_y], 'k-.', alpha=0.4, linewidth=width)
-        plt.plot([ratios.index[0], ratios.index[-1]], [1+delta_y, 1+delta_y], 'k-.', alpha=0.4, linewidth=width)
-
-    if ShowFlag == 1:
-        plt.plot(mdates.date2num(ratios.index[QCfinal]),
-                 ratios.values[QCfinal], 'rs', markersize=1, alpha=0.8, label='flag')
-        axe.legend(loc='lower right')
-
-    if bgColor:
-
-        axe.xaxis.label.set_color(bgColor)  # setting up X-axis label color to yellow
-        axe.yaxis.label.set_color(bgColor)  # setting up Y-axis label color to blue
-
-        axe.tick_params(axis='y', colors=bgColor)  # setting up Y-axis tick color to black
-
-        axe.spines['left'].set_color(bgColor)  # setting up Y-axis tick color to red
-        axe.spines['right'].set_color(bgColor)
-        axe.spines['top'].set_color(bgColor)  # setting up above X-axis tick color to red
-        axe.spines['bottom'].set_color(bgColor)
-        axe.text(mdates.date2num(index.values[0]) + 10, 1 + ylimit * 0.75, title, color=bgColor)
-
-    else:
-        axe.text(mdates.date2num(index.values[0]) + 10, 1 + ylimit * 0.75, title)
-
-    return axe
 
 def SolarRadVisualControl(
         meas_df,
@@ -286,17 +145,14 @@ def SolarRadVisualControl(
 
     fig = plt.figure(figsize=(19.2, 9.93))
 
-    # % % Part 1 (column 1): time series and 2D plots of the three different components
-
-
     # =====================================================================
     # First column : time series + heatmaps + ratios
     # =====================================================================
 
-    # Draw grid, only use 1 column
-    grid = GridSpec(8 if cams_df is None else 9, 3)
+    # Draw grid
+    grid = GridSpec(8 if cams_df is None else 9, 1)
     grid.update(
-        left=0.035, right=0.97,
+        left=0.035, right=0.32,
         bottom=0.03, top=0.98,
         hspace=0.02, wspace=0.05)
 
@@ -340,10 +196,11 @@ def SolarRadVisualControl(
         h2 = np.exp(-0.5 * (xx / Smth[1]) ** 2)
         h2 = h2 / sum(h2)
 
+    # Helper for factorizinf calls to the function
     def plot_ratio(row_idx, ratios, filter, y_label, title, ylimit=0.25, bg_color=None, hlines=[]) :
         plt.subplot(grid[row_idx, 0])
         plot_ratio_heatmap(y_label=y_label, ratios=ratios, filter=filter, title=title, ylimit=ylimit, bgColor=bg_color,
-            QCfinal=QCfinal, TOA=TOA, h1=h1, h2=h2, ShowFlag=ShowFlag, hlines=hlines)
+                           QCfinal=QCfinal, TOA=TOA, h1=h1, h2=h2, ShowFlag=ShowFlag, hlines=hlines)
 
     # DIF / GHI
     plot_ratio(
@@ -374,14 +231,16 @@ def SolarRadVisualControl(
             (5, 2), xycoords='figure pixels',
             fontsize=6, fontstyle='italic', color=MC_CLEAR_COLOR)
 
-    # ********************** Second column ***********************************
-
-    gs2 = GridSpec(4, 6)
-    gs2.update(left=0.07, right=0.97, bottom=0.1, top=0.98, hspace=0.25, wspace=0.25)
 
     # =====================================================================
     # % % Part4: ERL& PPL tests
     # =====================================================================
+
+    gs2 = GridSpec(4, 2)
+    gs2.update(
+        left=0.33, right=0.66,
+        bottom=0.03, top=0.98,
+        hspace=0.2, wspace=0.05)
 
     Stat_Test = qc_stats(meas_df, sp_df, flag_df)
 
@@ -391,62 +250,33 @@ def SolarRadVisualControl(
     PrmYi = ["GHI", "DNI", "DIF"]
     BSRN_PPL_Ks = [[1.5, 1.2, 100], [1, 0, 0], [0.95, 1.2, 50]]
     BSRN_ERL_Ks = [[1.2, 1.2, 50], [0.95, 0.2, 10], [0.75, 1.2, 30]]
-    for jj in range(3):
 
-        print(str(dt.datetime.now()) + ": --> QC: BSRN 1C - " + PrmYi[jj])
+    def mk_1c_legend(component_name) :
+        return 'BSRN 1C ' + component_name + ": {:.2f}% / {:.2f}%".format(
+            Stat_Test['T1C_ppl_' + component_name],
+            Stat_Test['T1C_erl_' + component_name])
 
-        ax21 = plt.subplot(gs2[jj, 2])
-        plt.text(30, 1475, 'BSRN 1C ' + PrmYi[jj] + ": {:.2f}% / {:.2f}%".format(Stat_Test['T1C_ppl_' + PrmYi[jj]],
-                                                                                 Stat_Test['T1C_erl_' + PrmYi[jj]]))
-        x = PrmXi[jj].values
-        y = Prm_Vars[jj].values
+    def bsrn_1c(row, component, component_name, limits) :
+        gs2.subplot(gs2[row, 0])
+        plot_qc_flags(
+            x=TOA, xlabel='Top of atmosphere (TOA) (W/m2)',
+            y=component,
+            ylabel=component_name + "(W/m2)",
+            legend=mk_1c_legend(component_name),
+            ShowFlag=ShowFlag, TOA=TOA, TOANI=TOANI, GAMMA_S0=GAMMA_S0, QCfinal=QCfinal, limits=limits)
 
-        if ShowFlag == -1:
-            Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000) & (flag_df.QCfinal == 0)
-        else:
-            Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000)
-        hist, xedges, yedges = np.histogram2d(x=x[Filteridx], y=y[Filteridx], bins=[200, 200],
-                                              range=[[0, 1500], [0, 1500]])
-        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=COLORMAP_DENSITY)
-        im00.set_clim(0, 0.25 * max(hist[(xedges > 5) & (yedges > 5)]))
 
-        idx0 = (TOA > 0)
-        idxSrtLim = np.argsort(x[idx0])
+    bsrn_1c(0, GHI, "GHI", [[1.5, 1.2, 100], [1.2, 1.2, 50]])
+    bsrn_1c(1, DNI, "DNI", [[1, 0, 0], [0.95, 0.2, 10]])
+    bsrn_1c(2, DIF, "DIF", [[0.95, 1.2, 50],[0.75, 1.2, 30]])
 
-        xx = x[idx0][idxSrtLim]
-        tx = np.arange(min(xx), max(xx), 100)
-        yy1 = BSRN_ERL_Ks[jj][0] * TOANI[idx0][idxSrtLim] * np.sin(GAMMA_S0[idx0][idxSrtLim]) ** \
-              BSRN_ERL_Ks[jj][1] + BSRN_ERL_Ks[jj][2]
-        yy2 = BSRN_PPL_Ks[jj][0] * TOANI[idx0][idxSrtLim] * np.sin(GAMMA_S0[idx0][idxSrtLim]) ** \
-              BSRN_PPL_Ks[jj][1] + BSRN_PPL_Ks[jj][2]
-        fpoly1 = np.poly1d(np.polyfit(xx, yy1, 5))
-        fpoly2 = np.poly1d(np.polyfit(xx, yy2, 5))
-        plt.plot(xx, yy1, '-', color=[0.8, 0.8, 0.8])
-        plt.plot(xx, yy2, '-', color=[0.8, 0.8, 0.8])
-        plt.plot(tx, fpoly1(tx), 'k--', alpha=0.4, linewidth=0.8)
-        plt.plot(tx, fpoly2(tx), 'k--', alpha=0.4, linewidth=0.8)
-
-        if ShowFlag == 1:
-            plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
-                     markersize=1, alpha=0.5)
-            plt.plot(x[flag_df['T1C_ppl_' + PrmYi[jj]]], y[flag_df['T1C_ppl_' + PrmYi[jj]]], 'rs',
-                     markersize=1, alpha=0.5, label='erl')
-            ax21.legend(loc='lower right')
-
-        plt.ylim((0, 1600))
-        plt.xlim((0, 1400))
-        plt.xlabel(PrmXilbl[jj] + " (W/m2)", fontsize=FONT_SIZE)
-        plt.ylabel(PrmYi[jj] + " (W/m2)", fontsize=FONT_SIZE)
-        # mpl.rcParams['xtick.labelsize'] = FONT_SIZE-1
-        # mpl.rcParams['ytick.labelsize'] = FONT_SIZE-1
 
     # =====================================================================
     # % % Part5: BSRN 2C, 3C,SERI-QC tests
     # -> BSRN 2C
     # =====================================================================
     print(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
-    ax22 = plt.subplot(gs2[0, 3])
+    ax22 = plt.subplot(gs2[0, 0])
     plt.text(12, 1.3, 'BSRN-2C' + ": {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']))
     if ShowFlag == -1:
         idxPlot = (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
@@ -473,7 +303,7 @@ def SolarRadVisualControl(
     # % % -> SERI-Kn
     # =====================================================================
     print(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
-    ax24 = plt.subplot(gs2[1, 3])
+    ax24 = plt.subplot(gs2[1, 1])
     plt.text(0.025, 0.92, 'SERI-kn' + ": {:.2f}% ".format(Stat_Test['T2C_seri_knkt']))
     if ShowFlag == -1:
         idxPlot = (DNI > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
@@ -496,7 +326,7 @@ def SolarRadVisualControl(
 
     # -> SERI-K
     print(str(dt.datetime.now()) + ": --> QC: SERI-K ")
-    ax26 = plt.subplot(gs2[2, 3])
+    ax26 = plt.subplot(gs2[2, 1])
     plt.text(0.025, 1.3, 'SERI-K' + ": {:.2f}% ".format(Stat_Test['T2C_seri_kkt']))
     if ShowFlag == -1:
         idxPlot = (DIF > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
@@ -518,7 +348,7 @@ def SolarRadVisualControl(
     plt.ylim((0, 1.45))
 
     print(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
-    ax27 = plt.subplot(gs2[3, 2])
+    ax27 = plt.subplot(gs2[3, 0])
     plt.text(30, 1300, 'BSRN closure' + ": {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
         idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
@@ -543,7 +373,7 @@ def SolarRadVisualControl(
     plt.xlim((0, 1400))
 
     print(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
-    ax28 = plt.subplot(gs2[3, 3])
+    ax28 = plt.subplot(gs2[3, 0])
     plt.text(8, 0.52, "BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
         idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
@@ -1116,7 +946,10 @@ def visual_qc(df, with_horizons=False, with_mc_clear=False):
 
     :param df: Dataframe of input irradiance (GHI, DHI, BNI), obtained with netcdf_to_dataframe(... rename_cols=True)
     :param with_horizons: True to compute horizons (requires network)
-    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network)
+    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network).
+      Requires to register to SODA (https://www.soda-pro.com/web-services/radiation/cams-radiation-service)
+      and provides email in CAMS_EMAIL env var
+
     """
     # Resample to the minute to produce graph
     resolution_sec = 60
