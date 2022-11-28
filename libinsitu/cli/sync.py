@@ -42,7 +42,7 @@ def date_placeholders(date) :
 
     return {
         **date_dict(date),
-        **date_dict(date+ONE_MONTH, "e")}
+        **date_dict(date+ONE_MONTH, "_end")}
 
 
 
@@ -91,8 +91,7 @@ def zip_file(inf, outf) :
             shutil.copyfileobj(f_in, f_out)
 
 
-
-def do_download(url_paths, out, dry_run=False, compress=False) :
+def do_download(url_paths, out, dry_run=False, compress=False, parallel=True) :
 
     def process_one(args):
         url, path = args
@@ -118,34 +117,40 @@ def do_download(url_paths, out, dry_run=False, compress=False) :
 
                 if dry_run:
                     info("Would have downloaded %s -> %s " + ("[compressed]" if compress else ""), url, out_path)
-                else:
-                    info("Downloading %s -> %s", url, out_path)
+                    return
 
-                    try:
-                        urlretrieve(url, tmpFile.name)
-                    except HTTPError as http_error :
-                        if http_error.code == 404 :
-                            info("Missing file : %s", url)
-                            touch(out_path + MISSING_SUFFIX)
-                            return
-                        else:
-                            raise
+                info("Downloading %s -> %s", url, out_path)
 
-                    if compress:
-                        zip_file(tmpFile.name, out_path)
-                    elif os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
-                        info("File {} was already present with same size => skipping")
-                    elif os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
-                        info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
-                        touch(out_path + EMPTY_SUFFIX)
+                try:
+                    urlretrieve(url, tmpFile.name)
+                except HTTPError as http_error :
+                    if http_error.code == 404 :
+                        info("Missing file : %s", url)
+                        touch(out_path + MISSING_SUFFIX)
+                        return
                     else:
-                        shutil.copy(tmpFile.name, out_path)
+                        raise
+                if os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
+                    info("File {} was already present with same size => skipping")
+                    return
+
+                if os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
+                    info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
+                    touch(out_path + EMPTY_SUFFIX)
+                    return
+
+                if compress:
+                    zip_file(tmpFile.name, out_path)
+                else:
+                    shutil.copy(tmpFile.name, out_path)
 
     # Parallel execution : wait for all executions to finish
-    #with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
-    #    executor.map(process_one, url_paths.items())
-    for args in url_paths.items() :
-        process_one(args)
+    if parallel :
+        with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
+            executor.map(process_one, url_paths.items())
+    else:
+        for args in url_paths.items() :
+            process_one(args)
 
 
 def parse_date(s):
@@ -186,6 +191,7 @@ def main() :
     parser.add_argument('--start-date', metavar='yyyy-mm-dd', type=parse_date, help='Start date, optional (start of station by default)', default=None)
     parser.add_argument('--end-date', metavar='yyyy-mm-dd', type=parse_date, help='End date, optional (end of station by default)', default=None)
     parser.add_argument('--dry-run', '-n', action='store_true', help='Do not download anything. Only print what would be downloaded')
+    parser.add_argument('--sequential', '-seq', action='store_true', help='Disable parallel download')
     args = parser.parse_args()
 
     network_info = networks_info[args.network]
@@ -199,7 +205,7 @@ def main() :
 
     # Filter stations on requested ones
     if station_ids :
-        station_ids = {id:val for id, val in stations_info.items() if id in station_ids}
+        stations_info = {id:val for id, val in stations_info.items() if id in station_ids}
 
     if not url_pattern:
         raise Exception("'SourceURL' not defined for network %s" % args.network)
@@ -214,7 +220,7 @@ def main() :
 
     url_paths = list_func(args.network, stations_info, url_pattern, path_pattern, args.start_date, args.end_date)
 
-    do_download(url_paths, args.out_folder, args.dry_run, compress)
+    do_download(url_paths, args.out_folder, args.dry_run, compress, not args.sequential)
 
 if __name__ == '__main__':
     main()
