@@ -5,9 +5,12 @@ import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from tempfile import NamedTemporaryFile
+from urllib.error import HTTPError
 from urllib.request import urlretrieve
 import gzip
 from dateutil.relativedelta import relativedelta
+import requests
+import jmespath
 
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
@@ -22,15 +25,11 @@ COMPRESS_ATTR="Compress"
 
 ERROR_SUFFIX = ".error"
 EMPTY_SUFFIX = ".empty"
-RECENT_DAYS = 40
+MISSING_SUFFIX = ".missing"
 ONE_MONTH = relativedelta(months=1)
 NB_WORKERS = 10
-EMPTY_LIMIT =50
+EMPTY_LIMIT = 50
 
-class PathInfo :
-    def __init__(self):
-        self.path = None
-        self.recent = False
 
 def date_placeholders(date) :
     """ Generate a dict of placeholder for start / end dates : YYYY MM DD / YYYYe MMe DDe """
@@ -49,7 +48,7 @@ def date_placeholders(date) :
 
 def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
     """Return a dict of input_path => output """
-    res = defaultdict(lambda : PathInfo())
+    res = dict()
 
     properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
 
@@ -80,11 +79,7 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
         if "!" in path :
             path  = path.split("!")[0]
 
-        res[url].path = path
-
-        # "Recent" chunk ?
-        if datetime.now() - date < timedelta(days=RECENT_DAYS) :
-            res[url].recent = True
+        res[url] = path
 
         date += ONE_MONTH
 
@@ -100,25 +95,23 @@ def zip_file(inf, outf) :
 def do_download(url_paths, out, dry_run=False, compress=False) :
 
     def process_one(args):
-        url, pathInfo = args
+        url, path = args
 
-        out_path = os.path.join(out, pathInfo.path)
+        out_path = os.path.join(out, path)
 
         with LogContext(file=out_path), IgnoreAndLogExceptions():
 
             # Skip file if already present, unless it is "recent"
             if os.path.exists(out_path) \
                     or os.path.exists(out_path + ERROR_SUFFIX) \
-                    or os.path.exists(out_path + EMPTY_SUFFIX):
+                    or os.path.exists(out_path + EMPTY_SUFFIX) \
+                    or os.path.exists(out_path + MISSING_SUFFIX):
 
-                if pathInfo.recent:
-                    info("File %s is already present but recent. Check if newer version exists", out_path)
-                else:
-                    info("File %s is already present. Skipping", out_path)
-                    return
+                info("File %s is already present. Skipping", out_path)
+                return
 
             folder = os.path.dirname(out_path)
-            if not os.path.exists(folder):
+            if not os.path.exists(folder) and not dry_run:
                 os.makedirs(folder)
 
             with NamedTemporaryFile() as tmpFile:
@@ -127,26 +120,60 @@ def do_download(url_paths, out, dry_run=False, compress=False) :
                     info("Would have downloaded %s -> %s " + ("[compressed]" if compress else ""), url, out_path)
                 else:
                     info("Downloading %s -> %s", url, out_path)
-                    urlretrieve(url, tmpFile.name)
+
+                    try:
+                        urlretrieve(url, tmpFile.name)
+                    except HTTPError as http_error :
+                        if http_error.code == 404 :
+                            info("Missing file : %s", url)
+                            touch(out_path + MISSING_SUFFIX)
+                            return
+                        else:
+                            raise
 
                     if compress:
                         zip_file(tmpFile.name, out_path)
                     elif os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
                         info("File {} was already present with same size => skipping")
                     elif os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
-                        info("Output file is < %d bytes : considered empty " % EMPTY_LIMIT)
+                        info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
                         touch(out_path + EMPTY_SUFFIX)
                     else:
                         shutil.copy(tmpFile.name, out_path)
 
     # Parallel execution : wait for all executions to finish
-    with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
-        executor.map(process_one, url_paths.items())
-
+    #with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
+    #    executor.map(process_one, url_paths.items())
+    for args in url_paths.items() :
+        process_one(args)
 
 
 def parse_date(s):
     return datetime.strptime(s, '%Y-%m-%d')
+
+def http_list(network, stations_info, url_pattern, path_pattern, start_date, end_date) :
+
+    url_paths = dict()
+    for id, properties in stations_info.items():
+
+        with LogContext(network=network, station_id=id):
+
+            url_paths.update(list_downloads(properties, url_pattern, path_pattern, start_date, end_date))
+
+    return url_paths
+
+def http_json_list(network, stations_info, url_pattern, path_pattern, start_date, end_date) :
+
+    url, jsme_filter = url_pattern.split("|")
+
+    # Get JSON
+    js = requests.get(url).json()
+
+    # Apply JMSE filter
+    urls = jmespath.search(jsme_filter, js)
+
+    return {url: os.path.basename(url) for url in urls}
+
 
 def main() :
 
@@ -161,27 +188,31 @@ def main() :
     parser.add_argument('--dry-run', '-n', action='store_true', help='Do not download anything. Only print what would be downloaded')
     args = parser.parse_args()
 
-    stations = getStationsInfo(args.network)
-
     network_info = networks_info[args.network]
-    url_pattern = network_info[SOURCE_URL_ATTR]
-    path_pattern = network_info[RAW_PATH_ATTR]
     compress = parse_bool(network_info[COMPRESS_ATTR])
 
-    if not url_pattern :
-        raise Exception("'SourceURL' not defined for network %s" % args.network)
-
+    url_pattern = network_info[SOURCE_URL_ATTR]
+    path_pattern = network_info[RAW_PATH_ATTR]
     station_ids = None if args.ids is None else args.ids.split(",")
 
-    url_paths = dict()
-    for id, properties in stations.items():
+    stations_info = getStationsInfo(args.network)
 
-        if station_ids and not id in station_ids :
-            continue
+    # Filter stations on requested ones
+    if station_ids :
+        station_ids = {id:val for id, val in stations_info.items() if id in station_ids}
 
-        with LogContext(network=args.network, station_id=id) :
+    if not url_pattern:
+        raise Exception("'SourceURL' not defined for network %s" % args.network)
 
-            url_paths.update(list_downloads(properties, url_pattern, path_pattern, args.start_date, args.end_date))
+    if "|" in url_pattern :
+        # http+json
+        list_func = http_json_list
+    elif url_pattern.startswith("http") :
+        list_func = http_list
+    else:
+        raise Exception("Unsupported URL : %s" % url_pattern)
+
+    url_paths = list_func(args.network, stations_info, url_pattern, path_pattern, args.start_date, args.end_date)
 
     do_download(url_paths, args.out_folder, args.dry_run, compress)
 
