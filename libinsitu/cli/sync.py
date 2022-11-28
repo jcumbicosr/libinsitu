@@ -45,8 +45,10 @@ def date_placeholders(date) :
         **date_dict(date),
         **date_dict(date+ONE_MONTH, "e")}
 
-def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
 
+
+def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
+    """Return a dict of input_path => output """
     res = defaultdict(lambda : PathInfo())
 
     properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
@@ -73,6 +75,10 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
 
         url = url_pattern.format(**properties, **date_dict)
         path = path_pattern.format(**properties, **date_dict)
+
+        # Split '!' in case a sub path is provided inside Zip file
+        if "!" in path :
+            path  = path.split("!")[0]
 
         res[url].path = path
 
@@ -167,6 +173,7 @@ def main() :
 
     station_ids = None if args.ids is None else args.ids.split(",")
 
+    url_paths = dict()
     for id, properties in stations.items():
 
         if station_ids and not id in station_ids :
@@ -174,8 +181,9 @@ def main() :
 
         with LogContext(network=args.network, station_id=id) :
 
-            url_paths = list_downloads(properties, url_pattern, path_pattern, args.start_date, args.end_date)
-            do_download(url_paths, args.out_folder, args.dry_run, compress)
+            url_paths.update(list_downloads(properties, url_pattern, path_pattern, args.start_date, args.end_date))
+
+    do_download(url_paths, args.out_folder, args.dry_run, compress)
 
 if __name__ == '__main__':
     main()
