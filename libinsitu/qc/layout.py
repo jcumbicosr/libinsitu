@@ -8,14 +8,13 @@ from urllib.request import urlopen
 
 import sg2
 from appdirs import user_cache_dir
-from matplotlib.pyplot import gca
 from pandas import DataFrame
 
 from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
     DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning
-from libinsitu.qc.graphs import FONT_SIZE, COLORMAP_DENSITY, COLORMAP_SHADING, MC_CLEAR_COLOR, plot_qc_flags
+from libinsitu.qc.graphs import *
 import os
 
 from matplotlib.gridspec import GridSpec
@@ -51,8 +50,6 @@ def get_version() :
     # TODO
     #return metadata.metadata('libinsitu')['Version']
     return "1.2"
-
-
 
 
 def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
@@ -159,13 +156,13 @@ def SolarRadVisualControl(
     # -- Plot time series
 
     # GHI
-    def plot_ts(row_idx, label, data, xmax):
+    def timeseries(row_idx, label, data, xmax):
         plt.subplot(grid[row_idx, 0])
         plot_timeseries(label, data, TOA, xmax, ShowFlag, QCfinal)
 
-    plot_ts(0, "GHI", GHI, 1400)
-    plot_ts(1, "DNI", DNI, 1400)
-    plot_ts(2, "DIF", DIF, 1000)
+    timeseries(0, "GHI", GHI, 1400)
+    timeseries(1, "DNI", DNI, 1400)
+    timeseries(2, "DIF", DIF, 1000)
 
     # -- Plot Heatmaps
 
@@ -236,210 +233,63 @@ def SolarRadVisualControl(
     # % % Part4: ERL& PPL tests
     # =====================================================================
 
-    gs2 = GridSpec(4, 2)
+    gs2 = GridSpec(4, 6)
     gs2.update(
-        left=0.33, right=0.66,
-        bottom=0.03, top=0.98,
-        hspace=0.2, wspace=0.05)
+        left=0.07, right=0.97,
+        bottom=0.1, top=0.98,
+        hspace=0.25, wspace=0.25)
 
     Stat_Test = qc_stats(meas_df, sp_df, flag_df)
 
-    PrmXi = [TOA, TOA, TOA]
-    PrmXilbl = ['Top of atmosphere (TOA)', 'Top of atmosphere (TOA)', 'Top of atmosphere (TOA)']
-    Prm_Vars = [GHI, DNI, DIF]
-    PrmYi = ["GHI", "DNI", "DIF"]
-    BSRN_PPL_Ks = [[1.5, 1.2, 100], [1, 0, 0], [0.95, 1.2, 50]]
-    BSRN_ERL_Ks = [[1.2, 1.2, 50], [0.95, 0.2, 10], [0.75, 1.2, 30]]
-
-    def mk_1c_legend(component_name) :
-        return 'BSRN 1C ' + component_name + ": {:.2f}% / {:.2f}%".format(
-            Stat_Test['T1C_ppl_' + component_name],
-            Stat_Test['T1C_erl_' + component_name])
-
     def bsrn_1c(row, component, component_name, limits) :
-        gs2.subplot(gs2[row, 0])
-        plot_qc_flags(
-            x=TOA, xlabel='Top of atmosphere (TOA) (W/m2)',
-            y=component,
-            ylabel=component_name + "(W/m2)",
-            legend=mk_1c_legend(component_name),
-            ShowFlag=ShowFlag, TOA=TOA, TOANI=TOANI, GAMMA_S0=GAMMA_S0, QCfinal=QCfinal, limits=limits)
-
+        plt.subplot(gs2[row, 2])
+        plot_bsrn_1c(
+            TOA=TOA,
+            component=component,
+            component_name=component_name,
+            ShowFlag=ShowFlag,
+            TOANI=TOANI,
+            GAMMA_S0=GAMMA_S0,
+            QCfinal=QCfinal,
+            limits=limits,
+            Stat_Test=Stat_Test)
 
     bsrn_1c(0, GHI, "GHI", [[1.5, 1.2, 100], [1.2, 1.2, 50]])
     bsrn_1c(1, DNI, "DNI", [[1, 0, 0], [0.95, 0.2, 10]])
     bsrn_1c(2, DIF, "DIF", [[0.95, 1.2, 50],[0.75, 1.2, 30]])
 
 
-    # =====================================================================
-    # % % Part5: BSRN 2C, 3C,SERI-QC tests
-    # -> BSRN 2C
-    # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
-    ax22 = plt.subplot(gs2[0, 0])
-    plt.text(12, 1.3, 'BSRN-2C' + ": {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']))
-    if ShowFlag == -1:
-        idxPlot = (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
-    else:
-        idxPlot = (GHI > 50) & (SZA < 90)
+    # BSRN 2C
+    plt.subplot(gs2[0, 3])
+    bsrn_2c(GHI, SZA, flag_df.K, Stat_Test, ShowFlag, QCfinal)
 
-    hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
-                                          range=[[10, 95], [0, 1.25]])
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, 0.8 * max(hist.flatten()))
-    if ShowFlag == 1:
-        plt.plot(SZA[flag_df.T2C_bsrn_kt], flag_df.K[flag_df.T2C_bsrn_kt], 'rs', markersize=1,
-                 alpha=0.5, label='bsrn2C')
-        ax22.legend(loc='lower left')
-    # plt.plot(SZA[T2C_bsrn_kd],KT[T2C_bsrn_kd],'r.',markersize=1,label="Flagged data")
-    plt.plot([0, 75, 75, 100], [1.05, 1.05, 1.1, 1.1], 'k--', alpha=0.4, linewidth=0.8)
-    plt.xlabel('Solar zenith angle (°)', fontsize=FONT_SIZE)
-    plt.ylabel('DIF/GHI (-)', fontsize=FONT_SIZE)
-    plt.xlim((10, 95))
-    plt.ylim((0, 1.4))
+    # SERI-Kn
+    plt.subplot(gs2[1, 3])
+    seri_kn(DNI, GHI, SZA, flag_df.KT, flag_df.Kn, Stat_Test, ShowFlag, QCfinal)
 
-    # =====================================================================
-    # % % -> SERI-Kn
-    # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
-    ax24 = plt.subplot(gs2[1, 1])
-    plt.text(0.025, 0.92, 'SERI-kn' + ": {:.2f}% ".format(Stat_Test['T2C_seri_knkt']))
-    if ShowFlag == -1:
-        idxPlot = (DNI > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
-    else:
-        idxPlot = (DNI > 0) & (GHI > 0) & (SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.Kn[idxPlot], bins=[200, 200],
-                                          range=[[0, 1.25], [0, 1]])
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, 0.1 * max(hist.flatten()))
-    plt.plot([0, 0.8, 1.35, 1.35], [0, 0.8, 0.8, 0], 'k--', alpha=0.4, linewidth=0.8)
-    if ShowFlag == 1:
-        plt.plot(flag_df.KT[flag_df.T2C_seri_kn_kt], flag_df.Kn[flag_df.T2C_seri_kn_kt], 'r.',
-                 markersize=0.9, label='SERI-kn')
-        ax24.legend(loc='upper right')
-    plt.xlabel('GHI/TOA (-)', fontsize=FONT_SIZE)
-    plt.ylabel('DNI/TOANI (-)', fontsize=FONT_SIZE)
-    plt.xlim((0, 1.5))
-    plt.ylim((0, 1.))
+    # SERI-K
+    plt.subplot(gs2[2, 3])
+    seri_k(DIF, GHI, SZA, flag_df.KT, flag_df.K, ShowFlag, QCfinal, Stat_Test)
 
-    # -> SERI-K
-    print(str(dt.datetime.now()) + ": --> QC: SERI-K ")
-    ax26 = plt.subplot(gs2[2, 1])
-    plt.text(0.025, 1.3, 'SERI-K' + ": {:.2f}% ".format(Stat_Test['T2C_seri_kkt']))
-    if ShowFlag == -1:
-        idxPlot = (DIF > 0) & (GHI > 0) & (SZA < 90) & (flag_df.QCfinal == 0)
-    else:
-        idxPlot = (DIF > 0) & (GHI > 0) & (SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=flag_df.KT[idxPlot], y=flag_df.K[idxPlot], bins=[200, 200],
-                                          range=[[0, 1.2], [0, 1.2]])
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, 0.1 * max(hist.flatten()))
-    plt.plot([0, 0.6, 0.6, 1.35, 1.35], [1.1, 1.1, 0.95, 0.95, 0], 'k--', alpha=0.4, linewidth=0.8)
-    if ShowFlag == 1:
-        plt.plot(flag_df.KT[flag_df.T2C_seri_k_kt], flag_df.K[flag_df.T2C_seri_k_kt], 'r.',
-                 markersize=0.9, label='seri-kkt')
-        ax26.legend(loc='upper right')
-    plt.xlabel('GHI/TOA (-)', fontsize=FONT_SIZE)
-    plt.ylabel('DIF/GHI (-)', fontsize=FONT_SIZE)
-    plt.xlim((0, 1.5))
-    plt.ylim((0, 1.45))
+    # BSRN Closure
+    plt.subplot(gs2[3, 2])
+    bsrn_closure(GHI, DIF, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal)
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
-    ax27 = plt.subplot(gs2[3, 0])
-    plt.text(30, 1300, 'BSRN closure' + ": {:.2f}% ".format(Stat_Test['T3C_bsrn']))
-    if ShowFlag == -1:
-        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
-    else:
-        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=GHI[idxPlot], y=GHI_est[idxPlot], bins=[500, 500],
-                                          range=[[0, 1500], [0, 1500]])
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, 0.1 * max(hist.flatten()))
-    if ShowFlag == 1:
-        ax27.plot(GHI[flag_df.T3C_bsrn_3cmp], GHI_est[flag_df.T3C_bsrn_3cmp], 'r.',
-                  markersize=1, label='closure', alpha=0.1)
-        ax27.legend(loc='lower right')
-    ax27.plot(np.array([0, 1400]), 0.85 * np.array([0, 1400]), 'k-.', alpha=0.4, linewidth=1.0)
-    plt.plot(np.array([0, 1400]), 0.92 * np.array([0, 1400]), 'k--', alpha=0.4, linewidth=0.8)
-    plt.plot(np.array([0, 1400]), 1.08 * np.array([0, 1400]), 'k--', alpha=0.4, linewidth=0.8)
-    plt.plot(np.array([0, 1400]), 1.15 * np.array([0, 1400]), 'k-.', alpha=0.4, linewidth=1.0)
-    plt.xlabel('GHI (W/m2)', fontsize=FONT_SIZE)
-    plt.ylabel('DIF+DNI*CSZA (W/m2)', fontsize=FONT_SIZE)
-    plt.ylim((0, 1400))
-    plt.xlim((0, 1400))
+    # BRSN Closure ratio
+    plt.subplot(gs2[3, 3])
+    im = bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal)
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
-    ax28 = plt.subplot(gs2[3, 0])
-    plt.text(8, 0.52, "BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']))
-    if ShowFlag == -1:
-        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90) & (flag_df.QCfinal == 0)
-    else:
-        idxPlot = (DIF > 0) & (GHI > 50) & (SZA < 90)
-    hist, xedges, yedges = np.histogram2d(x=SZA[idxPlot], y=GHI[idxPlot] / GHI_est[idxPlot],
-                                          bins=[200, 200], range=[[0, 90], [0, 2]])
-    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=1, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-    im00.set_clim(0, 0.5 * max(hist.flatten()))
-    if ShowFlag == 1:
-        plt.plot(SZA[flag_df.T3C_bsrn_3cmp],
-                 GHI[flag_df.T3C_bsrn_3cmp] / GHI_est[flag_df.T3C_bsrn_3cmp], 'r.',
-                 markersize=1, label='closure', alpha=0.1)
-        ax28.legend(loc='lower right')
-    plt.plot([10, 75, 75, 90, 90, 75, 75, 10], [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92], 'k--', alpha=0.4,
-             linewidth=0.8)
-    ax28.set_xlabel('Solar zenith angle (°)', fontsize=FONT_SIZE)
-    ax28.set_ylabel('GHI/(DIF+DNI*CSZA) (-)', fontsize=FONT_SIZE)
-    ax28.set_yticks(np.arange(0.2, 2, 0.2))
-    ax28.set_ylim((0.5, 1.5))
-
+    # Color legend
     cb_ax = fig.add_axes([0.38, 0.04, 0.28, 0.01])
-    cbar = fig.colorbar(im00, cax=cb_ax, orientation='horizontal', label='point density (-)')
+    cbar = fig.colorbar(im, cax=cb_ax, orientation='horizontal', label='point density (-)')
     cbar.set_ticks([])
 
-    # **************************** Third column *******************************
-    print(str(dt.datetime.now()) + ": --> QC: print general infos")
+    # -- Third column
 
-    Y0 = 0.90
-    dY = 0.15
-    gs0 = GridSpec(9, 12)
-    gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
+    # Text info
+    print_info()
 
-    ax01 = plt.subplot(gs0[0, 8])
-    ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
-    ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(country), size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(climate), size=FONT_SIZE)
-    ax01.axis('off')
-
-    ax02 = plt.subplot(gs0[0, 10])
-    ax02.text(0.01, Y0 - 1 * dY, '.         Period:  {} - {}'.format(DateStrStart, DateStrEnd), size=FONT_SIZE)
-    ax02.text(0.01, Y0 - 2 * dY, '  Annual sums:', size=FONT_SIZE)
-    ax02.text(0.01, Y0 - 3 * dY, 'GHI:   {0:.0f} kWh/m2'.format(AvgGHI), size=FONT_SIZE)
-    ax02.text(0.01, Y0 - 4 * dY, 'DIF:   {0:.0f} kWh/m2'.format(AvgDHI), size=FONT_SIZE)
-    ax02.text(0.01, Y0 - 5 * dY, 'DNI:   {0:.0f} kWh/m2'.format(AvgDNI), size=FONT_SIZE)
-    ax02.text(0.01, Y0 - 6 * dY, CodeInfo["name"] + ' ' + CodeInfo["vers"] + '', size=FONT_SIZE)
-    ax02.axis('off')
-
-    ax03 = plt.subplot(gs0[0, 11])
-    ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FONT_SIZE)
-    # ax03.text(0.01,Y0-2*dY,'# Flagged: {0:.1f}% '.format(Stat_FlaggedQCFinal),size=FONT_SIZE)
-    ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FONT_SIZE)
-    ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
-    ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
-    ax03.axis('off')
-
-    # ax2XXX = plt.axes([0.75, 0.88, 0.08, 0.07])
-    # img = plt.imread('./libCAMS_ymsd/CAMSlogo.png')
-    # ax2XXX .imshow(img)
-    # plt.axis('off')
-
+    # QC histograms
     print(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
     gs3b = GridSpec(9, 9)
     gs3b.update(left=0.075, right=0.98, bottom=0.001, top=0.97, hspace=0.025, wspace=0.00)

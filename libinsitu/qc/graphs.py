@@ -31,8 +31,6 @@ def conv2(v1, v2, m, mode='same'):
     tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
     return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
 
-
-
 def plot_heatmap_timeseries(label, data, sunrise, sunset, cmax, longitude, ShowFlag, QCFinal):
 
     info("plotting heatmap timeseries for %s " % label)
@@ -155,50 +153,83 @@ def plot_ratio_heatmap(ratios, filter, h1, h2, TOA, ylimit, title, y_label, Show
     return axe
 
 
-def plot_qc_flags(x, xlabel, y, ylabel, legend, ShowFlag, TOA, TOANI, GAMMA_S0, QCfinal, limits) :
+def generic_qc_graph(x, y, xlabel, ylabel, xrange, yrange, legend, lines, clim_ratio=0.25) :
+    """ Generic function to display QC heat map with limits """
 
-    info("Plotting QC flags for %s" % legend)
+    info("Plotting QC test: %s" % legend)
 
-    plt.text(30, 1475, legend)
-
-    Filteridx = (TOA > 0) & (y > 0) & (y < 2000) & (x > 0) & (x < 2000)
-
-    if ShowFlag == -1:
-        Filteridx = Filteridx & (QCfinal == 0)
-
-    x = x[Filteridx]
-    y = y[Filteridx]
+    ax = plt.gca()
+    plt.text(0.01, 0.9, legend, transform=ax.transAxes)
 
     hist, xedges, yedges = np.histogram2d(
         x=x,
         y=y,
         bins=[200, 200],
-        range=[[0, 1500], [0, 1500]])
+        range=[xrange, yrange])
 
     yedges, xedges = np.meshgrid(
         0.5 * (yedges[:-1] + yedges[1:]),
         0.5 * (xedges[:-1] + xedges[1:]))
 
-    im00 = plt.scatter(
+    im = plt.scatter(
         xedges.flatten(),
-        yedges.flatten(), s=3, c=hist.flatten(),
+        yedges.flatten(), s=3,
+        c=hist.flatten(),
         cmap=COLORMAP_DENSITY)
 
-    im00.set_clim(0, 0.25 * max(hist[(xedges > 5) & (yedges > 5)]))
+    im.set_clim(0, clim_ratio * max(hist.flatten()))
 
-    TOANI = TOANI[Filteridx]
-    GAMMA_S0 = GAMMA_S0[Filteridx]
+    for x, y in lines :
+        plt.plot(x, y, 'k--', alpha=0.4, linewidth=0.8)
+
+    plt.xlabel(xlabel, fontsize=FONT_SIZE)
+    plt.ylabel(ylabel, fontsize=FONT_SIZE)
+
+    plt.xlim(xrange)
+    plt.ylim([
+        yrange[0],
+        yrange[1] * 1.2])
+
+    return im
+
+def plot_bsrn_1c(TOA, component, component_name, Stat_Test, limits, TOANI, GAMMA_S0, ShowFlag, QCfinal) :
+
+    legend= 'BSRN 1C ' + component_name + ": {:.2f}% / {:.2f}%".format(
+        Stat_Test['T1C_ppl_' + component_name],
+        Stat_Test['T1C_erl_' + component_name])
+
+    # XXX should be done beforehand
+    filter = (TOA > 0) & (component > 0) & (component < 2000) & (TOA > 0) & (TOA < 2000)
+
+    if ShowFlag == -1:
+        filter = filter & (QCfinal == 0)
+
+    x = TOA[filter]
+    y = component[filter]
+
+    TOANI = TOANI[filter]
+    GAMMA_S0 = GAMMA_S0[filter]
 
     # Draw limits
-    for a, b, c in limits :
-
+    limits_xy = []
+    for a, b, c in limits:
         yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
-        plt.plot(x, yy, '-', color=[0.8, 0.8, 0.8])
 
         # Poly appromimation
         tx = np.arange(min(x), max(x), 100)
         fpoly = np.poly1d(np.polyfit(x, yy, 5))
-        plt.plot(tx, fpoly(tx), 'k--', alpha=0.4, linewidth=0.8)
+
+        limits_xy.append([tx, fpoly(tx)])
+
+    generic_qc_graph(
+        x=x, y=y,
+        xlabel='Top of atmosphere (TOA) (W/m2)',
+        ylabel=component_name + "W/m2",
+        xrange=[1, 1300],
+        yrange=[0, 1400],
+        legend=legend,
+        lines=limits_xy,
+        clim_ratio=0.25)
 
     #if ShowFlag == 1:
     #    plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
@@ -207,10 +238,126 @@ def plot_qc_flags(x, xlabel, y, ylabel, legend, ShowFlag, TOA, TOANI, GAMMA_S0, 
     #             markersize=1, alpha=0.5, label='erl')
     #    plt.legend(loc='lower right')
 
-    plt.ylim((0, 1600))
-    plt.xlim((0, 1400))
-    plt.xlabel(xlabel, fontsize=FONT_SIZE)
-    plt.ylabel(ylabel, fontsize=FONT_SIZE)
+def bsrn_2c(GHI, SZA, K, Stat_Test, ShowFlag, QCfinal):
 
+    filter = (GHI > 50) & (SZA < 90)
 
+    if ShowFlag == -1:
+        filter = filter & (QCfinal == 0)
 
+    line = [
+        [0, 75, 75, 100],
+        [1.05, 1.05, 1.1, 1.1]]
+
+    return generic_qc_graph(
+        legend="BSRN-2C : {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']),
+        x=SZA[filter], xlabel='Solar zenith angle (°)', xrange=[10, 95],
+        y=K[filter], ylabel='DIF/GHI (-)', yrange = [0, 1.25],
+        lines=[line],
+        clim_ratio=0.8)
+
+def seri_kn(DNI, GHI, SZA, KT, Kn, Stat_Test, ShowFlag, QCfinal) :
+
+    filter = (DNI > 0) & (GHI > 0) & (SZA < 90)
+    if ShowFlag == -1 :
+        filter = filter & (QCfinal == 0)
+
+    line = [
+        [0, 0.8, 1.35, 1.35],
+        [0, 0.8, 0.8, 0]]
+
+    return generic_qc_graph(
+        legend = "SERI-kn : {:.2f}% ".format(Stat_Test['T2C_seri_knkt']),
+        x=KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
+        y=Kn[filter], ylabel='DNI/TOANI (-)', yrange=(0, 0.8),
+        lines=[line], clim_ratio=0.1)
+
+def seri_k(DIF, GHI, SZA, KT, K, ShowFlag, QCfinal, Stat_Test) :
+
+    filter = (DIF > 0) & (GHI > 0) & (SZA < 90)
+
+    if ShowFlag == -1:
+        filter = filter & (QCfinal == 0)
+
+    line = (
+        [0, 0.6, 0.6, 1.35, 1.35],
+        [1.1, 1.1, 0.95, 0.95, 0])
+
+    return generic_qc_graph(
+        legend="SERI-K : {:.2f}% ".format(Stat_Test['T2C_seri_kkt']),
+        x=KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
+        y=K[filter], ylabel='DIF/GHI (-)', yrange=(0, 1.4),
+        lines=[line],
+        clim_ratio=0.1)
+
+def bsrn_closure(GHI, DIF, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
+
+    filter = (DIF > 0) & (GHI > 50) & (SZA < 90)
+
+    if ShowFlag == -1:
+        filter = filter & (QCfinal == 0)
+
+    # 4 diagonal lines
+    lines = []
+    for r in [0.85, 0.92, 1.08, 1.15] :
+        lines.append([
+            [0.0, 1400.0],
+            [0.0, 1400.0 *r]
+        ])
+
+    return generic_qc_graph(
+        legend="BSRN closure : {:.2f}% ".format(Stat_Test['T3C_bsrn']),
+        x=GHI[filter], xlabel='GHI (W/m2)', xrange=(0, 1400),
+        y=GHI_est[filter], ylabel='DIF+DNI*CSZA (W/m2)', yrange=(0, 1300),
+        lines=lines,
+        clim_ratio=0.1)
+
+def bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
+
+    filter = (DIF > 0) & (GHI > 50) & (SZA < 90)
+    if ShowFlag == -1:
+        filter = filter & (QCfinal == 0)
+
+    line = [
+        [10, 75, 75, 90, 90, 75, 75, 10],
+        [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92]]
+
+    return generic_qc_graph(
+        legend="BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']),
+        x=SZA[filter], xlabel='Solar zenith angle (°)', xrange=(0, 100),
+        y=GHI[filter] / GHI_est[filter], ylabel='GHI/(DIF+DNI*CSZA) (-)', yrange=(0.6, 1.2),
+        lines=[line],
+        clim_ratio=0.5)
+
+def print_info() :
+    Y0 = 0.90
+    dY = 0.15
+    gs0 = GridSpec(9, 12)
+    gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
+
+    ax01 = plt.subplot(gs0[0, 8])
+    ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
+    ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(country), size=FONT_SIZE)
+    ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(climate), size=FONT_SIZE)
+    ax01.axis('off')
+
+    ax02 = plt.subplot(gs0[0, 10])
+    ax02.text(0.01, Y0 - 1 * dY, '.         Period:  {} - {}'.format(DateStrStart, DateStrEnd), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 2 * dY, '  Annual sums:', size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 3 * dY, 'GHI:   {0:.0f} kWh/m2'.format(AvgGHI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 4 * dY, 'DIF:   {0:.0f} kWh/m2'.format(AvgDHI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 5 * dY, 'DNI:   {0:.0f} kWh/m2'.format(AvgDNI), size=FONT_SIZE)
+    ax02.text(0.01, Y0 - 6 * dY, CodeInfo["name"] + ' ' + CodeInfo["vers"] + '', size=FONT_SIZE)
+    ax02.axis('off')
+
+    ax03 = plt.subplot(gs0[0, 11])
+    ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FONT_SIZE)
+    # ax03.text(0.01,Y0-2*dY,'# Flagged: {0:.1f}% '.format(Stat_FlaggedQCFinal),size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
+    ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
+    ax03.axis('off')
