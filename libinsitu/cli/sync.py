@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 import os.path
 import shutil
-import sys
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from email.utils import parsedate_to_datetime
 from tempfile import NamedTemporaryFile
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 import gzip
+
+import pytz
 from dateutil.relativedelta import relativedelta
 import requests
 import jmespath
+import re
 
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
 from datetime import datetime, timedelta
 
-from libinsitu.log import info, LogContext, IgnoreAndLogExceptions
+from libinsitu.log import info, warning, LogContext, IgnoreAndLogExceptions
 import argparse
 
 SOURCE_URL_ATTR="SourceURL"
@@ -44,13 +46,17 @@ def date_placeholders(date) :
         **date_dict(date),
         **date_dict(date+ONE_MONTH, "_end")}
 
-
+def prepare_properties(properties) :
+    properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
+    properties["station_id"] = properties["Station_ID"].lower()
+    return properties
 
 def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
+
     """Return a dict of input_path => output """
     res = dict()
 
-    properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
+    properties = prepare_properties(properties)
 
     # No end date ? => until last month
     if not end_date :
@@ -58,30 +64,56 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
         if end_date_str :
             end_date = datetime.strptime(end_date_str, DATE_FORMAT)
         else:
+            # One month behin, to prevent partial data
             end_date = datetime.now() + relativedelta(days=-32)
 
-
-    # Loop on months
+    # By default, start of station
     if not start_date :
         start_date =  datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
 
-    # Start first of the month
-    date =  start_date.replace(day=1)
+    # Loop on months
+    def process_all_months(pattern) :
 
-    while date <= end_date:
+        # Start first of the month
+        date = start_date.replace(day=1)
+        while date <= end_date:
 
-        date_dict = date_placeholders(date)
+            date_dict = date_placeholders(date)
 
-        url = url_pattern.format(**properties, **date_dict)
-        path = path_pattern.format(**properties, **date_dict)
+            url = pattern.format(**properties, **date_dict)
 
-        # Split '!' in case a sub path is provided inside Zip file
-        if "!" in path :
-            path  = path.split("!")[0]
+            if '*' in path_pattern :
+                # Wildcard in output file pattern ? take the end of the url and filename
+                path = os.path.basename(url)
+            else:
+                # Format output file pattern
+                path = path_pattern.format(**properties, **date_dict)
 
-        res[url] = path
 
-        date += ONE_MONTH
+            # Split '!' in case a sub path is provided inside Zip file
+            if "!" in path :
+                path  = path.split("!")[0]
+
+            res[url] = path
+
+            date += ONE_MONTH
+
+    if "[" in url_pattern :
+        # There is an alterantibe [one,two] in the pattern
+        reg = re.compile(r'.*(\[.*\]).*')
+        match = reg.match(url_pattern)
+        options = match.group(1).replace("[", "").replace("]", "").split(",")
+
+        # Replace the options by a placeholder
+        pattern = re.sub('\[.*\]', '{i}', url_pattern)
+
+        # Loop on options
+        for option in options :
+            properties["i"] = option
+            process_all_months(pattern)
+
+    else :
+        process_all_months(url_pattern)
 
     return res
 
@@ -90,8 +122,15 @@ def zip_file(inf, outf) :
         with gzip.open(outf, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
 
+def more_recent(path, url) :
+    """ Compare last-modified http header with local modification date. Return true if local file is more recent """
+    headers = requests.head(url).headers
+    url_date = parsedate_to_datetime(headers["last-modified"])
+    local_date = datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=pytz.utc)
+    return local_date > url_date
 
-def do_download(url_paths, out, dry_run=False, compress=False, parallel=True) :
+
+def do_download(url_paths, out, dry_run=False, compress=False, parallel=True, check_time=False) :
 
     def process_one(args):
         url, path = args
@@ -101,13 +140,19 @@ def do_download(url_paths, out, dry_run=False, compress=False, parallel=True) :
         with LogContext(file=out_path), IgnoreAndLogExceptions():
 
             # Skip file if already present, unless it is "recent"
-            if os.path.exists(out_path) \
-                    or os.path.exists(out_path + ERROR_SUFFIX) \
-                    or os.path.exists(out_path + EMPTY_SUFFIX) \
-                    or os.path.exists(out_path + MISSING_SUFFIX):
+            for path in [out_path, out_path + ERROR_SUFFIX, out_path + EMPTY_SUFFIX, out_path + MISSING_SUFFIX] :
+                if os.path.exists(path) :
 
-                info("File %s is already present. Skipping", out_path)
-                return
+                    if check_time :
+                        if more_recent(path, url) :
+                            info("Local file %s is more recent than remote URL %s. Skipping" % (path, url))
+                            return
+                        else:
+                            warning("Remote url %s is more recent than local file URL %s" % (url, path))
+
+                    else:
+                        info("File %s is already present. Skipping", path)
+                        return
 
             folder = os.path.dirname(out_path)
             if not os.path.exists(folder) and not dry_run:
@@ -119,9 +164,8 @@ def do_download(url_paths, out, dry_run=False, compress=False, parallel=True) :
                     info("Would have downloaded %s -> %s " + ("[compressed]" if compress else ""), url, out_path)
                     return
 
-                info("Downloading %s -> %s", url, out_path)
-
                 try:
+                    info("Downloading %s -> %s", url, out_path)
                     urlretrieve(url, tmpFile.name)
                 except HTTPError as http_error :
                     if http_error.code == 404 :
@@ -130,9 +174,6 @@ def do_download(url_paths, out, dry_run=False, compress=False, parallel=True) :
                         return
                     else:
                         raise
-                if os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
-                    info("File {} was already present with same size => skipping")
-                    return
 
                 if os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
                     info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
@@ -167,9 +208,10 @@ def http_list(network, stations_info, url_pattern, path_pattern, start_date, end
 
     return url_paths
 
-def http_json_list(network, stations_info, url_pattern, path_pattern, start_date, end_date) :
+def http_json_list(network, stations_info, url_pattern, *args, **kargs) :
 
     url, jsme_filter = url_pattern.split("|")
+    url = url.replace("+json", "")
 
     # Get JSON
     js = requests.get(url).json()
@@ -192,6 +234,7 @@ def main() :
     parser.add_argument('--end-date', metavar='yyyy-mm-dd', type=parse_date, help='End date, optional (end of station by default)', default=None)
     parser.add_argument('--dry-run', '-n', action='store_true', help='Do not download anything. Only print what would be downloaded')
     parser.add_argument('--sequential', '-seq', action='store_true', help='Disable parallel download')
+    parser.add_argument('--check-time', '-t', action='store_true', help='Check modification time to override existing file')
     args = parser.parse_args()
 
     network_info = networks_info[args.network]
@@ -210,7 +253,7 @@ def main() :
     if not url_pattern:
         raise Exception("'SourceURL' not defined for network %s" % args.network)
 
-    if "|" in url_pattern :
+    if "+json" in url_pattern :
         # http+json
         list_func = http_json_list
     elif url_pattern.startswith("http") :
@@ -220,7 +263,11 @@ def main() :
 
     url_paths = list_func(args.network, stations_info, url_pattern, path_pattern, args.start_date, args.end_date)
 
-    do_download(url_paths, args.out_folder, args.dry_run, compress, not args.sequential)
+    do_download(url_paths, args.out_folder,
+        dry_run=args.dry_run,
+        compress=compress,
+        parallel=not args.sequential,
+        check_time=args.check_time)
 
 if __name__ == '__main__':
     main()

@@ -39,7 +39,7 @@ if curr_branch == "dev" :
     version += "." + str(min_diff) + "-dev"
 
 
-extra_urls= []
+extra_urls = []
 with open("requirements.txt", "r") as f :
 
     def extract_extra_index(strs) :
