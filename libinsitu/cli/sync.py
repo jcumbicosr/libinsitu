@@ -9,6 +9,7 @@ from urllib.request import urlretrieve
 import gzip
 from dateutil.relativedelta import relativedelta
 
+from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
 from datetime import datetime, timedelta
 
@@ -20,9 +21,11 @@ RAW_PATH_ATTR="RawDataPath"
 COMPRESS_ATTR="Compress"
 
 ERROR_SUFFIX = ".error"
+EMPTY_SUFFIX = ".empty"
 RECENT_DAYS = 40
 ONE_MONTH = relativedelta(months=1)
-NB_WORKERS=10
+NB_WORKERS = 10
+EMPTY_LIMIT =50
 
 class PathInfo :
     def __init__(self):
@@ -46,17 +49,20 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
 
     res = defaultdict(lambda : PathInfo())
 
-    properties = dict((key, parse_value(val)) for key, val in properties.items())
+    properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
 
-    # No end date ? => until now
+    # No end date ? => until last month
     if not end_date :
-        end_date_str = properties.get("EndDate", None)
-        end_date = datetime.now() if end_date_str is None else datetime.strptime(end_date_str, DATE_FORMAT)
+        end_date_str = properties.get("Station_EndDate", None)
+        if end_date_str :
+            end_date = datetime.strptime(end_date_str, DATE_FORMAT)
+        else:
+            end_date = datetime.now() + relativedelta(days=-32)
 
 
     # Loop on months
     if not start_date :
-        start_date =  datetime.strptime(properties["StartDate"], DATE_FORMAT)
+        start_date =  datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
 
     # Start first of the month
     date =  start_date.replace(day=1)
@@ -95,7 +101,9 @@ def do_download(url_paths, out, dry_run=False, compress=False) :
         with LogContext(file=out_path), IgnoreAndLogExceptions():
 
             # Skip file if already present, unless it is "recent"
-            if os.path.exists(out_path) or os.path.exists(out_path + ERROR_SUFFIX):
+            if os.path.exists(out_path) \
+                    or os.path.exists(out_path + ERROR_SUFFIX) \
+                    or os.path.exists(out_path + EMPTY_SUFFIX):
 
                 if pathInfo.recent:
                     info("File %s is already present but recent. Check if newer version exists", out_path)
@@ -117,12 +125,13 @@ def do_download(url_paths, out, dry_run=False, compress=False) :
 
                     if compress:
                         zip_file(tmpFile.name, out_path)
+                    elif os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
+                        info("File {} was already present with same size => skipping")
+                    elif os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
+                        info("Output file is < %d bytes : considered empty " % EMPTY_LIMIT)
+                        touch(out_path + EMPTY_SUFFIX)
                     else:
-                        # Files already exists ? Only update if size are different
-                        if os.path.exists(out_path) and os.path.getsize(out_path) == os.path.getsize(tmpFile.name):
-                            info("File {} was already present with same size => skipping")
-                        else:
-                            shutil.copy(tmpFile.name, out_path)
+                        shutil.copy(tmpFile.name, out_path)
 
     # Parallel execution : wait for all executions to finish
     with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
