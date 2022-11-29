@@ -7,8 +7,9 @@ from tempfile import NamedTemporaryFile
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 import gzip
-
+import subprocess
 import pytz
+import urllib3.packages.six
 from dateutil.relativedelta import relativedelta
 import requests
 import jmespath
@@ -17,7 +18,7 @@ import re
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
 from datetime import datetime, timedelta
-
+from dotenv import load_dotenv
 from libinsitu.log import info, warning, LogContext, IgnoreAndLogExceptions
 import argparse
 
@@ -46,17 +47,24 @@ def date_placeholders(date) :
         **date_dict(date),
         **date_dict(date+ONE_MONTH, "_end")}
 
-def prepare_properties(properties) :
+def prepare_properties(network, properties) :
+    """ Adds prefix Station_ adds env variables (more user/passord)"""
+
     properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
     properties["station_id"] = properties["Station_ID"].lower()
+
+    # Add environment variable prefixed by the network
+    for key, val in os.environ.items() :
+        if key.startswith(network) :
+            key = key.replace(network, "")
+            properties[key] = val
+
     return properties
 
 def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
 
     """Return a dict of input_path => output """
     res = dict()
-
-    properties = prepare_properties(properties)
 
     # No end date ? => until last month
     if not end_date :
@@ -130,6 +138,88 @@ def more_recent(path, url) :
     return local_date > url_date
 
 
+def ftp_get(url, out_path, dry_run=False) :
+    url = url.replace("ftp://", "")
+    domain, uri = url.split("/", 1)
+    user=None
+    password=None
+    if "@" in domain :
+        credentials, domain = domain.split("@")
+        user, password = credentials.split(":")
+    print("Ftp :", domain, user, password, uri, out_path)
+
+    user_pass = "" if not user else "-u %s,%s" % (user, password)
+
+    ftp_command = """
+        set ftps:initial-prot ""; 
+        set ftp:ssl-force true; 
+        set ftp:ssl-protect-data true; 
+        set ssl:verify-certificate no; 
+        open ftp://{domain} {user_pass}; mirror --verbose --ignore-time --no-perms {dry_run} {src} {dest}
+    """.format(
+        user_pass=user_pass,
+        domain=domain,
+        src=uri,
+        dest=out_path,
+        dry_run="" if not dry_run else "--dry-run")
+
+    #print(ftp_command)
+    subprocess.run(["lftp", "-c", ftp_command], check=True)
+
+
+
+
+def http_get(url, out_path, check_time=False, dry_run=False, compress=False) :
+
+    with LogContext(file=out_path), IgnoreAndLogExceptions():
+
+        # Skip file if already present, unless it is "recent"
+        for path in [out_path, out_path + ERROR_SUFFIX, out_path + EMPTY_SUFFIX, out_path + MISSING_SUFFIX]:
+            if os.path.exists(path):
+
+                if check_time:
+                    if more_recent(path, url):
+                        info("Local file %s is more recent than remote URL %s. Skipping" % (path, url))
+                        return
+                    else:
+                        warning("Remote url %s is more recent than local file URL %s" % (url, path))
+
+                else:
+                    info("File %s is already present. Skipping", path)
+                    return
+
+        folder = os.path.dirname(out_path)
+        if not os.path.exists(folder) and not dry_run:
+            os.makedirs(folder)
+
+        with NamedTemporaryFile() as tmpFile:
+
+            if dry_run:
+                info("Would have downloaded %s -> %s " + ("[compressed]" if compress else ""), url, out_path)
+                return
+
+            try:
+                info("Downloading %s -> %s", url, out_path)
+                urlretrieve(url, tmpFile.name)
+            except HTTPError as http_error:
+                if http_error.code == 404:
+                    info("Missing file : %s", url)
+                    touch(out_path + MISSING_SUFFIX)
+                    return
+                else:
+                    raise
+
+            if os.path.getsize(tmpFile.name) < EMPTY_LIMIT:
+                info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
+                touch(out_path + EMPTY_SUFFIX)
+                return
+
+            if compress:
+                zip_file(tmpFile.name, out_path)
+            else:
+                shutil.copy(tmpFile.name, out_path)
+
+
 def do_download(url_paths, out, dry_run=False, compress=False, parallel=True, check_time=False) :
 
     def process_one(args):
@@ -137,53 +227,14 @@ def do_download(url_paths, out, dry_run=False, compress=False, parallel=True, ch
 
         out_path = os.path.join(out, path)
 
-        with LogContext(file=out_path), IgnoreAndLogExceptions():
+        if url.startswith("http") :
+            http_get(url, out_path, check_time=check_time, dry_run=dry_run, compress=compress)
+        elif url.startswith("ftp") :
+            ftp_get(url, out_path, dry_run=dry_run)
+        else:
+            raise Exception("Unsupported protocol : %s" % url)
 
-            # Skip file if already present, unless it is "recent"
-            for path in [out_path, out_path + ERROR_SUFFIX, out_path + EMPTY_SUFFIX, out_path + MISSING_SUFFIX] :
-                if os.path.exists(path) :
 
-                    if check_time :
-                        if more_recent(path, url) :
-                            info("Local file %s is more recent than remote URL %s. Skipping" % (path, url))
-                            return
-                        else:
-                            warning("Remote url %s is more recent than local file URL %s" % (url, path))
-
-                    else:
-                        info("File %s is already present. Skipping", path)
-                        return
-
-            folder = os.path.dirname(out_path)
-            if not os.path.exists(folder) and not dry_run:
-                os.makedirs(folder)
-
-            with NamedTemporaryFile() as tmpFile:
-
-                if dry_run:
-                    info("Would have downloaded %s -> %s " + ("[compressed]" if compress else ""), url, out_path)
-                    return
-
-                try:
-                    info("Downloading %s -> %s", url, out_path)
-                    urlretrieve(url, tmpFile.name)
-                except HTTPError as http_error :
-                    if http_error.code == 404 :
-                        info("Missing file : %s", url)
-                        touch(out_path + MISSING_SUFFIX)
-                        return
-                    else:
-                        raise
-
-                if os.path.getsize(tmpFile.name) < EMPTY_LIMIT :
-                    info("Output file is < %d bytes : considered empty" % EMPTY_LIMIT)
-                    touch(out_path + EMPTY_SUFFIX)
-                    return
-
-                if compress:
-                    zip_file(tmpFile.name, out_path)
-                else:
-                    shutil.copy(tmpFile.name, out_path)
 
     # Parallel execution : wait for all executions to finish
     if parallel :
@@ -202,13 +253,15 @@ def http_list(network, stations_info, url_pattern, path_pattern, start_date, end
     url_paths = dict()
     for id, properties in stations_info.items():
 
+        properties = prepare_properties(network, properties)
+
         with LogContext(network=network, station_id=id):
 
             url_paths.update(list_downloads(properties, url_pattern, path_pattern, start_date, end_date))
 
     return url_paths
 
-def http_json_list(network, stations_info, url_pattern, *args, **kargs) :
+def http_json_list(url_pattern) :
 
     url, jsme_filter = url_pattern.split("|")
     url = url.replace("+json", "")
@@ -221,6 +274,18 @@ def http_json_list(network, stations_info, url_pattern, *args, **kargs) :
 
     return {url: os.path.basename(url) for url in urls}
 
+def ftp_list(network, stations_info, url_pattern) :
+    url_paths = dict()
+    for id, properties in stations_info.items():
+
+        properties = prepare_properties(network, properties)
+
+        with LogContext(network=network, station_id=id):
+
+            url = url_pattern.format(**properties)
+            url_paths[url] = "./"
+
+    return url_paths
 
 def main() :
 
@@ -236,6 +301,8 @@ def main() :
     parser.add_argument('--sequential', '-seq', action='store_true', help='Disable parallel download')
     parser.add_argument('--check-time', '-t', action='store_true', help='Check modification time to override existing file')
     args = parser.parse_args()
+
+    load_dotenv()
 
     network_info = networks_info[args.network]
     compress = parse_bool(network_info[COMPRESS_ATTR])
@@ -254,16 +321,28 @@ def main() :
         raise Exception("'SourceURL' not defined for network %s" % args.network)
 
     if "+json" in url_pattern :
-        # http+json
-        list_func = http_json_list
+        url_paths = http_json_list(url_pattern=url_pattern)
     elif url_pattern.startswith("http") :
-        list_func = http_list
+        url_paths = http_list(
+            network=args.network,
+            stations_info=stations_info,
+            url_pattern=url_pattern,
+            path_pattern=path_pattern,
+            start_date=args.start_date,
+            end_date=args.end_date)
+    elif url_pattern.startswith("ftp") :
+
+        url_paths = ftp_list(
+            network=args.network,
+            stations_info=stations_info,
+            url_pattern=url_pattern)
+
     else:
         raise Exception("Unsupported URL : %s" % url_pattern)
 
-    url_paths = list_func(args.network, stations_info, url_pattern, path_pattern, args.start_date, args.end_date)
-
-    do_download(url_paths, args.out_folder,
+    do_download(
+        url_paths=url_paths,
+        out=args.out_folder,
         dry_run=args.dry_run,
         compress=compress,
         parallel=not args.sequential,
