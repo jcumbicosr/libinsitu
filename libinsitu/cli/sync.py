@@ -61,10 +61,11 @@ def prepare_properties(network, properties) :
 
     return properties
 
-def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
+def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
 
     """Return a dict of input_path => output """
-    res = dict()
+    urls = dict()
+    end_dates = dict()
 
     # No end date ? => until last month
     if not end_date :
@@ -79,19 +80,25 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
     if not start_date :
         start_date =  datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
 
+    # Start at begin of month
+    start_date = start_date.replace(day=1)
+
     # Loop on months
     def process_all_months(pattern) :
 
         # Start first of the month
         date = start_date.replace(day=1)
+
         while date <= end_date:
 
+            # Build placeholders for current date
             date_dict = date_placeholders(date)
 
+            # format input URL
             url = pattern.format(**properties, **date_dict)
 
             if '*' in path_pattern :
-                # Wildcard in output file pattern ? take the end of the url and filename
+                # Wildcard in output file pattern ? take the end of the url as filename
                 path = os.path.basename(url)
             else:
                 # Format output file pattern
@@ -102,12 +109,19 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
             if "!" in path :
                 path  = path.split("!")[0]
 
-            res[url] = path
+            urls[url] = path
 
+            # Next date
             date += ONE_MONTH
 
+            # Save it at the last date for this URL
+            if not url in end_dates or date > end_dates[url] :
+                end_dates[url] = date
+
+
     if "[" in url_pattern :
-        # There is an alterantibe [one,two] in the pattern
+
+        # There is an alternative [one,two] in the pattern
         reg = re.compile(r'.*(\[.*\]).*')
         match = reg.match(url_pattern)
         options = match.group(1).replace("[", "").replace("]", "").split(",")
@@ -121,24 +135,32 @@ def list_downloads(properties, url_pattern, path_pattern, start_date=None, end_d
             process_all_months(pattern)
 
     else :
+        # No "[one,two]" in url pattern : simple case
         process_all_months(url_pattern)
 
-    return res
+    return urls, end_dates
 
 def zip_file(inf, outf) :
     with open(inf, 'rb') as f_in:
         with gzip.open(outf, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
 
-def more_recent(path, url) :
-    """ Compare last-modified http header with local modification date. Return true if local file is more recent """
+def file_mtime(path) :
+    """Get modification time of a file"""
+    return datetime.fromtimestamp(os.path.getmtime(path))
+
+def utc(dt) :
+    return dt.astimezone(pytz.utc).replace(tzinfo=None)
+
+def modified_time(url) :
+    """Get last-modified from header"""
     headers = requests.head(url).headers
-    url_date = parsedate_to_datetime(headers["last-modified"])
-    local_date = datetime.fromtimestamp(os.path.getmtime(path)).replace(tzinfo=pytz.utc)
-    return local_date > url_date
+    return utc(parsedate_to_datetime(headers["last-modified"]))
 
 
 def ftp_get(url, out_path, dry_run=False) :
+    """Sync FTP to out_path"""
+
     url = url.replace("ftp://", "")
     domain, uri = url.split("/", 1)
     user=None
@@ -163,13 +185,13 @@ def ftp_get(url, out_path, dry_run=False) :
         dest=out_path,
         dry_run="" if not dry_run else "--dry-run")
 
-    #print(ftp_command)
-    subprocess.run(["lftp", "-c", ftp_command], check=True)
+    # Call lftp
+    subprocess.run(
+        ["lftp", "-c", ftp_command],
+        check=True)
 
 
-
-
-def http_get(url, out_path, check_time=False, dry_run=False, compress=False) :
+def http_get(url, end_date, out_path, check_time=False, dry_run=False, compress=False) :
 
     with LogContext(file=out_path), IgnoreAndLogExceptions():
 
@@ -178,20 +200,27 @@ def http_get(url, out_path, check_time=False, dry_run=False, compress=False) :
             if os.path.exists(path):
 
                 if check_time:
-                    if more_recent(path, url):
+
+                    # Check modification date HTTP header
+                    if file_mtime(path) > modified_time(url):
                         info("Local file %s is more recent than remote URL %s. Skipping" % (path, url))
                         return
                     else:
                         warning("Remote url %s is more recent than local file URL %s" % (url, path))
 
+                elif end_date is not None and end_date > file_mtime(path) :
+                    info("File is present but its modification time (%s) is before potential end date of data (%s). Retrying" % (file_mtime(path), end_date))
+
                 else:
                     info("File %s is already present. Skipping", path)
                     return
 
+        # Create folders
         folder = os.path.dirname(out_path)
         if not os.path.exists(folder) and not dry_run:
             os.makedirs(folder)
 
+        # Do download
         with NamedTemporaryFile() as tmpFile:
 
             if dry_run:
@@ -217,32 +246,37 @@ def http_get(url, out_path, check_time=False, dry_run=False, compress=False) :
             if compress:
                 zip_file(tmpFile.name, out_path)
             else:
-                shutil.copy(tmpFile.name, out_path)
+                if path.getsize(tmpFile.name) == path.getsize(out_path) :
+                    info("Files have same size : considered identical. Do not update")
+                else:
+                    shutil.copy(tmpFile.name, out_path)
 
 
-def do_download(url_paths, out, dry_run=False, compress=False, parallel=True, check_time=False) :
+def do_download(
+        url_paths, url_end_dates,
+        out,
+        dry_run=False, compress=False, parallel=True, check_time=False) :
 
-    def process_one(args):
+    def process_one_path(args):
+
         url, path = args
-
+        end_date = url_end_dates.get(url, None)
         out_path = os.path.join(out, path)
 
         if url.startswith("http") :
-            http_get(url, out_path, check_time=check_time, dry_run=dry_run, compress=compress)
+            http_get(url, end_date, out_path, check_time=check_time, dry_run=dry_run, compress=compress)
         elif url.startswith("ftp") :
             ftp_get(url, out_path, dry_run=dry_run)
         else:
             raise Exception("Unsupported protocol : %s" % url)
 
-
-
     # Parallel execution : wait for all executions to finish
     if parallel :
         with ThreadPoolExecutor(max_workers=NB_WORKERS) as executor:
-            executor.map(process_one, url_paths.items())
+            executor.map(process_one_path, url_paths.items())
     else:
         for args in url_paths.items() :
-            process_one(args)
+            process_one_path(args)
 
 
 def parse_date(s):
@@ -251,15 +285,23 @@ def parse_date(s):
 def http_list(network, stations_info, url_pattern, path_pattern, start_date, end_date) :
 
     url_paths = dict()
+    url_end_dates = dict()
+
     for id, properties in stations_info.items():
 
         properties = prepare_properties(network, properties)
 
         with LogContext(network=network, station_id=id):
 
-            url_paths.update(list_downloads(properties, url_pattern, path_pattern, start_date, end_date))
+            paths, end_dates = list_urls_for_one_station(
+                properties,
+                url_pattern, path_pattern,
+                start_date, end_date)
 
-    return url_paths
+            url_paths.update(paths)
+            url_end_dates.update(end_dates)
+
+    return url_paths, url_end_dates
 
 def http_json_list(url_pattern) :
 
@@ -320,10 +362,17 @@ def main() :
     if not url_pattern:
         raise Exception("'SourceURL' not defined for network %s" % args.network)
 
+
+    url_end_dates = dict()
+
     if "+json" in url_pattern :
+        # Use http+json parsing
         url_paths = http_json_list(url_pattern=url_pattern)
+
     elif url_pattern.startswith("http") :
-        url_paths = http_list(
+
+        # Use http syncing
+        url_paths, url_end_dates = http_list(
             network=args.network,
             stations_info=stations_info,
             url_pattern=url_pattern,
@@ -332,6 +381,7 @@ def main() :
             end_date=args.end_date)
     elif url_pattern.startswith("ftp") :
 
+        # Use FTP
         url_paths = ftp_list(
             network=args.network,
             stations_info=stations_info,
@@ -341,7 +391,8 @@ def main() :
         raise Exception("Unsupported URL : %s" % url_pattern)
 
     do_download(
-        url_paths=url_paths,
+        url_paths = url_paths,
+        url_end_dates = url_end_dates,
         out=args.out_folder,
         dry_run=args.dry_run,
         compress=compress,
