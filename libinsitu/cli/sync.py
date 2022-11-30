@@ -30,6 +30,7 @@ ERROR_SUFFIX = ".error"
 EMPTY_SUFFIX = ".empty"
 MISSING_SUFFIX = ".missing"
 ONE_MONTH = relativedelta(months=1)
+ONE_YEAR = relativedelta(years=1)
 NB_WORKERS = 10
 EMPTY_LIMIT = 50
 
@@ -61,6 +62,16 @@ def prepare_properties(network, properties) :
 
     return properties
 
+def get_pattern_period(path_pattern) :
+    """Check if pattern is 'monthly' or 'yearly"""
+    placeholders = re.findall(r"{(\w*)}", path_pattern)
+    if "MM" in placeholders :
+        return "monthly"
+    elif "YYYY" in placeholders :
+        return "yearly"
+    else:
+        raise("No time pattern found in %s" % path_pattern)
+
 def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
 
     """Return a dict of input_path => output """
@@ -73,15 +84,22 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
         if end_date_str :
             end_date = datetime.strptime(end_date_str, DATE_FORMAT)
         else:
-            # One month behin, to prevent partial data
-            end_date = datetime.now() + relativedelta(days=-32)
+            # End date is now
+            end_date = datetime.now()
 
     # By default, start of station
     if not start_date :
         start_date =  datetime.strptime(properties["Station_StartDate"], DATE_FORMAT)
 
-    # Start at begin of month
-    start_date = start_date.replace(day=1)
+    period = get_pattern_period(path_pattern)
+
+    # Start at begin of period (month or year)
+    if period == "monthly" :
+        start_date = start_date.replace(day=1)
+    elif period == "yearly":
+        start_date = start_date.replace(month=1, day=1)
+    else:
+        raise Exception("Unsupported period : %s" % period)
 
     # Loop on months
     def process_all_months(pattern) :
@@ -112,7 +130,12 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
             urls[url] = path
 
             # Next date
-            date += ONE_MONTH
+            if period == "monthly" :
+                date += ONE_MONTH
+            elif period == "yearly" :
+                date += ONE_YEAR
+            else:
+                raise Exception("Unsupported period : %s" % period)
 
             # Save it at the last date for this URL
             if not url in end_dates or date > end_dates[url] :
@@ -246,8 +269,10 @@ def http_get(url, end_date, out_path, check_time=False, dry_run=False, compress=
             if compress:
                 zip_file(tmpFile.name, out_path)
             else:
-                if path.getsize(tmpFile.name) == path.getsize(out_path) :
-                    info("Files have same size : considered identical. Do not update")
+
+                # File exists with same size ? => Skipping
+                if os.path.exists(out_path) and os.path.getsize(tmpFile.name) == os.path.getsize(out_path) :
+                    info("Files have same size (%s) : considered identical. Do not update" % out_path)
                 else:
                     shutil.copy(tmpFile.name, out_path)
 
