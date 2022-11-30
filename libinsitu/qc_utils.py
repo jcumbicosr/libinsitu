@@ -394,7 +394,7 @@ def SolarRadVisualControl(
     BSRN_ERL_Ks = [[1.2, 1.2, 50], [0.95, 0.2, 10], [0.75, 1.2, 30]]
     for jj in range(3):
 
-        print(str(dt.datetime.now()) + ": --> QC: BSRN 1C - " + PrmYi[jj])
+        info(str(dt.datetime.now()) + ": --> QC: BSRN 1C - " + PrmYi[jj])
 
         ax21 = plt.subplot(gs2[jj, 2])
         plt.text(30, 1475, 'BSRN 1C ' + PrmYi[jj] + ": {:.2f}% / {:.2f}%".format(Stat_Test['T1C_ppl_' + PrmYi[jj]],
@@ -446,7 +446,7 @@ def SolarRadVisualControl(
     # % % Part5: BSRN 2C, 3C,SERI-QC tests
     # -> BSRN 2C
     # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
     ax22 = plt.subplot(gs2[0, 3])
     plt.text(12, 1.3, 'BSRN-2C' + ": {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']))
     if ShowFlag == -1:
@@ -473,7 +473,7 @@ def SolarRadVisualControl(
     # =====================================================================
     # % % -> SERI-Kn
     # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
+    info(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
     ax24 = plt.subplot(gs2[1, 3])
     plt.text(0.025, 0.92, 'SERI-kn' + ": {:.2f}% ".format(Stat_Test['T2C_seri_knkt']))
     if ShowFlag == -1:
@@ -496,7 +496,7 @@ def SolarRadVisualControl(
     plt.ylim((0, 1.))
 
     # -> SERI-K
-    print(str(dt.datetime.now()) + ": --> QC: SERI-K ")
+    info(str(dt.datetime.now()) + ": --> QC: SERI-K ")
     ax26 = plt.subplot(gs2[2, 3])
     plt.text(0.025, 1.3, 'SERI-K' + ": {:.2f}% ".format(Stat_Test['T2C_seri_kkt']))
     if ShowFlag == -1:
@@ -518,7 +518,7 @@ def SolarRadVisualControl(
     plt.xlim((0, 1.5))
     plt.ylim((0, 1.45))
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
     ax27 = plt.subplot(gs2[3, 2])
     plt.text(30, 1300, 'BSRN closure' + ": {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
@@ -543,7 +543,7 @@ def SolarRadVisualControl(
     plt.ylim((0, 1400))
     plt.xlim((0, 1400))
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
     ax28 = plt.subplot(gs2[3, 3])
     plt.text(8, 0.52, "BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
@@ -572,7 +572,7 @@ def SolarRadVisualControl(
     cbar.set_ticks([])
 
     # **************************** Third column *******************************
-    print(str(dt.datetime.now()) + ": --> QC: print general infos")
+    info(str(dt.datetime.now()) + ": --> QC: print general infos")
 
     Y0 = 0.90
     dY = 0.15
@@ -611,7 +611,7 @@ def SolarRadVisualControl(
     # ax2XXX .imshow(img)
     # plt.axis('off')
 
-    print(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
+    info(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
     gs3b = GridSpec(9, 9)
     gs3b.update(left=0.075, right=0.98, bottom=0.001, top=0.97, hspace=0.025, wspace=0.00)
 
@@ -674,11 +674,11 @@ def SolarRadVisualControl(
 
     gs3.update(left=0.0, right=0.99, bottom=0.05, top=0.875, hspace=0.1, wspace=0.2)
 
-    # print(str(dt.datetime.now())+": --> QC: planarity check")
+    # info(str(dt.datetime.now())+": --> QC: planarity check")
 
     if cams_df is not None :
 
-        print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
+        info(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
         # NB: the calculation can be optimized to run faster
 
         # Aliases
@@ -742,7 +742,7 @@ def SolarRadVisualControl(
 
 
 
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
+    info(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
     idxSC = (GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
     vSEA =  GAMMA_S0[idxSC]
     vSAA = ALPHA_S[idxSC]
@@ -771,7 +771,7 @@ def SolarRadVisualControl(
     plt.ylim((0, SELMax))
     plt.colorbar(im32, label='GHI/TOA (-)')
 
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
+    info(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
     ax33 = plt.subplot(gs3[shadow_row+2:shadow_row+4, 2])
     vKN = DNI[idxSC] / TOANI[idxSC]
     idx_sort = np.argsort(vKN.values)
