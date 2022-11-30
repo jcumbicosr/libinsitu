@@ -231,7 +231,13 @@ def SolarRadVisualControl(
         flag_df,
         cams_df,
         horizons,
+        latitude,
+        longitude,
+        elevation,
+        station_id="-",
+        station_name="-",
         ShowFlag=-1) :
+
     """
      ShowFlag=-1     : only show non-flagged data
      ShowFlag=0      : show all data without filtering nor tagging flagged data
@@ -245,14 +251,9 @@ def SolarRadVisualControl(
         "vers": get_version()}
 
     # Get meta data
-    latitude = meas_df.attrs[LATITUDE_VAR]
-    longitude = meas_df.attrs[LONGITUDE_VAR]
-    elevation = meas_df.attrs[ELEVATION_VAR]
     climate = _get_meta(meas_df, CLIMATE_ATTRS)
     country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
     source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
-    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
-    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
     # Aliases
     index = meas_df.index
@@ -580,7 +581,7 @@ def SolarRadVisualControl(
 
     ax01 = plt.subplot(gs0[0, 8])
     ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
+    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station_name, size=FONT_SIZE)  # 'ID/ Station'
     ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
@@ -933,6 +934,10 @@ def cleanup_data(df, freq=None):
     if freq is None:
         freq = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
+    # Not UTC ?
+    if df.index.tz is not None :
+        df.index = df.index.tz_convert('UTC').tz_localize(None)
+
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
     for varname in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
@@ -963,8 +968,6 @@ def sun_position(lat, lon, alt, start_time, end_time, freq="60S") :
         alt = 0
 
     times = pd.date_range(start_time, end_time, freq=freq)
-
-    print(times)
 
     sun_rise = sg2.sun_rise(
         [[lon, lat, alt]],
@@ -1112,6 +1115,8 @@ def visual_qc(
         latitude = None,
         longitude = None,
         elevation = None,
+        station_id = None,
+        station_name = None,
         with_horizons = False,
         with_mc_clear = False):
     """
@@ -1122,6 +1127,8 @@ def visual_qc(
     :param latitude: Latitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
     :param longitude: Longitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
     :param elevation: elevation of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Id of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Name of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
     :param with_horizons: True to compute horizons (requires network)
     :param with_mc_clear: True to compute mc_clear from SODA (requires SODA credentials and network access)
     """
@@ -1131,10 +1138,12 @@ def visual_qc(
     # Clean data
     df = cleanup_data(df, resolution_sec)
 
-    # Get meta data
+    # Get meta data from parameters or from attributes attached to the Dataframe
     lat = latitude if latitude else  float(df.attrs[LATITUDE_VAR])
     lon = longitude if longitude else float(df.attrs[LONGITUDE_VAR])
     alt = elevation if elevation else float(df.attrs[ELEVATION_VAR])
+    station_id = station_id if station_id else _get_meta(df, STATION_ID_ATTRS)
+    station_name = station_name if station_name else _get_meta(df, STATION_NAME_VAR)
 
     # Compute geom & theoretical irradiance
     sp_df = compute_sun_pos(df, lat, lon, alt)
@@ -1160,10 +1169,12 @@ def visual_qc(
 
     # Draw figures
     SolarRadVisualControl(
-        df,
-        sp_df,
-        flags_df,
-        cams_df,
-        horizons,
+        meas_df=df,
+        sp_df=sp_df,
+        flag_df=flags_df,
+        cams_df=cams_df,
+        horizons=horizons,
+        latitude=lat, longitude=lon, elevation=alt,
+        station_id=station_id, station_name=station_name,
         ShowFlag=0)
 
