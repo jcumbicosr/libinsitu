@@ -964,6 +964,8 @@ def sun_position(lat, lon, alt, start_time, end_time, freq="60S") :
 
     times = pd.date_range(start_time, end_time, freq=freq)
 
+    print(times)
+
     sun_rise = sg2.sun_rise(
         [[lon, lat, alt]],
         times)
@@ -1093,13 +1095,8 @@ def write_flags(ncfile, flags_df) :
 
     qc_var[time_idx] = out_masks
 
-def compute_sun_pos(df) :
+def compute_sun_pos(df, lat, lon, alt) :
     """Call sg2 on data"""
-
-    # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
 
     # Compute geom & theoretical irradiance
     sp_df = sun_position(
@@ -1110,13 +1107,23 @@ def compute_sun_pos(df) :
 
     return sp_df
 
-def visual_qc(df, with_horizons=False, with_mc_clear=False):
+def visual_qc(
+        df,
+        latitude = None,
+        longitude = None,
+        elevation = None,
+        with_horizons = False,
+        with_mc_clear = False):
     """
     Generates matplotlib graphs for visual QC
 
-    :param df: Dataframe of input irradiance (GHI, DHI, BNI), obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param df: Dataframe of input irradiance. It should have a time index and 3 columns : GHI, DHI, BNI).
+               This dataframe can typically be obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param latitude: Latitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param longitude: Longitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param elevation: elevation of the station. Can also be passed as meta data (.attrs) of the Dataframe
     :param with_horizons: True to compute horizons (requires network)
-    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network)
+    :param with_mc_clear: True to compute mc_clear from SODA (requires SODA credentials and network access)
     """
     # Resample to the minute to produce graph
     resolution_sec = 60
@@ -1125,12 +1132,12 @@ def visual_qc(df, with_horizons=False, with_mc_clear=False):
     df = cleanup_data(df, resolution_sec)
 
     # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
+    lat = latitude if latitude else  float(df.attrs[LATITUDE_VAR])
+    lon = longitude if longitude else float(df.attrs[LONGITUDE_VAR])
+    alt = elevation if elevation else float(df.attrs[ELEVATION_VAR])
 
     # Compute geom & theoretical irradiance
-    sp_df = compute_sun_pos(df)
+    sp_df = compute_sun_pos(df, lat, lon, alt)
 
     # Compute QC flags
     flags_df = flagData(df, sp_df)
