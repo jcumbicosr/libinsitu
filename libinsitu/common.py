@@ -24,7 +24,7 @@ from libinsitu.log import warning
 
 # Name of dimensions and variables
 TIME_DIM = 'time'
-TIME_VAR = "Time"
+TIME_VAR = "time"
 GLOBAL_VAR = "GHI"
 DIFFUSE_VAR = "DHI"
 DIRECT_VAR = "BNI"
