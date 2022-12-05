@@ -13,4 +13,4 @@ upload:
 	twine upload -u oie-minesparistech dist/libinsitu*
 
 test:
-	PYTHONPATH=$(CURDIR) pytest libinsitu/test/unit_tests.py
+	PYTHONPATH=$(CURDIR) pytest libinsitu/test/*.py
