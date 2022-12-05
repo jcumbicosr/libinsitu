@@ -27,6 +27,7 @@ variables:
 	float elevation;
 		*:long_name = "Elevation above mean seal level" ;
 		*:standard_name = "height_above_mean_sea_level" ;
+		*:_CoordinateAxisType = "Z" ;
 		*:units = "m" ;
 		*:axis = "Z" ;
 
@@ -45,6 +46,7 @@ variables:
 		*:time_origin = "1970-01-01 00:00:00" ;
 		*:time_zone= "UTC"
 		*:abbreviation = "Date/Time" ;
+		*:_CoordinateAxisType = "Time" ;
 		*:axis = "T" ;
 		*:calendar = "gregorian" ;
 
