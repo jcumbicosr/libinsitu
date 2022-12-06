@@ -5,6 +5,7 @@ Created on Thu Jun 23 10:09:54 2022
 @author: y-m.saint-drenan
 """
 import os
+from enum import Enum
 from urllib.request import urlopen
 
 import pandas as pd
@@ -31,33 +32,7 @@ MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
 
-def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
 
-    info("plotting timeseries for %s" % label)
-
-    if ShowFlag == -1:
-        idxPlot = (TOA > 0) & (data.values > -50 & (QCfinal == 0))
-    else:
-        idxPlot = (TOA > 0) & (data.values > -50)
-
-    index = data.index
-    axe = gca()
-
-    axe.plot(
-        data.index[idxPlot],
-        data.values[idxPlot],
-        color='b',
-        alpha=0.8,
-        label='meas.',
-        lw=0.2)
-
-    plt.ylim((0, ymax))
-    plt.xlim((
-        index.values[0],
-        index.values[-1]))
-
-    axe.set_ylabel(label + " (W/m2)", size=8)
-    plt.setp(axe.get_xticklabels(), visible=False)
 
 
 def flagData(meas_df, sp_df):
@@ -367,6 +342,11 @@ def compute_sun_pos(df, lat, lon, alt) :
 
     return sp_df
 
+class ShowFlag(Enum):
+    HIDE="hide" # Hide data with errors
+    SHOW="show" # Show all data
+    FLAG="flag" # Flag errors in red
+
 def visual_qc(
         df,
         latitude = None,
@@ -375,7 +355,9 @@ def visual_qc(
         station_id = None,
         station_name = None,
         with_horizons = False,
-        with_mc_clear = False):
+        with_mc_clear = False,
+        show_flag=ShowFlag.SHOW):
+
     """
     Generates matplotlib graphs for visual QC
 
@@ -425,6 +407,17 @@ def visual_qc(
     else:
         cams_df = None
 
+    # Transform flag
+    # TODO : refactor main_layout to use Enum too
+    flag = {
+        ShowFlag.SHOW : 0,
+        ShowFlag.HIDE : -1,
+        ShowFlag.FLAG : 1
+    }[show_flag]
+
+    # Statistics on QC flags
+    stat_test = qc_stats(df, sp_df, flags_df)
+
     # Draw figures
     main_layout(
         meas_df=df,
@@ -432,7 +425,8 @@ def visual_qc(
         flag_df=flags_df,
         cams_df=cams_df,
         horizons=horizons,
+        stat_test=stat_test,
         latitude=lat, longitude=lon, elevation=alt,
         station_id=station_id, station_name=station_name,
-        ShowFlag=0)
+        ShowFlag=flag)
 

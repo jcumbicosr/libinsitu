@@ -4,8 +4,7 @@ from matplotlib.gridspec import GridSpec
 
 from libinsitu import info
 from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap, MC_CLEAR_COLOR, plot_bsrn_1c, bsrn_2c, \
-    seri_kn, seri_k, bsrn_closure, bsrn_closure_ratio, print_info, histo_qc, horizontality_graph, shadow_analysis
-from libinsitu.qc.qc_utils import plot_timeseries, qc_stats
+    seri_kn, seri_k, bsrn_closure, bsrn_closure_ratio, print_info, histo_qc, horizontality_graph, shadow_analysis, plot_timeseries
 
 
 def main_layout(
@@ -13,19 +12,26 @@ def main_layout(
         sp_df,
         flag_df,
         cams_df,
+        stat_test,
         horizons,
         latitude,
         longitude,
         elevation,
         station_id="-",
         station_name="-",
-        ShowFlag=-1) :
+        ShowFlag=-1):
 
     """
      ShowFlag=-1     : only show non-flagged data
      ShowFlag=0      : show all data without filtering nor tagging flagged data
      ShowFlag=1      : show all data and highlight flagged data in red
     """
+
+    if ShowFlag == -1:
+        # Hide all data with having at least one QC error
+        meas_df.loc[
+            flag_df.QCfinal != 0,
+            ["GHI", "DHI", "BNI"]] = np.nan
 
     # Aliases
     GHI = meas_df.GHI
@@ -63,7 +69,7 @@ def main_layout(
     # GHI
     def timeseries(row_idx, label, data, xmax):
         plt.subplot(grid[row_idx, 0])
-        plot_timeseries(label, data, TOA, xmax, ShowFlag, QCfinal)
+        plot_timeseries(label, data, TOA, xmax)
 
     timeseries(0, "GHI", GHI, 1400)
     timeseries(1, "DNI", DNI, 1400)
@@ -144,7 +150,7 @@ def main_layout(
         bottom=0.1, top=0.98,
         hspace=0.25, wspace=0.25)
 
-    Stat_Test = qc_stats(meas_df, sp_df, flag_df)
+
 
     def bsrn_1c(row, component, component_name, limits) :
         plt.subplot(gs2[row, 2])
@@ -152,12 +158,10 @@ def main_layout(
             TOA=TOA,
             component=component,
             component_name=component_name,
-            ShowFlag=ShowFlag,
             TOANI=TOANI,
             GAMMA_S0=GAMMA_S0,
-            QCfinal=QCfinal,
             limits=limits,
-            Stat_Test=Stat_Test)
+            stat_test=stat_test)
 
     bsrn_1c(0, GHI, "GHI", [[1.5, 1.2, 100], [1.2, 1.2, 50]])
     bsrn_1c(1, DNI, "DNI", [[1, 0, 0], [0.95, 0.2, 10]])
@@ -166,23 +170,23 @@ def main_layout(
 
     # BSRN 2C
     plt.subplot(gs2[0, 3])
-    bsrn_2c(GHI, SZA, flag_df.K, Stat_Test, ShowFlag, QCfinal)
+    bsrn_2c(GHI, SZA, flag_df.K, stat_test)
 
     # SERI-Kn
     plt.subplot(gs2[1, 3])
-    seri_kn(DNI, GHI, SZA, flag_df.KT, flag_df.Kn, Stat_Test, ShowFlag, QCfinal)
+    seri_kn(DNI, GHI, SZA, flag_df.KT, flag_df.Kn, stat_test)
 
     # SERI-K
     plt.subplot(gs2[2, 3])
-    seri_k(DIF, GHI, SZA, flag_df.KT, flag_df.K, ShowFlag, QCfinal, Stat_Test)
+    seri_k(DIF, GHI, SZA, flag_df.KT, flag_df.K, stat_test)
 
     # BSRN Closure
     plt.subplot(gs2[3, 2])
-    bsrn_closure(GHI, DIF, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal)
+    bsrn_closure(GHI, DIF, SZA, GHI_est, stat_test)
 
     # BRSN Closure ratio
     plt.subplot(gs2[3, 3])
-    im = bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal)
+    im = bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, stat_test)
 
     # Color legend
     cb_ax = fig.add_axes([0.38, 0.04, 0.28, 0.01])
@@ -235,14 +239,14 @@ def main_layout(
         info("Horizontality test")
         plt.subplot(gs3[3:5, 2])
 
-        horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latitude, ShowFlag)
+        horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, latitude)
 
 
     # -- Shadow analysis
     info("Shadow analysis (GHI)")
 
     plt.subplot(gs3[shadow_row:shadow_row+2, 2])
-    shadow_analysis('GHI/TOA (-)', GHI, TOA, 0.85, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal)
+    shadow_analysis('GHI/TOA (-)', GHI, TOA, 0.85, GAMMA_S0, ALPHA_S, latitude, horizons)
 
     plt.subplot(gs3[shadow_row + 2:shadow_row + 4, 2])
-    shadow_analysis('DNI/TOANI (-)', DNI, TOANI, 0.65, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal)
+    shadow_analysis('DNI/TOANI (-)', DNI, TOANI, 0.65, GAMMA_S0, ALPHA_S, latitude, horizons)

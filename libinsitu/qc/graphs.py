@@ -34,6 +34,31 @@ def conv2(v1, v2, m, mode='same'):
     tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
     return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
 
+def plot_timeseries(label, data, TOA, ymax) :
+
+    info("plotting timeseries for %s" % label)
+
+    idxPlot = (TOA > 0) & (data.values > -50)
+
+    index = data.index
+    axe = gca()
+
+    axe.plot(
+        data.index[idxPlot],
+        data.values[idxPlot],
+        color='b',
+        alpha=0.8,
+        label='meas.',
+        lw=0.2)
+
+    plt.ylim((0, ymax))
+    plt.xlim((
+        index.values[0],
+        index.values[-1]))
+
+    axe.set_ylabel(label + " (W/m2)", size=8)
+    plt.setp(axe.get_xticklabels(), visible=False)
+
 def plot_heatmap_timeseries(label, data, sunrise, sunset, cmax, longitude, ShowFlag, QCFinal):
 
     info("plotting heatmap timeseries for %s " % label)
@@ -96,11 +121,7 @@ def plot_ratio_heatmap(ratios, filter, h1, h2, TOA, ylimit, title, y_label, Show
 
     index = ratios.index
 
-    if ShowFlag == -1:
-        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0) & (
-                QCfinal == 0)
-    else:
-        Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
+    Filteridx = filter & (ratios.values > 0) & (ratios.values < 100) & (TOA > 0)
 
     x = mdates.date2num(ratios.index[Filteridx])
     y = ratios.values[Filteridx]
@@ -195,17 +216,14 @@ def generic_qc_graph(x, y, xlabel, ylabel, xrange, yrange, legend, lines, clim_r
 
     return im
 
-def plot_bsrn_1c(TOA, component, component_name, Stat_Test, limits, TOANI, GAMMA_S0, ShowFlag, QCfinal) :
+def plot_bsrn_1c(TOA, component, component_name, stat_test, limits, TOANI, GAMMA_S0) :
 
     legend= 'BSRN 1C ' + component_name + ": {:.2f}% / {:.2f}%".format(
-        Stat_Test['T1C_ppl_' + component_name],
-        Stat_Test['T1C_erl_' + component_name])
+        stat_test['T1C_ppl_' + component_name],
+        stat_test['T1C_erl_' + component_name])
 
     # XXX should be done beforehand
     filter = (TOA > 0) & (component > 0) & (component < 2000) & (TOA > 0) & (TOA < 2000)
-
-    if ShowFlag == -1:
-        filter = filter & (QCfinal == 0)
 
     x = TOA[filter]
     y = component[filter]
@@ -241,64 +259,53 @@ def plot_bsrn_1c(TOA, component, component_name, Stat_Test, limits, TOANI, GAMMA
     #             markersize=1, alpha=0.5, label='erl')
     #    plt.legend(loc='lower right')
 
-def bsrn_2c(GHI, SZA, K, Stat_Test, ShowFlag, QCfinal):
+def bsrn_2c(GHI, SZA, K, stat_test):
 
     filter = (GHI > 50) & (SZA < 90)
-
-    if ShowFlag == -1:
-        filter = filter & (QCfinal == 0)
 
     line = [
         [0, 75, 75, 100],
         [1.05, 1.05, 1.1, 1.1]]
 
     return generic_qc_graph(
-        legend="BSRN-2C : {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']),
+        legend="BSRN-2C : {:.2f}% ".format(stat_test['T2C_bsrn_kt']),
         x=SZA[filter], xlabel='Solar zenith angle (°)', xrange=[10, 95],
         y=K[filter], ylabel='DIF/GHI (-)', yrange = [0, 1.25],
         lines=[line],
         clim_ratio=0.8)
 
-def seri_kn(DNI, GHI, SZA, KT, Kn, Stat_Test, ShowFlag, QCfinal) :
+def seri_kn(DNI, GHI, SZA, KT, Kn, stat_test) :
 
     filter = (DNI > 0) & (GHI > 0) & (SZA < 90)
-    if ShowFlag == -1 :
-        filter = filter & (QCfinal == 0)
 
     line = [
         [0, 0.8, 1.35, 1.35],
         [0, 0.8, 0.8, 0]]
 
     return generic_qc_graph(
-        legend = "SERI-kn : {:.2f}% ".format(Stat_Test['T2C_seri_knkt']),
+        legend = "SERI-kn : {:.2f}% ".format(stat_test['T2C_seri_knkt']),
         x=KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
         y=Kn[filter], ylabel='DNI/TOANI (-)', yrange=(0, 0.8),
         lines=[line], clim_ratio=0.1)
 
-def seri_k(DIF, GHI, SZA, KT, K, ShowFlag, QCfinal, Stat_Test) :
+def seri_k(DIF, GHI, SZA, KT, K, stat_test) :
 
     filter = (DIF > 0) & (GHI > 0) & (SZA < 90)
-
-    if ShowFlag == -1:
-        filter = filter & (QCfinal == 0)
 
     line = (
         [0, 0.6, 0.6, 1.35, 1.35],
         [1.1, 1.1, 0.95, 0.95, 0])
 
     return generic_qc_graph(
-        legend="SERI-K : {:.2f}% ".format(Stat_Test['T2C_seri_kkt']),
+        legend="SERI-K : {:.2f}% ".format(stat_test['T2C_seri_kkt']),
         x=KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
         y=K[filter], ylabel='DIF/GHI (-)', yrange=(0, 1.4),
         lines=[line],
         clim_ratio=0.1)
 
-def bsrn_closure(GHI, DIF, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
+def bsrn_closure(GHI, DIF, SZA, GHI_est, stat_test) :
 
     filter = (DIF > 0) & (GHI > 50) & (SZA < 90)
-
-    if ShowFlag == -1:
-        filter = filter & (QCfinal == 0)
 
     # 4 diagonal lines
     lines = []
@@ -309,24 +316,22 @@ def bsrn_closure(GHI, DIF, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
         ])
 
     return generic_qc_graph(
-        legend="BSRN closure : {:.2f}% ".format(Stat_Test['T3C_bsrn']),
+        legend="BSRN closure : {:.2f}% ".format(stat_test['T3C_bsrn']),
         x=GHI[filter], xlabel='GHI (W/m2)', xrange=(0, 1400),
         y=GHI_est[filter], ylabel='DIF+DNI*CSZA (W/m2)', yrange=(0, 1300),
         lines=lines,
         clim_ratio=0.1)
 
-def bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
+def bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, stat_test) :
 
     filter = (DIF > 0) & (GHI > 50) & (SZA < 90)
-    if ShowFlag == -1:
-        filter = filter & (QCfinal == 0)
 
     line = [
         [10, 75, 75, 90, 90, 75, 75, 10],
         [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92]]
 
     return generic_qc_graph(
-        legend="BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']),
+        legend="BSRN closure: {:.2f}% ".format(stat_test['T3C_bsrn']),
         x=SZA[filter], xlabel='Solar zenith angle (°)', xrange=(0, 100),
         y=GHI[filter] / GHI_est[filter], ylabel='GHI/(DIF+DNI*CSZA) (-)', yrange=(0.6, 1.2),
         lines=[line],
@@ -395,7 +400,6 @@ def print_info(meas_df, GHI, DIF, DNI, TOA, latitude, longitude, elevation, stat
 
     ax03 = plt.subplot(gs0[0, 11])
     ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FONT_SIZE)
-    # ax03.text(0.01,Y0-2*dY,'# Flagged: {0:.1f}% '.format(Stat_FlaggedQCFinal),size=FONT_SIZE)
     ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FONT_SIZE)
     ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
     ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
@@ -425,7 +429,7 @@ def histo_qc(comp, x, x_label, SZA, QCfinal, legend_pos=None, y_label=False) :
     axe.set_xlabel(x_label)
     axe.set_yticks([])
 
-def horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latitude, ShowFlag) :
+def horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, latitude) :
 
     axe = gca()
 
@@ -436,12 +440,10 @@ def horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latit
     isClearSky = detect_clearsky(GHI, CLEAR_SKY_GHI)
 
     YYL = [0.8, 1.2]
-    if ShowFlag == -1:
-        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
+
+    idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
                   (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-    else:
-        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
-                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+
     vSAA = ALPHA_S.values
     if latitude < 0:
         vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
@@ -488,11 +490,11 @@ def horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latit
 
     plt.colorbar(im00, label='point density (-)')
 
-def shadow_analysis(label, comp, ref, cmax, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal) :
+def shadow_analysis(label, comp, ref, cmax, GAMMA_S0, ALPHA_S, latitude, horizons) :
 
     axe = gca()
 
-    idxSC = (GAMMA_S0 > 1 / 50) & (QCfinal == 0)
+    idxSC = (GAMMA_S0 > 1 / 50)
     vSEA = GAMMA_S0[idxSC]
     vSAA = ALPHA_S[idxSC]
     if latitude < 0:
