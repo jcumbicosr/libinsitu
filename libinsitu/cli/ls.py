@@ -3,12 +3,12 @@ import csv
 import json
 import os, sys
 
-from requests import Session
 import argparse
 from rich.console import Console
 from rich.table import Table
 
 from libinsitu.catalog import *
+from libinsitu.log import console
 
 
 def printCatalog(catalog, rec=False) :
@@ -88,6 +88,9 @@ def output_csv(catalog) :
 
 
 def main():
+
+    # Put logs to stderr
+    console.file = sys.stderr
 
     parser = argparse.ArgumentParser(description='Browse a TDS (THREDDS) catalog')
     parser.add_argument('url', metavar='<http://host/catalog.xml>', type=str, help='Start URL')
