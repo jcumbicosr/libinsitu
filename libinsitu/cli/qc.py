@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import LogContext
-from libinsitu.qc.layout import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
+from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
 
 
 def parser() :

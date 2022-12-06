@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from libinsitu import info
-from libinsitu.qc.base_graphs import BaseMatplotlibGraphs, MC_CLEAR_COLOR
+from libinsitu.qc.matplot.graphs import BaseMatplotlibGraphs, MC_CLEAR_COLOR
 
 
 class MaplotLibGraphs(BaseMatplotlibGraphs):

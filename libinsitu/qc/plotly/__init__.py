@@ -1,14 +1,8 @@
 from plotly.subplots import make_subplots
-import plotly.graph_objects as go
 import plotly.express as px
-from libinsitu.qc.matplotlib import MaplotLibGraphs
-import datetime
-import pandas as pd
-import numpy as np
-import xarray as xr
+from libinsitu.qc.matplot import MaplotLibGraphs
 import datashader as ds
 import datashader.transfer_functions as tf
-from collections import OrderedDict
 
 class PlotlyGraphs(MaplotLibGraphs) :
 
