@@ -13,16 +13,19 @@ import pvlib
 import sg2
 from appdirs import user_cache_dir
 from diskcache import Cache
+from pandas import DataFrame
 
 from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
     STATION_ID_ATTRS, STATION_NAME_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, \
     GLOBAL_TIME_RESOLUTION_ATTR
-from libinsitu.log import warning
-from libinsitu.qc.graphs import *
-from libinsitu.qc.graphs import _get_meta
-from libinsitu.qc.main_layout import main_layout
+from libinsitu.log import warning, info
+import numpy as np
+
+from libinsitu.qc.matplotlib import MaplotLibGraphs
+from libinsitu.qc.matplotlib.graphs import _get_meta
+from libinsitu.qc.plotly import PlotlyGraphs
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -31,8 +34,6 @@ MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
-
-
 
 
 def flagData(meas_df, sp_df):
@@ -356,7 +357,8 @@ def visual_qc(
         station_name = None,
         with_horizons = False,
         with_mc_clear = False,
-        show_flag=ShowFlag.SHOW):
+        show_flag=ShowFlag.SHOW,
+        engine="matplotlib"):
 
     """
     Generates matplotlib graphs for visual QC
@@ -418,8 +420,14 @@ def visual_qc(
     # Statistics on QC flags
     stat_test = qc_stats(df, sp_df, flags_df)
 
+    # Pick class depending on engine
+    Clazz = {
+        "matplotlib" : MaplotLibGraphs,
+        "plotly" : PlotlyGraphs
+    }[engine]
+
     # Draw figures
-    main_layout(
+    graph = Clazz(
         meas_df=df,
         sp_df=sp_df,
         flag_df=flags_df,
@@ -428,5 +436,7 @@ def visual_qc(
         stat_test=stat_test,
         latitude=lat, longitude=lon, elevation=alt,
         station_id=station_id, station_name=station_name,
-        ShowFlag=flag)
+        show_flag=flag)
+
+    return graph.main_layout()
 
