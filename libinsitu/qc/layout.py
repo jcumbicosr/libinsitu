@@ -9,7 +9,8 @@ from urllib.request import urlopen
 import sg2
 from appdirs import user_cache_dir
 
-from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
+from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
+    STATION_ID_ATTRS, STATION_NAME_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning
 from libinsitu.qc.graphs import *
@@ -25,7 +26,7 @@ import pvlib
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
 from diskcache import Cache
 
-from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap, histo_qc
+from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap, histo_qc, _get_meta
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -70,16 +71,17 @@ def SolarRadVisualControl(
         flag_df,
         cams_df,
         horizons,
+        latitude,
+        longitude,
+        elevation,
+        station_id="-",
+        station_name="-",
         ShowFlag=-1) :
     """
      ShowFlag=-1     : only show non-flagged data
      ShowFlag=0      : show all data without filtering nor tagging flagged data
      ShowFlag=1      : show all data and highlight flagged data in red
     """
-
-    # Get meta data
-    latitude = meas_df.attrs[LATITUDE_VAR]
-    longitude = meas_df.attrs[LONGITUDE_VAR]
 
     # Aliases
     GHI = meas_df.GHI
@@ -246,7 +248,11 @@ def SolarRadVisualControl(
     # -- Third column
 
     # -- Text info
-    print_info(meas_df, GHI, DIF, DNI, TOA)
+    print_info(
+        meas_df,
+        GHI, DIF, DNI, TOA,
+        latitude, longitude, elevation,
+        station_id, station_name)
 
     # -- QC histograms
     info("QC: histograms of K, Kn & KT")
@@ -288,8 +294,8 @@ def SolarRadVisualControl(
         horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latitude, ShowFlag)
 
 
+    # -- Shadow analysis
     info("Shadow analysis (GHI)")
-
 
     plt.subplot(gs3[shadow_row:shadow_row+2, 2])
     shadow_analysis('GHI/TOA (-)', GHI, TOA, 0.85, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal)
@@ -428,6 +434,10 @@ def cleanup_data(df, freq=None):
     # Default resolution : take the one from the source
     if freq is None:
         freq = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
+
+    # Not UTC ?
+    if df.index.tz is not None:
+        df.index = df.index.tz_convert('UTC').tz_localize(None)
 
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
@@ -589,13 +599,8 @@ def write_flags(ncfile, flags_df) :
 
     qc_var[time_idx] = out_masks
 
-def compute_sun_pos(df) :
+def compute_sun_pos(df, lat, lon, alt) :
     """Call sg2 on data"""
-
-    # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
 
     # Compute geom & theoretical irradiance
     sp_df = sun_position(
@@ -606,30 +611,44 @@ def compute_sun_pos(df) :
 
     return sp_df
 
-def visual_qc(df, with_horizons=False, with_mc_clear=False):
+def visual_qc(
+        df,
+        latitude = None,
+        longitude = None,
+        elevation = None,
+        station_id = None,
+        station_name = None,
+        with_horizons = False,
+        with_mc_clear = False):
     """
     Generates matplotlib graphs for visual QC
 
-    :param df: Dataframe of input irradiance (GHI, DHI, BNI), obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param df: Dataframe of input irradiance. It should have a time index and 3 columns : GHI, DHI, BNI).
+               This dataframe can typically be obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param latitude: Latitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param longitude: Longitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param elevation: elevation of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Id of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Name of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
     :param with_horizons: True to compute horizons (requires network)
-    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network).
-      Requires to register to SODA (https://www.soda-pro.com/web-services/radiation/cams-radiation-service)
-      and provides email in CAMS_EMAIL env var
-
+    :param with_mc_clear: True to compute mc_clear from SODA (requires SODA credentials and network access)
     """
+
     # Resample to the minute to produce graph
     resolution_sec = 60
 
     # Clean data
     df = cleanup_data(df, resolution_sec)
 
-    # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
+    # Get meta data from parameters or from attributes attached to the Dataframe
+    lat = latitude if latitude else  float(df.attrs[LATITUDE_VAR])
+    lon = longitude if longitude else float(df.attrs[LONGITUDE_VAR])
+    alt = elevation if elevation else float(df.attrs[ELEVATION_VAR])
+    station_id = station_id if station_id else _get_meta(df, STATION_ID_ATTRS)
+    station_name = station_name if station_name else _get_meta(df, STATION_NAME_VAR)
 
     # Compute geom & theoretical irradiance
-    sp_df = compute_sun_pos(df)
+    sp_df = compute_sun_pos(df, lat , lon, alt)
 
     # Compute QC flags
     flags_df = flagData(df, sp_df)
@@ -652,10 +671,12 @@ def visual_qc(df, with_horizons=False, with_mc_clear=False):
 
     # Draw figures
     SolarRadVisualControl(
-        df,
-        sp_df,
-        flags_df,
-        cams_df,
-        horizons,
+        meas_df=df,
+        sp_df=sp_df,
+        flag_df=flags_df,
+        cams_df=cams_df,
+        horizons=horizons,
+        latitude=lat, longitude=lon, elevation=alt,
+        station_id=station_id, station_name=station_name,
         ShowFlag=0)
 

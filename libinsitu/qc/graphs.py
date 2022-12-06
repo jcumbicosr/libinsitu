@@ -7,13 +7,10 @@ from matplotlib.pyplot import gca
 from pandas import DataFrame
 from pvlib.clearsky import detect_clearsky
 
-from libinsitu import info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, \
-    NETWORK_NAME_ATTRS, STATION_ID_ATTRS, STATION_NAME_VAR
+from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS
 from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
-
-
 
 NB_MIN_IN_DAY = 24 * 60
 FONT_SIZE = 8
@@ -349,21 +346,16 @@ def _get_meta(df, keys) :
             return df.attrs[key]
     return "-"
 
-def print_info(meas_df, GHI, DIF, DNI, TOA) :
+def print_info(meas_df, GHI, DIF, DNI, TOA, latitude, longitude, elevation, station_id, station_name) :
 
     Y0 = 0.90
     dY = 0.15
     gs0 = GridSpec(9, 12)
     gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
 
-    latitude = meas_df.attrs[LATITUDE_VAR]
-    longitude = meas_df.attrs[LONGITUDE_VAR]
-    elevation = meas_df.attrs[ELEVATION_VAR]
     climate = _get_meta(meas_df, CLIMATE_ATTRS)
     country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
     source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
-    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
-    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
     CodeInfo = {
         "project": "CAMS2-73",
@@ -384,7 +376,7 @@ def print_info(meas_df, GHI, DIF, DNI, TOA) :
 
     ax01 = plt.subplot(gs0[0, 8])
     ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
+    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station_name, size=FONT_SIZE)  # 'ID/ Station'
     ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
