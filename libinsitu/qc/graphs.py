@@ -1,21 +1,27 @@
 import copy
 
 import matplotlib as mpl
-import numpy as np
 from matplotlib import dates as mdates, pyplot as plt
+from matplotlib.gridspec import GridSpec
 from matplotlib.pyplot import gca
-from libinsitu import info
+from pandas import DataFrame
+from pvlib.clearsky import detect_clearsky
+
+from libinsitu import info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, \
+    NETWORK_NAME_ATTRS, STATION_ID_ATTRS, STATION_NAME_VAR
 from matplotlib import cm
+import numpy as np
+from matplotlib.colors import ListedColormap
+
+
 
 NB_MIN_IN_DAY = 24 * 60
 FONT_SIZE = 8
-
 MC_CLEAR_COLOR = 'mediumseagreen'
 
 
 def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
-    import numpy as np
-    from matplotlib.colors import ListedColormap
+
     cmpGrey = ColorGrey * np.ones((1, 3))
     cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
     M0 = np.hstack((np.ones((NGrey, 1)) @ cmpGrey + (np.expand_dims((np.linspace(0, 1, NGrey)), axis=0).T) @ (
@@ -329,11 +335,52 @@ def bsrn_closure_ratio(DIF, GHI, SZA, GHI_est, Stat_Test, ShowFlag, QCfinal) :
         lines=[line],
         clim_ratio=0.5)
 
-def print_info() :
+
+def get_version() :
+    # TODO
+    #return metadata.metadata('libinsitu')['Version']
+    return "1.2"
+
+
+def _get_meta(df, keys) :
+    """Try several keys to get Meta data"""
+    for key in keys :
+        if key in df.attrs :
+            return df.attrs[key]
+    return "-"
+
+def print_info(meas_df, GHI, DIF, DNI, TOA) :
+
     Y0 = 0.90
     dY = 0.15
     gs0 = GridSpec(9, 12)
     gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
+
+    latitude = meas_df.attrs[LATITUDE_VAR]
+    longitude = meas_df.attrs[LONGITUDE_VAR]
+    elevation = meas_df.attrs[ELEVATION_VAR]
+    climate = _get_meta(meas_df, CLIMATE_ATTRS)
+    country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
+    source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
+    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
+    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
+
+    CodeInfo = {
+        "project": "CAMS2-73",
+        "author": 'ARMINES, DLR',
+        "name": 'libinsitu - Visual plausibility control',
+        "vers": get_version()}
+
+    NbDays = len(meas_df.index[GHI > 0].normalize().unique())
+    AvgGHI = sum(GHI[GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvgDHI = sum(DIF[DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvgDNI = sum(DNI[DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
+    AvailGHI = sum((GHI > -2) & (TOA > 0)) / sum((TOA > 0)) * 100
+    AvailDHI = sum((DIF > -2) & (TOA > 0)) / sum(TOA > 0) * 100
+    AvailDNI = sum((DNI > -2) & (TOA > 0)) / sum(TOA > 0) * 100
+
+    DateStrStart = meas_df.index[GHI > 0][0].strftime("%Y-%m-%d")
+    DateStrEnd = meas_df.index[GHI > 0][-1].strftime("%Y-%m-%d")
 
     ax01 = plt.subplot(gs0[0, 8])
     ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
@@ -361,3 +408,127 @@ def print_info() :
     ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
     ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
     ax03.axis('off')
+
+def histo_qc(comp, x, x_label, SZA, QCfinal, legend_pos=None, y_label=False) :
+
+    axe = gca()
+
+    idxPlot_qc = (comp > 5) & (SZA < 90) & (QCfinal == 0)
+    idxPlot_all = (comp > 5) & (SZA < 90)
+    hist_qc, xedges = np.histogram(x[idxPlot_qc], bins=500, range=[0, 1.2])
+    hist_all, xedges = np.histogram(x[idxPlot_all], bins=500, range=[0, 1.2])
+    xval = (xedges[1:] + xedges[:-1]) / 2
+    axe.fill_between(xval, 0 * xval, hist_all, color=[204 / 255, 0 / 255, 0 / 255], label='flagged data')
+    axe.fill_between(xval, 0 * xval, hist_qc, color=[102 / 255, 178 / 255, 255 / 255], label='valid data')
+
+    if legend_pos :
+        axe.legend(loc=legend_pos)
+
+    if y_label :
+        axe.set_ylabel('count')
+
+    axe.set_xlim([0, 1.1])
+    axe.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    axe.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
+    axe.set_xlabel(x_label)
+    axe.set_yticks([])
+
+def horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latitude, ShowFlag) :
+
+    axe = gca()
+
+    # Aliases
+    CLEAR_SKY_GHI = cams_df.CLEAR_SKY_GHI
+    CLEAR_SKY_DNI = cams_df.CLEAR_SKY_DNI
+
+    isClearSky = detect_clearsky(GHI, CLEAR_SKY_GHI)
+
+    YYL = [0.8, 1.2]
+    if ShowFlag == -1:
+        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
+                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+    else:
+        idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
+                  (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
+    vSAA = ALPHA_S.values
+    if latitude < 0:
+        vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
+
+    if (latitude < 0):
+        angle_filter = np.abs(vSAA * 180 / np.pi) < 60
+    else:
+        angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
+
+    kc = GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
+         CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
+
+    S = kc.resample('1D', label='left').sum()
+    C = kc.resample('1D', label='left').count()
+
+    Dailydata = DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
+
+    data4plot = DataFrame(
+        {'kc': GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
+         'SAA': vSAA[idxPlot] * 180 / np.pi, \
+         'day': meas_df[idxPlot].index.floor(freq='D')}, \
+        index=meas_df[idxPlot].index)
+    data4plot = data4plot.join(Dailydata, on='day', how='left')
+    ix = data4plot.Avgkc > 0
+    xPlot = data4plot.SAA[ix].values
+    yPlot = data4plot.kc[ix].values / data4plot.Avgkc[ix].values
+
+    dxx = 0 if latitude >= 0 else 180
+
+    hist, xedges, yedges = np.histogram2d(x=xPlot, y=yPlot, bins=[180, 100], range=[[0 - dxx, 360 - dxx], YYL])
+    plt.plot([0 - dxx, 360 - dxx], [1, 1], 'r--', alpha=0.4, linewidth=0.8)
+    plt.xlim((0 - dxx, 360 - dxx))
+    axe.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
+
+    yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
+
+    im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
+    im00.set_clim(0, 0.7 * max(hist.flatten()))
+
+    plt.ylabel('kc/kc_daily (-)', fontsize=FONT_SIZE)
+    plt.xlabel('Solar azimuth angle (°)', fontsize=FONT_SIZE)
+
+    axe.set_ylim(YYL)
+
+    plt.colorbar(im00, label='point density (-)')
+
+def shadow_analysis(label, comp, ref, cmax, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal) :
+
+    axe = gca()
+
+    idxSC = (GAMMA_S0 > 1 / 50) & (QCfinal == 0)
+    vSEA = GAMMA_S0[idxSC]
+    vSAA = ALPHA_S[idxSC]
+    if latitude < 0:
+        vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
+
+    SELMax = 45
+
+    vK = comp[idxSC] / ref[idxSC]
+    idx_sort = np.argsort(vK.values)
+    im = plt.scatter(
+        vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi,
+        s=1, c=vK[idx_sort],
+        cmap=COLORMAP_SHADING,
+        marker='s', alpha=.5)
+
+    plt.ylabel('Solar elevation angle [°]', fontsize=FONT_SIZE)
+    plt.xlabel('Solar azimuth angle [°]', fontsize=FONT_SIZE)
+
+    if horizons is not None:
+        plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
+        plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
+    if latitude < 0:
+        dxx = 180
+    else:
+        dxx = 0
+
+    plt.xlim((45 - dxx, 315 - dxx))
+    axe.text(50 - dxx, 0.92 * SELMax, 'shadow analysis')
+    im.set_clim(0, cmax)
+    plt.ylim((0, SELMax))
+    plt.colorbar(im, label=label)

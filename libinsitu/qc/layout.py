@@ -8,10 +8,8 @@ from urllib.request import urlopen
 
 import sg2
 from appdirs import user_cache_dir
-from pandas import DataFrame
 
-from libinsitu import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, STATION_ID_ATTRS, CDL_PATH, read_res, \
-    DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
+from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.log import info, warning
 from libinsitu.qc.graphs import *
@@ -21,14 +19,13 @@ from matplotlib.gridspec import GridSpec
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime as dt
 import pvlib
 
 
-from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
+from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, GLOBAL_TIME_RESOLUTION_ATTR
 from diskcache import Cache
 
-from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap
+from libinsitu.qc.graphs import plot_heatmap_timeseries, plot_ratio_heatmap, histo_qc
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -37,20 +34,6 @@ MIN_VAL = -100.0
 MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
-
-
-def _get_meta(df, keys) :
-    """Try several keys to get Meta data"""
-    for key in keys :
-        if key in df.attrs :
-            return df.attrs[key]
-    return "-"
-
-def get_version() :
-    # TODO
-    #return metadata.metadata('libinsitu')['Version']
-    return "1.2"
-
 
 def plot_timeseries(label, data, TOA, ymax, ShowFlag, QCfinal) :
 
@@ -94,24 +77,11 @@ def SolarRadVisualControl(
      ShowFlag=1      : show all data and highlight flagged data in red
     """
 
-    CodeInfo = {
-        "project": "CAMS2-73",
-        "author": 'ARMINES, DLR',
-        "name": 'libinsitu - Visual plausibility control',
-        "vers": get_version()}
-
     # Get meta data
     latitude = meas_df.attrs[LATITUDE_VAR]
     longitude = meas_df.attrs[LONGITUDE_VAR]
-    elevation = meas_df.attrs[ELEVATION_VAR]
-    climate = _get_meta(meas_df, CLIMATE_ATTRS)
-    country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
-    source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
-    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
-    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
     # Aliases
-    index = meas_df.index
     GHI = meas_df.GHI
     DIF = meas_df.DHI
     DNI = meas_df.BNI
@@ -128,17 +98,6 @@ def SolarRadVisualControl(
     GHI_est = DIF + DNI * np.cos(THETA_Z)
 
     info("QC: visual plot preparation")
-
-    NbDays = len(index[GHI > 0].normalize().unique())
-    AvgGHI = sum(GHI[GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvgDHI = sum(DIF[DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvgDNI = sum(DNI[DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
-    AvailGHI = sum((GHI > -2) & (TOA > 0)) / sum((TOA > 0)) * 100
-    AvailDHI = sum((DIF > -2) & (TOA > 0)) / sum(TOA > 0) * 100
-    AvailDNI = sum((DNI > -2) & (TOA > 0)) / sum(TOA > 0) * 100
-
-    DateStrStart = index[GHI > 0][0].strftime("%Y-%m-%d")
-    DateStrEnd = index[GHI > 0][-1].strftime("%Y-%m-%d")
 
     fig = plt.figure(figsize=(19.2, 9.93))
 
@@ -286,62 +245,29 @@ def SolarRadVisualControl(
 
     # -- Third column
 
-    # Text info
-    print_info()
+    # -- Text info
+    print_info(meas_df, GHI, DIF, DNI, TOA)
 
-    # QC histograms
-    print(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
+    # -- QC histograms
+    info("QC: histograms of K, Kn & KT")
+
     gs3b = GridSpec(9, 9)
-    gs3b.update(left=0.075, right=0.98, bottom=0.001, top=0.97, hspace=0.025, wspace=0.00)
+    gs3b.update(
+        left=0.075,
+        right=0.98,
+        bottom=0.001,
+        top=0.97,
+        hspace=0.025,
+        wspace=0.00)
 
-    ax31a = plt.subplot(gs3b[1:3, 6])
-    # TODO: replace flag_df.QCfinal par flag_df.QCGHI
-    idxPlot_qc = (GHI > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (GHI > 5) & (SZA < 90)
-    hist_qc, xedges = np.histogram(flag_df.KT[idxPlot_qc], bins=500, range=[0, 1.2])
-    hist_all, xedges = np.histogram(flag_df.KT[idxPlot_all], bins=500, range=[0, 1.2])
-    xval = (xedges[1:] + xedges[:-1]) / 2
-    ax31a.fill_between(xval, 0 * xval, hist_all, color=[204 / 255, 0 / 255, 0 / 255], label='flagged dara')
-    ax31a.fill_between(xval, 0 * xval, hist_qc, color=[102 / 255, 178 / 255, 255 / 255], label='valid data')
-    # ax31a.legend(loc='upper right')
-    ax31a.set_ylabel('count')
-    ax31a.set_xlim([0, 1.1])
-    ax31a.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    ax31a.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
-    ax31a.set_xlabel('GHI/TOA')
-    ax31a.set_yticks([])
+    plt.subplot(gs3b[1:3, 6])
+    histo_qc(GHI, flag_df.KT, 'GHI/TOA', SZA, flag_df.QCfinal, y_label=True)
 
-    ax31b = plt.subplot(gs3b[1:3, 7])
-    # TODO: replace flag_df.QCfinal par flag_df.QCDNI
-    idxPlot_qc = (DNI > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (DNI > 5) & (SZA < 90)
-    hist_qc, xedges = np.histogram(flag_df.Kn[idxPlot_qc], bins=500, range=[0, 1.2])
-    hist_all, xedges = np.histogram(flag_df.Kn[idxPlot_all], bins=500, range=[0, 1.2])
-    xval = (xedges[1:] + xedges[:-1]) / 2
-    ax31b.fill_between(xval, 0 * xval, hist_all, color=[204 / 255, 0 / 255, 0 / 255], label='flagged dara')
-    ax31b.fill_between(xval, 0 * xval, hist_qc, color=[102 / 255, 178 / 255, 255 / 255], label='valid data')
-    # ax31b.legend(loc='upper right')
-    ax31b.set_xlabel('DNI/TOANI')
-    ax31b.set_xlim([0, 1.1])
-    ax31b.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    ax31b.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
-    ax31b.set_yticks([])
+    plt.subplot(gs3b[1:3, 7])
+    histo_qc(DNI, flag_df.Kn, 'DNI/TOANI', SZA, flag_df.QCfinal)
 
-    ax31c = plt.subplot(gs3b[1:3, 8])
-    # TODO: replace flag_df.QCfinal par flag_df.QCDIF
-    idxPlot_qc = (DIF > 5) & (SZA < 90) & (flag_df.QCfinal == 0)
-    idxPlot_all = (DIF > 5) & (SZA < 90)
-    hist_qc, xedges = np.histogram(flag_df.K[idxPlot_qc], bins=500, range=[0, 1.2])
-    hist_all, xedges = np.histogram(flag_df.K[idxPlot_all], bins=500, range=[0, 1.2])
-    xval = (xedges[1:] + xedges[:-1]) / 2
-    ax31c.fill_between(xval, 0 * xval, hist_all, color=[204 / 255, 0 / 255, 0 / 255], label='flagged dara')
-    ax31c.fill_between(xval, 0 * xval, hist_qc, color=[102 / 255, 178 / 255, 255 / 255], label='valid data')
-    ax31c.legend(loc='upper left')
-    ax31c.set_xlim([0, 1.1])
-    ax31c.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    ax31c.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
-    ax31c.set_xlabel('DIF/GHI')
-    ax31c.set_yticks([])
+    plt.subplot(gs3b[1:3, 8])
+    histo_qc(DIF, flag_df.K, 'DIF/GHI', SZA, flag_df.QCfinal, legend_pos='upper left')
 
 
     if cams_df is None :
@@ -353,123 +279,23 @@ def SolarRadVisualControl(
 
     gs3.update(left=0.0, right=0.99, bottom=0.05, top=0.875, hspace=0.1, wspace=0.2)
 
-    # print(str(dt.datetime.now())+": --> QC: planarity check")
+    # -- Horizontality graph
+    if cams_df is not None:
 
-    if cams_df is not None :
+        info("Horizontality test")
+        plt.subplot(gs3[3:5, 2])
 
-        print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
-        # NB: the calculation can be optimized to run faster
-
-        # Aliases
-        CLEAR_SKY_GHI = cams_df.CLEAR_SKY_GHI
-        CLEAR_SKY_DNI = cams_df.CLEAR_SKY_DNI
+        horizontality_graph(cams_df, meas_df, GHI, DIF, SZA, ALPHA_S, flag_df, latitude, ShowFlag)
 
 
-        isClearSky = pvlib.clearsky.detect_clearsky(GHI, CLEAR_SKY_GHI)
-        ax31 = plt.subplot(gs3[3:5, 2])
-        YYL = [0.8, 1.2]
-        if ShowFlag == -1:
-            idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & (flag_df.QCfinal == 0) & \
-                      (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-        else:
-            idxPlot = isClearSky & (DIF > 0) & (GHI > 100) & (SZA < 90) & \
-                      (CLEAR_SKY_GHI.values > 50) & (GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-        vSAA = ALPHA_S.values
-        if latitude < 0:
-            vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
-
-        xPlot = vSAA * 180 / np.pi
-        yPlot = np.zeros(DNI.shape)
-        # yPlot[QC_df.CLEAR_SKY_DNI.values>0]=QC_df.GHI.values[QC_df.CLEAR_SKY_DNI.values>0]/QC_df.CLEAR_SKY_GHI.values[QC_df.CLEAR_SKY_DNI.values>0]
-
-        if (latitude < 0):
-            angle_filter = np.abs(vSAA * 180 / np.pi) < 60
-        else:
-            angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
-
-        kc = GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
-             CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
-
-        S = kc.resample('1D', label='left').sum()
-        C = kc.resample('1D', label='left').count()
-        Dailydata = pd.DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
-        data4plot = pd.DataFrame(
-            {'kc': GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
-             'SAA': vSAA[idxPlot] * 180 / np.pi, \
-             'day': meas_df[idxPlot].index.floor(freq='D')}, \
-            index=meas_df[idxPlot].index)
-        data4plot = data4plot.join(Dailydata, on='day', how='left')
-        ix = data4plot.Avgkc > 0
-        xPlot = data4plot.SAA[ix].values
-        yPlot = data4plot.kc[ix].values / data4plot.Avgkc[ix].values
-
-        if latitude >= 0:
-            dxx = 0
-        else:
-            dxx = 180
-        hist, xedges, yedges = np.histogram2d(x=xPlot, y=yPlot, bins=[180, 100], range=[[0 - dxx, 360 - dxx], YYL])
-        plt.plot([0 - dxx, 360 - dxx], [1, 1], 'r--', alpha=0.4, linewidth=0.8)
-        plt.xlim((0 - dxx, 360 - dxx))
-        ax31.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
-        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-        im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-        im00.set_clim(0, 0.7 * max(hist.flatten()))
-        plt.ylabel('kc/kc_daily (-)', fontsize=FONT_SIZE)
-        plt.xlabel('Solar azimuth angle (°)', fontsize=FONT_SIZE)
-        ax31.set_ylim(YYL)
-        plt.colorbar(im00, label='point density (-)')
+    info("Shadow analysis (GHI)")
 
 
+    plt.subplot(gs3[shadow_row:shadow_row+2, 2])
+    shadow_analysis('GHI/TOA (-)', GHI, TOA, 0.85, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal)
 
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
-    idxSC = (GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
-    vSEA =  GAMMA_S0[idxSC]
-    vSAA = ALPHA_S[idxSC]
-    if latitude < 0:
-        vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
-
-    SELMax = 45
-
-    ax32 = plt.subplot(gs3[shadow_row:shadow_row+2, 2])
-    vKT = GHI[idxSC] / TOA[idxSC]
-    idx_sort = np.argsort(vKT.values)
-    im32 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKT[idx_sort], cmap=COLORMAP_SHADING,
-                       marker='s', alpha=.5)
-    plt.ylabel('Solar elevation angle [°]', fontsize=FONT_SIZE)
-    plt.xlabel('Solar azimuth angle [°]', fontsize=FONT_SIZE)
-    if horizons is not None:
-        plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
-        plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
-    if latitude < 0:
-        dxx = 180
-    else:
-        dxx = 0
-    plt.xlim((45 - dxx, 315 - dxx))
-    ax32.text(50 - dxx, 0.92 * SELMax, 'shadow analysis')
-    im32.set_clim(0, 0.85)
-    plt.ylim((0, SELMax))
-    plt.colorbar(im32, label='GHI/TOA (-)')
-
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
-    ax33 = plt.subplot(gs3[shadow_row+2:shadow_row+4, 2])
-    vKN = DNI[idxSC] / TOANI[idxSC]
-    idx_sort = np.argsort(vKN.values)
-    im33 = plt.scatter(vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi, s=1, c=vKN[idx_sort], cmap=COLORMAP_SHADING,
-                       marker='s', alpha=.5)
-    plt.ylabel('Solar elevation angle [°]', fontsize=FONT_SIZE)
-    plt.xlabel('Solar azimuth angle [°]', fontsize=FONT_SIZE)
-    if horizons is not None :
-        plt.plot(horizons.AZIMUT, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
-        plt.plot(horizons.AZIMUT - 360, horizons.ELEVATION, '-', linewidth=1, alpha=0.6, c='red')
-    if latitude < 0:
-        dxx = 180
-    else:
-        dxx = 0
-    plt.xlim((45 - dxx, 315 - dxx))
-    ax33.text(50 - dxx, 0.92 * SELMax, 'shadow analysis')
-    im33.set_clim(0, 0.65)
-    plt.ylim((0, SELMax))
-    plt.colorbar(im33, label='DNI/TOANI (-)')
+    plt.subplot(gs3[shadow_row + 2:shadow_row + 4, 2])
+    shadow_analysis('DNI/TOANI (-)', DNI, TOANI, 0.65, GAMMA_S0, ALPHA_S, latitude, horizons, QCfinal)
 
 
 def flagData(meas_df, sp_df):
@@ -489,8 +315,6 @@ def flagData(meas_df, sp_df):
     TOA = sp_df.TOA
     TOANI = sp_df.TOANI
     GAMMA_S0 = sp_df.GAMMA_S0
-    #CLEAR_SKY_GHI = sp_df.CLEAR_SKY_GHI
-    #CLEAR_SKY_DNI = sp_df.CLEAR_SKY_DNI
 
     GHI_est = DIF + DNI * np.cos(sp_df.THETA_Z)
     SZA = sp_df.THETA_Z * 180 / np.pi
@@ -505,12 +329,6 @@ def flagData(meas_df, sp_df):
 
     K = np.zeros(size)
     K[GHI >= 1] = DIF[GHI >= 1] / GHI[GHI >= 1]
-
-    #kc = np.zeros(shape)
-    #kc[CLEAR_SKY_GHI >= 1] = GHI[CLEAR_SKY_GHI >= 1] / CLEAR_SKY_GHI[CLEAR_SKY_GHI >= 1]
-
-    #kbc = np.zeros(shape)
-    #kbc[CLEAR_SKY_DNI >= 1] = DNI[CLEAR_SKY_DNI >= 1] / CLEAR_SKY_DNI[CLEAR_SKY_DNI >= 1]
 
     # % % -----------   Calculation of the individual QC flags -----------------
     # BSRN one-component test
@@ -529,8 +347,6 @@ def flagData(meas_df, sp_df):
 
     flag_df["Kn"] = Kn
     flag_df["K"] = K
-    #flag_df["kc"] = kc
-    #flag_df["kbc"] = kbc
     flag_df["KT"] = KT
 
     # BSRN two-component test
