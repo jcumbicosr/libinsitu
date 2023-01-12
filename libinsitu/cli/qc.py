@@ -67,9 +67,15 @@ def main() :
             plt.close()
 
         if args.update :
+
+            lat = float(df.attrs[LATITUDE_VAR])
+            lon = float(df.attrs[LONGITUDE_VAR])
+            alt = float(df.attrs[ELEVATION_VAR])
+
+
             # Update NetCDF file with QC
             df = cleanup_data(df)
-            sp_df = compute_sun_pos(df)
+            sp_df = compute_sun_pos(df, lat, lon, alt)
             flags_df = flagData(df, sp_df)
 
 

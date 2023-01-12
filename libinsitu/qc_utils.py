@@ -231,7 +231,13 @@ def SolarRadVisualControl(
         flag_df,
         cams_df,
         horizons,
+        latitude,
+        longitude,
+        elevation,
+        station_id="-",
+        station_name="-",
         ShowFlag=-1) :
+
     """
      ShowFlag=-1     : only show non-flagged data
      ShowFlag=0      : show all data without filtering nor tagging flagged data
@@ -245,14 +251,9 @@ def SolarRadVisualControl(
         "vers": get_version()}
 
     # Get meta data
-    latitude = meas_df.attrs[LATITUDE_VAR]
-    longitude = meas_df.attrs[LONGITUDE_VAR]
-    elevation = meas_df.attrs[ELEVATION_VAR]
     climate = _get_meta(meas_df, CLIMATE_ATTRS)
     country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
     source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
-    station_id = _get_meta(meas_df, STATION_ID_ATTRS)
-    station = meas_df.attrs.get(STATION_NAME_VAR, "-")
 
     # Aliases
     index = meas_df.index
@@ -393,7 +394,7 @@ def SolarRadVisualControl(
     BSRN_ERL_Ks = [[1.2, 1.2, 50], [0.95, 0.2, 10], [0.75, 1.2, 30]]
     for jj in range(3):
 
-        print(str(dt.datetime.now()) + ": --> QC: BSRN 1C - " + PrmYi[jj])
+        info(str(dt.datetime.now()) + ": --> QC: BSRN 1C - " + PrmYi[jj])
 
         ax21 = plt.subplot(gs2[jj, 2])
         plt.text(30, 1475, 'BSRN 1C ' + PrmYi[jj] + ": {:.2f}% / {:.2f}%".format(Stat_Test['T1C_ppl_' + PrmYi[jj]],
@@ -445,7 +446,7 @@ def SolarRadVisualControl(
     # % % Part5: BSRN 2C, 3C,SERI-QC tests
     # -> BSRN 2C
     # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN 2C ")
     ax22 = plt.subplot(gs2[0, 3])
     plt.text(12, 1.3, 'BSRN-2C' + ": {:.2f}% ".format(Stat_Test['T2C_bsrn_kt']))
     if ShowFlag == -1:
@@ -472,7 +473,7 @@ def SolarRadVisualControl(
     # =====================================================================
     # % % -> SERI-Kn
     # =====================================================================
-    print(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
+    info(str(dt.datetime.now()) + ": --> QC: SERI-Kn ")
     ax24 = plt.subplot(gs2[1, 3])
     plt.text(0.025, 0.92, 'SERI-kn' + ": {:.2f}% ".format(Stat_Test['T2C_seri_knkt']))
     if ShowFlag == -1:
@@ -495,7 +496,7 @@ def SolarRadVisualControl(
     plt.ylim((0, 1.))
 
     # -> SERI-K
-    print(str(dt.datetime.now()) + ": --> QC: SERI-K ")
+    info(str(dt.datetime.now()) + ": --> QC: SERI-K ")
     ax26 = plt.subplot(gs2[2, 3])
     plt.text(0.025, 1.3, 'SERI-K' + ": {:.2f}% ".format(Stat_Test['T2C_seri_kkt']))
     if ShowFlag == -1:
@@ -517,7 +518,7 @@ def SolarRadVisualControl(
     plt.xlim((0, 1.5))
     plt.ylim((0, 1.45))
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN closure ymeas=f(yest)")
     ax27 = plt.subplot(gs2[3, 2])
     plt.text(30, 1300, 'BSRN closure' + ": {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
@@ -542,7 +543,7 @@ def SolarRadVisualControl(
     plt.ylim((0, 1400))
     plt.xlim((0, 1400))
 
-    print(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
+    info(str(dt.datetime.now()) + ": --> QC: BSRN closure ratio=f(SZA)")
     ax28 = plt.subplot(gs2[3, 3])
     plt.text(8, 0.52, "BSRN closure: {:.2f}% ".format(Stat_Test['T3C_bsrn']))
     if ShowFlag == -1:
@@ -571,7 +572,7 @@ def SolarRadVisualControl(
     cbar.set_ticks([])
 
     # **************************** Third column *******************************
-    print(str(dt.datetime.now()) + ": --> QC: print general infos")
+    info(str(dt.datetime.now()) + ": --> QC: print general infos")
 
     Y0 = 0.90
     dY = 0.15
@@ -580,7 +581,7 @@ def SolarRadVisualControl(
 
     ax01 = plt.subplot(gs0[0, 8])
     ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
-    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station, size=FONT_SIZE)  # 'ID/ Station'
+    ax01.text(0.01, Y0 - 1 * dY, station_id + ': ' + station_name, size=FONT_SIZE)  # 'ID/ Station'
     ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(latitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(longitude), size=FONT_SIZE)
     ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(elevation), size=FONT_SIZE)
@@ -610,7 +611,7 @@ def SolarRadVisualControl(
     # ax2XXX .imshow(img)
     # plt.axis('off')
 
-    print(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
+    info(str(dt.datetime.now()) + ": --> QC: histograms of K, Kn & KT")
     gs3b = GridSpec(9, 9)
     gs3b.update(left=0.075, right=0.98, bottom=0.001, top=0.97, hspace=0.025, wspace=0.00)
 
@@ -673,11 +674,11 @@ def SolarRadVisualControl(
 
     gs3.update(left=0.0, right=0.99, bottom=0.05, top=0.875, hspace=0.1, wspace=0.2)
 
-    # print(str(dt.datetime.now())+": --> QC: planarity check")
+    # info(str(dt.datetime.now())+": --> QC: planarity check")
 
     if cams_df is not None :
 
-        print(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
+        info(str(dt.datetime.now()) + ": --> QC: Verification of the pyranometer tilt angle")
         # NB: the calculation can be optimized to run faster
 
         # Aliases
@@ -741,7 +742,7 @@ def SolarRadVisualControl(
 
 
 
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
+    info(str(dt.datetime.now()) + ": --> QC: Shadow analysis (GHI)")
     idxSC = (GAMMA_S0 > 1 / 50) & (flag_df.QCfinal == 0)
     vSEA =  GAMMA_S0[idxSC]
     vSAA = ALPHA_S[idxSC]
@@ -770,7 +771,7 @@ def SolarRadVisualControl(
     plt.ylim((0, SELMax))
     plt.colorbar(im32, label='GHI/TOA (-)')
 
-    print(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
+    info(str(dt.datetime.now()) + ": --> QC: Shadow analysis (DNI)")
     ax33 = plt.subplot(gs3[shadow_row+2:shadow_row+4, 2])
     vKN = DNI[idxSC] / TOANI[idxSC]
     idx_sort = np.argsort(vKN.values)
@@ -933,6 +934,10 @@ def cleanup_data(df, freq=None):
     if freq is None:
         freq = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
+    # Not UTC ?
+    if df.index.tz is not None :
+        df.index = df.index.tz_convert('UTC').tz_localize(None)
+
     # Fill out of range values with NAN
     # XXX use "range" QC check instead
     for varname in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
@@ -1093,13 +1098,8 @@ def write_flags(ncfile, flags_df) :
 
     qc_var[time_idx] = out_masks
 
-def compute_sun_pos(df) :
+def compute_sun_pos(df, lat, lon, alt) :
     """Call sg2 on data"""
-
-    # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
 
     # Compute geom & theoretical irradiance
     sp_df = sun_position(
@@ -1110,13 +1110,27 @@ def compute_sun_pos(df) :
 
     return sp_df
 
-def visual_qc(df, with_horizons=False, with_mc_clear=False):
+def visual_qc(
+        df,
+        latitude = None,
+        longitude = None,
+        elevation = None,
+        station_id = None,
+        station_name = None,
+        with_horizons = False,
+        with_mc_clear = False):
     """
     Generates matplotlib graphs for visual QC
 
-    :param df: Dataframe of input irradiance (GHI, DHI, BNI), obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param df: Dataframe of input irradiance. It should have a time index and 3 columns : GHI, DHI, BNI).
+               This dataframe can typically be obtained with netcdf_to_dataframe(... rename_cols=True)
+    :param latitude: Latitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param longitude: Longitude of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param elevation: elevation of the station. Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Id of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
+    :param station_id: Name of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
     :param with_horizons: True to compute horizons (requires network)
-    :param with_mc_clear: True to compute mc_clear from SODA (requires credentials and network)
+    :param with_mc_clear: True to compute mc_clear from SODA (requires SODA credentials and network access)
     """
     # Resample to the minute to produce graph
     resolution_sec = 60
@@ -1124,13 +1138,15 @@ def visual_qc(df, with_horizons=False, with_mc_clear=False):
     # Clean data
     df = cleanup_data(df, resolution_sec)
 
-    # Get meta data
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
+    # Get meta data from parameters or from attributes attached to the Dataframe
+    lat = latitude if latitude else  float(df.attrs[LATITUDE_VAR])
+    lon = longitude if longitude else float(df.attrs[LONGITUDE_VAR])
+    alt = elevation if elevation else float(df.attrs[ELEVATION_VAR])
+    station_id = station_id if station_id else _get_meta(df, STATION_ID_ATTRS)
+    station_name = station_name if station_name else _get_meta(df, STATION_NAME_VAR)
 
     # Compute geom & theoretical irradiance
-    sp_df = compute_sun_pos(df)
+    sp_df = compute_sun_pos(df, lat, lon, alt)
 
     # Compute QC flags
     flags_df = flagData(df, sp_df)
@@ -1153,10 +1169,12 @@ def visual_qc(df, with_horizons=False, with_mc_clear=False):
 
     # Draw figures
     SolarRadVisualControl(
-        df,
-        sp_df,
-        flags_df,
-        cams_df,
-        horizons,
+        meas_df=df,
+        sp_df=sp_df,
+        flag_df=flags_df,
+        cams_df=cams_df,
+        horizons=horizons,
+        latitude=lat, longitude=lon, elevation=alt,
+        station_id=station_id, station_name=station_name,
         ShowFlag=0)
 
