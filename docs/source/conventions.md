@@ -151,11 +151,11 @@ They should declare the following CF attributes :
 * **units** (mandatory) : Unit. SI unit is preferred.
 * **grid_mapping**  (mandatory) : Set to "crs" defined above.
 * **long name** (optional) : Name used for display.
-* **_valid_min, _valid_max** (optional) : Float attribute value for expected minimum and maximum (used for QC). 
+* **valid_min_, valid_max_** (optional) : Float attribute value for expected minimum and maximum (used for QC). 
   Note that we don't use directly the CF convention **valid_min, valid_max** here, since some drivers remove values outside of this range.
   We want to keep full control upon data here, and only use this meta data for flagging some values. 
 * **least_significant_digit** (optional) : Number of significant digits. Used by *Python* driver at creation time for lossy compression.
-
+* **_FillValue** : This is better to set an explicit fill value. We use **-999.0**, which is a common value. 
 
 We propose to include the following subset of [CF data variables](https://cfconventions.org/Data/cf-standard-names/79/build/cf-standard-name-table.html), 
 depending of their availability.
@@ -171,9 +171,9 @@ We propose to use SI units when possible.
 | BNI  | direct_downwelling_shortwave_flux_in_air | W m-2       |
 | T2   | air_temperature                    | K           |
 | RH   | relative_humidity                  | "1" (ratio) |
-| P     |  air_pressure                                  | Pa            |
-| WS   | wind_speed                         | m s-1            |
-| WD   | wind_direction                     | degrees                 |
+| P    |  air_pressure                      | Pa          |
+| WS   | wind_speed                         | m s-1       |
+| WD   | wind_direction                     | degrees     |
 
 This translates into the following CDL :
 
@@ -183,40 +183,44 @@ float GHI(time) ;
     GHI:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
     GHI:abbreviation = "SWD" ;
     GHI:units = "W m-2" ;
-    GHI:valid_min=0.0 ;
-    GHI:valid_max=3000 ;
+    GHI:valid_min_=0.0 ;
+    GHI:valid_max_=3000 ;
     GHI:grid_mapping = "crs" ;
     GHI:least_significant_digit = 1;
-
+    GHI:_FillValue = -999.0;
+    
 float DHI(time) ;
     DHI:long_name = "Diffuse horizontal radiation" ;
     DHI:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
     DHI:abbreviation = "DHI" ;
     DHI:units = "W m-2" ;
-    DHI:valid_min=0.0 ;
-    DHI:valid_max=3000 ;
+    DHI:valid_min_=0.0 ;
+    DHI:valid_max_=3000 ;
     DHI:grid_mapping = "crs" ;
     DHI:least_significant_digit = 1;
+    DHI:_FillValue = -999.0;
 
 float BNI(time) ;
     BNI:long_name = "Beam (or direct) normal radiation" ;
     BNI:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
     BNI:abbreviation = "BNI" ;
     BNI:units = "W m-2" ;
-    BNI:valid_min=0.0 ;
-    BNI:valid_max=3000 ;
+    BNI:valid_min_=0.0 ;
+    BNI:valid_max_=3000 ;
     BNI:grid_mapping = "crs" ;
     BNI:least_significant_digit = 1;
+    BNI:_FillValue = -999.0;
 
 float T2(time) ;
     T2:long_name = "Air temperature at 2 m height" ;
     T2:standard_name = "air_temperature" ;
     T2:abbreviation = "T2" ;
     T2:units = "K" ;
-    T2:valid_min=123.0 ;
-    T2:valid_max=372.9 ;
+    T2:valid_min_=123.0 ;
+    T2:valid_max_=372.9 ;
     T2:grid_mapping = "crs" ;
     T2:least_significant_digit = 1;
+    T2:_FillValue = -999.0;
 
 float RH(time) ;
 
@@ -224,10 +228,11 @@ float RH(time) ;
     RH:standard_name = "relative_humidity" ;
     RH:abbreviation = "RH" ;
     RH:units = "1" ;
-    RH:valid_min=0.0 ;
-    RH:valid_max=1.0 ;
+    RH:valid_min_=0.0 ;
+    RH:valid_max_=1.0 ;
     RH:grid_mapping = "crs" ;
     RH:least_significant_digit = 3;
+    RH:_FillValue = -999.0;
 
 float WS(time) ;
 
@@ -235,10 +240,11 @@ float WS(time) ;
     WS:standard_name = "wind_speed" ;
     WS:abbreviation = "windspd" ;
     WS:units = "m s-1" ;
-    WS:_valid_min=0.0;
-    WS:_valid_max=100.0;
+    WS:_valid_min_=0.0;
+    WS:_valid_max_=100.0;
     WS:grid_mapping = "crs" ;
     WS:least_significant_digit = 2;
+    WS:_FillValue = -999.0;
 
 float WD(time) ;
 
@@ -246,10 +252,11 @@ float WD(time) ;
     WD:standard_name = "wind_direction" ;
     WD:abbreviation = "winddir" ;
     WD:units = "degrees";
-    WD:_valid_min=0.0;
-    WD:_valid_max=360.0;
+    WD:_valid_min_=0.0;
+    WD:_valid_max_=360.0;
     WD:grid_mapping = "crs" ;
     WD:least_significant_digit = 1;
+    WD:_FillValue = -999.0;
 
 float P(time) ;
     P:parameter = "Station pressure" ;
@@ -257,10 +264,11 @@ float P(time) ;
     P:standard_name = "air_pressure" ;
 
     P:units = "Pa" ;
-    P:valid_min=0.0 ;
-    P:valid_max=120000.0;
+    P:valid_min_=0.0 ;
+    P:valid_max_=120000.0;
     P:grid_mapping = "crs";
-    WD:least_significant_digit = 0;
+    P:least_significant_digit = 0;
+    P:_FillValue = -999.0;
 
 ```
 

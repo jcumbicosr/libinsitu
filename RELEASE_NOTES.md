@@ -2,6 +2,7 @@
 * Fixed bug splitting meta data with "," to lists
 * Added CLI utils ins-update-meta, to only update metadata for NetCDF files without recomputing data
 * Refactor of QC flags
+* Fixed CDL to be better compliant with cf conventions
 
 1.2 :
 * Fixed bug in date filtering of nc2df with start date different from origin date

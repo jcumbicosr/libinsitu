@@ -56,8 +56,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "SWD" ;
 		*:units = "W m-2" ;
-		*:_valid_min=0.0 ;
-		*:_valid_max=3000 ;
+		*:valid_min_=0.0 ;
+		*:valid_max_=3000 ;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
@@ -68,8 +68,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "DHI" ;
 		*:units = "W m-2" ;
-		*:_valid_min=0.0 ;
-		*:_valid_max=3000 ;
+		*:valid_min_=0.0 ;
+		*:valid_max_=3000 ;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
@@ -80,8 +80,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "BNI" ;
 		*:units = "W m-2" ;
-		*:_valid_min=0.0 ;
-		*:_valid_max=3000 ;
+		*:valid_min_=0.0 ;
+		*:valid_max_=3000 ;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
@@ -92,8 +92,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "T2" ;
 		*:units = "K" ;
-		*:_valid_min=123.0 ;
-		*:_valid_max=372.9 ;
+		*:valid_min_=123.0 ;
+		*:valid_max_=372.9 ;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
@@ -105,8 +105,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "RH" ;
 		*:units = "1" ;
-		*:_valid_min=0.0 ;
-		*:_valid_max=1.0 ;
+		*:valid_min_=0.0 ;
+		*:valid_max_=1.0 ;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=3;
 		*:_FillValue = -999.0;
@@ -118,8 +118,8 @@ variables:
 		*:abbreviation = "windspd" ;
 		*:coordinates = "time latitude longitude elevation "
 		*:units = "m s-1" ;
-		*:_valid_min=0.0;
-		*:_valid_max=100.0;
+		*:valid_min_=0.0;
+		*:valid_max_=100.0;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=2;
 		*:_FillValue = -999.0;
@@ -131,8 +131,8 @@ variables:
 		*:abbreviation = "winddir" ;
 		*:coordinates = "time latitude longitude elevation "
 		*:units = "degrees";
-		*:_valid_min=0.0;
-		*:_valid_max=360.0;
+		*:valid_min_=0.0;
+		*:valid_max_=360.0;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
@@ -144,8 +144,8 @@ variables:
 		*:coordinates = "time latitude longitude elevation "
 
 		*:units = "Pa" ;
-		*:_valid_min=0.0 ;
-		*:_valid_max=120000.0;
+		*:valid_min_=0.0 ;
+		*:valid_max_=120000.0;
 		*:grid_mapping = "crs" ;
 		*:least_significant_digit=0;
 		*:_FillValue = -999.0;
