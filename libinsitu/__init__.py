@@ -1,3 +1,3 @@
 from .common import *
 from .catalog import *
-from .qc_utils import *
+from .qc.qc_utils import *

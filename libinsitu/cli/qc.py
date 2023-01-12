@@ -1,17 +1,15 @@
-import matplotlib.pyplot as plt
 import argparse
 from datetime import datetime
 
-import pandas as pd
+import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
 
-from libinsitu import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, openNetCDF, GLOBAL_TIME_RESOLUTION_ATTR, getNetworkId, \
-    readShortname, info
+from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import LogContext
-from libinsitu.qc_utils import SolarRadVisualControl, flagData, wps_Horizon_SRTM, sun_position, get_cams, \
-    write_flags, cleanup_data, visual_qc, compute_sun_pos
-from dotenv import load_dotenv
+from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
+
 
 def parser() :
     parser = argparse.ArgumentParser(description='Perform QC analysis on input file. It can fill QC flags in it and / or generate visual QC image')
