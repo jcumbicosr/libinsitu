@@ -15,6 +15,6 @@ visual_qc
 
 This function applies QC checks on an irradiance Dataframe and output visual graphs.
 
-.. autofunction:: libinsitu.qc_utils.visual_qc
+.. autofunction:: libinsitu.qc.qc_utils.visual_qc
 
-.. _Notebook: https://git.sophia.mines-paristech.fr/oie/libinsitu/-/blob/main/example-notebook.ipynb
+.. _Notebook: https://git.sophia.mines-paristech.fr/oie/libinsitu/-/blob/notebooks/visual-quality-check.ipynb

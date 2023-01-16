@@ -141,6 +141,8 @@ if not sys.stdout.isatty():
 else :
     console = None
 
+
+
 rich_handler = RichHandlerContext(omit_repeated_times=False, console=console)
 rich_handler.addFilter(ThreadingLocalContextFilter(["network", "station_id"]))
 logging.basicConfig(

@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 
-from libinsitu import openNetCDF, getNetworkId, readShortname, info
+from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import LogContext
-from libinsitu.qc.layout import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
+from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
 
 
 def parser() :
@@ -65,9 +65,15 @@ def main() :
             plt.close()
 
         if args.update :
+
+            lat = float(df.attrs[LATITUDE_VAR])
+            lon = float(df.attrs[LONGITUDE_VAR])
+            alt = float(df.attrs[ELEVATION_VAR])
+
+
             # Update NetCDF file with QC
             df = cleanup_data(df)
-            sp_df = compute_sun_pos(df)
+            sp_df = compute_sun_pos(df, lat, lon, alt)
             flags_df = flagData(df, sp_df)
 
 

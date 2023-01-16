@@ -7,6 +7,8 @@ from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITU
 from libinsitu.log import info, warning
 
 
+SYSTEM_ATTRIBUTES = ["_FillValue"]
+
 class Variable :
     def __init__(self, name, type, dimensions):
         self.type = type
@@ -138,6 +140,11 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
     for key, val in src.items() :
         oldval = None if not key in existing_attrs else dest.getncattr(key)
+
+        if key in SYSTEM_ATTRIBUTES :
+            # Do not update system attributes
+            continue
+
         if oldval != val :
 
             if (val is None or val == "") and not delete :
@@ -147,6 +154,8 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
 
             if not dry_run:
                 dest.setncattr(key, val)
+
+
 def cmp_var(var,  vardef:Variable) :
     return var.dtype == vardef.type and var.dimensions == tuple(vardef.dimensions)
 

@@ -21,25 +21,10 @@ def run(args) :
 branches = run(["git", "branch"])
 curr_branch = next(line for line in branches if "*" in line)
 curr_branch = curr_branch.replace(" ", "").replace("*", "")
-version = read("VERSION")
 name = "libinsitu"
 
+extra_urls= []
 
-if curr_branch == "dev" :
-
-    name += "_dev"
-
-    #commit = run(["git", "log"])[0].split()[1][0:8]
-
-    start = datetime.strptime("2021-01-01", '%Y-%m-%d')
-    now = datetime.now()
-
-    min_diff = int((now-start).total_seconds() // 60)
-
-    version += "." + str(min_diff) + "-dev"
-
-
-extra_urls = []
 with open("requirements.txt", "r") as f :
 
     def extract_extra_index(strs) :
@@ -72,7 +57,6 @@ print("Extra URLs : %s" % extra_urls)
 
 setup(
     name = name,
-    version = version,
     python_requires='>3.7',
     author = "OIE - Mines ParisTech",
     author_email = "raphael.jolivet@mines-paristech.fr",
@@ -87,7 +71,12 @@ setup(
     dependency_links=extra_urls,
     include_package_data=True,
     classifiers=[],
+    setup_requires=['setuptools_scm'],
     install_requires=requirements,
+    use_scm_version={
+        'write_to': 'build/lib/libinsitu/_version.py',
+        'write_to_template': '__version__ = "{version}"',
+    },
     entry_points={'console_scripts': entry_points}
 )
 
