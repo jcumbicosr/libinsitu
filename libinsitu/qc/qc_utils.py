@@ -25,7 +25,6 @@ import numpy as np
 
 from libinsitu.qc.matplot import MaplotLibGraphs
 from libinsitu.qc.matplot.graphs import _get_meta
-from libinsitu.qc.plotly import PlotlyGraphs
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -423,7 +422,7 @@ def visual_qc(
     # Pick class depending on engine
     Clazz = {
         "matplotlib" : MaplotLibGraphs,
-        "plotly" : PlotlyGraphs
+        #"plotly" : PlotlyGraphs
     }[engine]
 
     # Draw figures

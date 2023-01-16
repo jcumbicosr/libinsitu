@@ -1,3 +1,6 @@
+1.3.1 :
+* Removed support for plotly for now : dependencies were broken
+
 1.3 :
 * Fixed bug splitting meta data with "," to lists
 * Added CLI utils ins-update-meta, to only update metadata for NetCDF files without recomputing data
