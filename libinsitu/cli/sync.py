@@ -9,7 +9,6 @@ from urllib.request import urlretrieve
 import gzip
 import subprocess
 import pytz
-import urllib3.packages.six
 from dateutil.relativedelta import relativedelta
 import requests
 import jmespath
@@ -35,6 +34,7 @@ NB_WORKERS = 10
 EMPTY_LIMIT = 50
 
 
+
 def date_placeholders(date) :
     """ Generate a dict of placeholder for start / end dates : YYYY MM DD / YYYYe MMe DDe """
 
@@ -57,7 +57,7 @@ def prepare_properties(network, properties) :
     # Add environment variable prefixed by the network
     for key, val in os.environ.items() :
         if key.startswith(network) :
-            key = key.replace(network, "")
+            key = key.replace(network + "_", "")
             properties[key] = val
 
     return properties
@@ -358,7 +358,9 @@ def main() :
 
     networks_info = getNetworksInfo()
 
-    parser = argparse.ArgumentParser(description='Get raw data files from HTTP APIs')
+    epilog = "FTP user and passord should be passed via envvariables (or .env file) as <NETWORK>_FTP_USER and <NETWORK>_FTP_PASS"
+
+    parser = argparse.ArgumentParser(description='Get raw data files from HTTP/FTP APIs', epilog=epilog)
     parser.add_argument('network', metavar='<network>', choices=list(networks_info.keys()), help='Network')
     parser.add_argument('out_folder', metavar='<dir>', type=str, help='Output folder')
     parser.add_argument('--ids', metavar='station_id1,station_id2', type=str, help='Optional IDs', default=None)
