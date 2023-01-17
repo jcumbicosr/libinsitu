@@ -3,6 +3,9 @@ import datetime
 import os.path
 from os.path import basename, dirname
 
+import numpy as np
+
+from libinsitu import update_qc_flags
 from libinsitu.common import *
 from libinsitu.cdl import *
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
@@ -85,29 +88,36 @@ def process_network(network, station_id, out_filename, args) :
     mode = "w" if new else "a"
     ncfile = Dataset(out_filename, mode=mode)
 
-    if  new :
+    if new :
         # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", out_filename)
         init_nc(ncfile, properties, [])
 
+    min_date = None
+    max_date = None
+
     # Loop on input files
     for infile in in_files :
-
-        # Incremental mode : check status files
-        status_folder = args.status_folder or dirname(infile)
-        status_file = os.path.join(status_folder, basename(infile) + DONE_SUFFIX)
-        err_file = os.path.join(status_folder, basename(infile) + ERR_SUFFIX)
-
-        # Incremental mode : if output was already there, don't proess input files having a more recent .done file
-        if not new and args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
-            info("File %s is older than status file %s : Skipping", infile, status_file)
-            continue
-
         with LogContext(file=os.path.basename(infile)):
 
             # Safe execution : do not stop on error
             try:
-                process_chunck(handler, infile, ncfile, args, properties)
+
+                # Incremental mode : check status files
+                status_folder = args.status_folder or dirname(infile)
+                status_file = os.path.join(status_folder, basename(infile) + DONE_SUFFIX)
+                err_file = os.path.join(status_folder, basename(infile) + ERR_SUFFIX)
+
+                # Incremental mode : if output was already there, don't proess input files having a more recent .done file
+                if not new and args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
+                    info("File %s is older than status file %s : Skipping", infile, status_file)
+                    continue
+
+                chunk_start, chunk_end = process_chunck(handler, infile, ncfile, args, properties)
+
+                # Store extent of update
+                min_date = nmin(chunk_start, min_date)
+                max_date = nmax(chunk_end, max_date)
 
                 # Incremental mode : touch status file
                 if args.incremental:
@@ -130,6 +140,15 @@ def process_network(network, station_id, out_filename, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
+    if min_date is not None :
+        # We need to wait for everything to be processed before computing QC (instead of computing it chunk by chunk),
+        # because some provider split components into several input files (like SKYNET)
+        info("Processing QC flags on [%s - %s]" % (min_date, max_date))
+
+        update_qc_flags(
+            ncfile,
+            start_time=min_date,
+            end_time=max_date)
 
 
 def idx2slice(idx) :
@@ -226,7 +245,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
     data = data.asfreq("%dS" % resolution_s)
 
     # Transform time to seconds since start date and time idx
-    chunk_dates = data.index.values
+    chunk_dates : NDArray[datetime64] = data.index.values
 
     times_sec = datetime64_to_sec(ncfile, chunk_dates)
 
@@ -296,6 +315,8 @@ def process_chunck(handler, infile, ncfile, args, properties):
     check_and_assign(ncfile, data, time_idx, size_before, args)
 
     info("Chunk processed successfully")
+
+    return chunk_start, chunk_end
 
 
 def sort_files(files) :

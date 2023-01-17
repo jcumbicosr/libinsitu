@@ -8,13 +8,13 @@ from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 
 from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, \
-    older_than
+    older_than, update_qc_flags
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import LogContext
 from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
 
-
 def parser() :
+
     parser = argparse.ArgumentParser(description='Perform QC analysis on input file. It can fill QC flags in it and / or generate visual QC image')
     parser.add_argument('input', metavar='<file.nc|odap_url>', type=str, help='Input local file or URL')
     parser.add_argument('--output', '-o', metavar='<out.png>', type=str, help='Output image')
@@ -60,10 +60,11 @@ def main() :
             return
 
         # Load NetCDF timeseries as pandas Dataframe
-        df = netcdf_to_dataframe(ncfile, **params)
+
 
         if args.output :
 
+            df = netcdf_to_dataframe(ncfile, **params)
 
             visual_qc(
                 df,
@@ -76,18 +77,10 @@ def main() :
 
         if args.update :
 
-            lat = float(df.attrs[LATITUDE_VAR])
-            lon = float(df.attrs[LONGITUDE_VAR])
-            alt = float(df.attrs[ELEVATION_VAR])
-
-
-            # Update NetCDF file with QC
-            df = cleanup_data(df)
-            sp_df = compute_sun_pos(df, lat, lon, alt)
-            flags_df = flagData(df, sp_df)
-
-
-            write_flags(ncfile, flags_df)
+            update_qc_flags(
+                ncfile,
+                start_time=args.from_date,
+                end_time=args.to_date)
 
 
 

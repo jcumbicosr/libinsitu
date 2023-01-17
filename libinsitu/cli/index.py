@@ -177,9 +177,6 @@ def process_station(start_day, outfile, istation, infile) :
                 finally:
                     out_nc.close()
 
-
-
-
 def list_data_vars(ncfile) :
     res = set()
     timeVar = getTimeVar(ncfile)

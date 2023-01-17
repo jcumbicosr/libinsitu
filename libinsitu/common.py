@@ -733,3 +733,22 @@ class DefaultDict(defaultdict) :
 
     def __contains__(self, item):
         return True
+
+def nmin(a, b):
+    """Min which returns the other input if one is None"""
+
+    if a is None :
+        return b
+    elif b is None :
+        return a
+    else :
+        return min(a, b)
+
+def nmax(a, b):
+    """Max which returns the other input if one is None"""
+    if a is None :
+        return b
+    elif b is None :
+        return a
+    else :
+        return max(a, b)
