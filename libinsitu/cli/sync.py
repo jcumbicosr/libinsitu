@@ -241,7 +241,7 @@ def http_get(url, end_date, out_path, check_time=False, dry_run=False, compress=
         # Create folders
         folder = os.path.dirname(out_path)
         if not os.path.exists(folder) and not dry_run:
-            os.makedirs(folder)
+            os.makedirs(folder, exist_ok=True)
 
         # Do download
         with NamedTemporaryFile() as tmpFile:

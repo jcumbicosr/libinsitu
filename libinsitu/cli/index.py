@@ -1,4 +1,5 @@
 import argparse
+import os.path
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from multiprocessing import Lock
@@ -7,7 +8,7 @@ import sg2
 from netCDF4 import Dataset
 
 from libinsitu import read_res, info, netcdf_to_dataframe, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, STATION_NAME_VAR, \
-    datetime64_to_sec, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR, qc_masks
+    datetime64_to_sec, sec_to_datetime64, getTimeVar, TIME_DIM, QC_FLAGS_VAR, qc_masks, older_than
 from libinsitu.cdl import cdl2netcdf, parse_cdl
 import pandas as pd
 import numpy as np
@@ -27,6 +28,7 @@ def parser() :
     parser = argparse.ArgumentParser(description='Produces daily index NetCDF files from other files')
     parser.add_argument('output', metavar='<out.nc>', help="Output NetCDF file")
     parser.add_argument('inputs', metavar='<file.nc>', help="Input NetCDF files", nargs="+")
+    parser.add_argument('--incremental', '-i', action="store_true", help='If true, do not run if output exists and is more recent', default=False)
     parser.add_argument('--max-threads', metavar='<nb_threads>', type=int, default=None)
 
     return parser
@@ -35,6 +37,18 @@ def parser() :
 def main() :
 
     args = parser().parse_args()
+
+    # Incremental mode
+    if args.incremental and os.path.exists(args.output) :
+        # XXX simple case. Make it incremental for single individual input later
+        new_files = False
+        for input in args.inputs :
+            if older_than(args.output, input):
+                new_files = True
+        if not new_files :
+            info("Output is already present and more recent than inputs. Skipping")
+            return
+
 
     out_nc = Dataset(args.output, "w")
 

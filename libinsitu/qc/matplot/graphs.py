@@ -12,6 +12,7 @@ from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
 from libinsitu.qc.base_graphs import BaseGraphs
+from libinsitu._version import __version__
 
 
 NB_MIN_IN_DAY = 24 * 60
@@ -358,7 +359,7 @@ class BaseMatplotlibGraphs(BaseGraphs):
             "project": "CAMS2-73",
             "author": 'ARMINES, DLR',
             "name": 'libinsitu - Visual plausibility control',
-            "vers": get_version()}
+            "vers": __version__}
 
         NbDays = len(self.meas_df.index[self.GHI > 0].normalize().unique())
         AvgGHI = sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
@@ -519,10 +520,7 @@ class BaseMatplotlibGraphs(BaseGraphs):
         plt.ylim((0, SELMax))
         plt.colorbar(im, label=label)
 
-def get_version() :
-    # TODO
-    #return metadata.metadata('libinsitu')['Version']
-    return "1.2"
+
 
 def _get_meta(df, keys) :
     """Try several keys to get Meta data"""

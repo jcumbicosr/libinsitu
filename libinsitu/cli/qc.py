@@ -1,11 +1,14 @@
 import argparse
+import os.path
 from datetime import datetime
+from logging import info
 
 import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 
-from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR
+from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, \
+    older_than
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import LogContext
 from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
@@ -15,6 +18,7 @@ def parser() :
     parser = argparse.ArgumentParser(description='Perform QC analysis on input file. It can fill QC flags in it and / or generate visual QC image')
     parser.add_argument('input', metavar='<file.nc|odap_url>', type=str, help='Input local file or URL')
     parser.add_argument('--output', '-o', metavar='<out.png>', type=str, help='Output image')
+    parser.add_argument('--incremental', '-i', action="store_true", help='If true, do not run if output exists and is more recent', default=False)
     parser.add_argument('--update', '-u', action="store_true", help='Update QC flags on input file', default=False)
     parser.add_argument('--from-date', '-f', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='Start date on analysis (last 5 years of data by default for graph output)', default=None)
     parser.add_argument('--to-date', '-t', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='End date of analysis', default=None)
@@ -50,10 +54,16 @@ def main() :
             # By default, show 5 years of data in graph ouptput
             params["rel_start_time"] = relativedelta(years=-5)
 
+        # Incremental mode : skip if more recent
+        if args.incremental and args.output and os.path.exists(args.output) and older_than(args.input, args.output) :
+            info("Incremental mode : Output file %s is already present and more recent. Skipping" % args.output)
+            return
+
         # Load NetCDF timeseries as pandas Dataframe
         df = netcdf_to_dataframe(ncfile, **params)
 
         if args.output :
+
 
             visual_qc(
                 df,
