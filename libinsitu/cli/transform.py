@@ -296,20 +296,22 @@ def process_chunck(handler, infile, ncfile, args, properties):
                     warning("Strict resolution requested : skipping")
                     return
 
+    timeVar = getTimeVar(ncfile)
+
     # Fill time variable with proper values
-    size_before = len(ncfile.variables[TIME_VAR]) # Remember the size of TIME before it is extended
+    size_before = len(timeVar) # Remember the size of TIME before it is extended
 
     # Fill Time variable
-    if len(ncfile.variables[TIME_VAR]) == 0 :
+    if len(timeVar) == 0 :
         next_time_sec =  datetime64_to_sec(ncfile, start_date64(ncfile))
     else:
-        next_time_sec = ncfile.variables[TIME_VAR][-1] + resolution_s
+        next_time_sec = timeVar[-1] + resolution_s
 
     end_time_sec = chunk_end_int + resolution_s
     new_times_sec = np.arange(next_time_sec, end_time_sec, resolution_s)
     next_time_idx = seconds_to_idx(ncfile, next_time_sec)
     end_time_idx = seconds_to_idx(ncfile, end_time_sec)
-    ncfile.variables[TIME_VAR][next_time_idx: end_time_idx] = new_times_sec
+    timeVar[next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values
     check_and_assign(ncfile, data, time_idx, size_before, args)

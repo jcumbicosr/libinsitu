@@ -156,6 +156,7 @@ variables:
 	    *:coordinates = "time latitude longitude elevation "
 	    *:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
 	    *:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+        *:_FillValue = 0;
 
 # Global attributes
 

@@ -522,13 +522,13 @@ def __nc2df(
         data = dict()
         for varname in data_vars :
             var = ncfile.variables[varname]
-            floats = var[start_idx:end_idx:steps]
+            values = var[start_idx:end_idx:steps]
 
-            #if hasattr(var, "least_significant_digit") :
-            #    digits = var.least_significant_digit
-            #    floats = np.around(floats, decimals=digits)
+            # Unmask int vars
+            if np.ma.is_masked(values) and np.issubdtype(values.dtype, np.integer) :
+                values = values.data
 
-            data[varname] = floats
+            data[varname] = values
 
         df = DataFrame(data, index=times)
 
