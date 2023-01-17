@@ -195,6 +195,9 @@ def ftp_get(url, out_path, dry_run=False) :
 
     user_pass = "" if not user else "-u %s,%s" % (user, password)
 
+    if uri == "" :
+        uri = "./"
+
     ftp_command = """
         set ftps:initial-prot ""; 
         set ftp:ssl-force true; 
@@ -207,6 +210,10 @@ def ftp_get(url, out_path, dry_run=False) :
         src=uri,
         dest=out_path,
         dry_run="" if not dry_run else "--dry-run")
+
+
+    args = ["lftp", "-c", ftp_command]
+    info("Ftp command : %s" % str(args))
 
     # Call lftp
     subprocess.run(
