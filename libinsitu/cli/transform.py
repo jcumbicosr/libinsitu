@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import datetime
-import numpy as np
 import os.path
-import sys
 from os.path import basename, dirname
 
 from libinsitu.common import *
 from libinsitu.cdl import *
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
 from libinsitu.log import debug, info, warning, logger, LogContext, error
+from libinsitu._version import __version__
 import argparse
 
 
@@ -76,6 +75,7 @@ def process_network(network, station_id, out_filename, args) :
 
     properties["UpdateTime"] = now
     properties["CreationTime"] = now
+    properties["Version"] = __version__
 
     handler : InSituHandler = HANDLERS[network](properties)
 

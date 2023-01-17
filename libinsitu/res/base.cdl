@@ -169,6 +169,7 @@ variables:
     :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
     :featureType = "timeSeries" ;
     :cdm_data_type = "timeSeries";
+    :product_version = "libinsitu {Version}"
 
     # Conventions
     :Conventions = "CF-1.10 ACDD-1.3";
@@ -185,9 +186,8 @@ variables:
     :metadata_link =  "{Station_Url}";
     :creator_email = "{Network_ContactPersonMail}";
     :creator_url = "{Network_DescriptionURL}" ;
-    :references = "{Network_References}" ;
+    :references = "Source data : {Network_References}; Processing : Philippe Blanc, Raphaël Jolivet, Lionel Ménard, Yves-Marie Saint-Drenan. Data sharing of in-situ measurements following GEO and FAIR principles in the solar energy sector: An end-to-end implementation example in the solar energy domain ranging from data encoding up to search and discovery. 2022. hal-03811628" ;
     :license = "{Network_LicenseInfoURL}" ;
-
     :comment = "{Station_Comment}" ;
 
     # Station info & coordinates [ACDD1.3]
