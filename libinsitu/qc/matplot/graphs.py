@@ -11,6 +11,8 @@ from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_A
 from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
+
+from libinsitu.log import debug
 from libinsitu.qc.base_graphs import BaseGraphs
 from libinsitu._version import __version__
 
@@ -239,14 +241,18 @@ class BaseMatplotlibGraphs(BaseGraphs):
 
         # Draw limits
         limits_xy = []
-        for a, b, c in limits:
-            yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
 
-            # Poly appromimation
-            tx = np.arange(min(x), max(x), 100)
-            fpoly = np.poly1d(np.polyfit(x, yy, 5))
+        if len(x) > 0 :
+            for a, b, c in limits:
+                yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
 
-            limits_xy.append([tx, fpoly(tx)])
+                debug(x)
+
+                # Poly appromimation
+                tx = np.arange(min(x), max(x), 100)
+                fpoly = np.poly1d(np.polyfit(x, yy, 5))
+
+                limits_xy.append([tx, fpoly(tx)])
 
         self.generic_qc_graph(
             x=x, y=y,
@@ -361,20 +367,23 @@ class BaseMatplotlibGraphs(BaseGraphs):
             "name": 'libinsitu - Visual plausibility control',
             "vers": __version__}
 
+        posTOA = self.TOA > 0
+        nPosTOA = sum(posTOA)
+
         NbDays = len(self.meas_df.index[self.GHI > 0].normalize().unique())
         AvgGHI = sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDHI = sum(self.DIF[self.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDNI = sum(self.DNI[self.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
-        AvailGHI = sum((self.GHI > -2) & (self.TOA > 0)) / sum((self.TOA > 0)) * 100
-        AvailDHI = sum((self.DIF > -2) & (self.TOA > 0)) / sum(self.TOA > 0) * 100
-        AvailDNI = sum((self.DNI > -2) & (self.TOA > 0)) / sum(self.TOA > 0) * 100
+        AvailGHI = np.nan if nPosTOA == 0 else sum((self.GHI > -2) & posTOA) / nPosTOA * 100
+        AvailDHI = np.nan if nPosTOA == 0 else sum((self.DIF > -2) & posTOA) / nPosTOA * 100
+        AvailDNI = np.nan if nPosTOA == 0 else sum((self.DNI > -2) & posTOA) / nPosTOA * 100
 
         DateStrStart = self.meas_df.index[self.GHI > 0][0].strftime("%Y-%m-%d")
         DateStrEnd = self.meas_df.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
 
         ax01 = plt.subplot(gs0[0, 8])
         ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 1 * dY, self.station_id + ': ' + self.station_name, size=FONT_SIZE)  # 'ID/ Station'
+        ax01.text(0.01, Y0 - 1 * dY, 'Station: '+ self.station_id + ': ' + self.station_name, size=FONT_SIZE)  # 'ID/ Station'
         ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(self.latitude), size=FONT_SIZE)
         ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(self.longitude), size=FONT_SIZE)
         ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(self.elevation), size=FONT_SIZE)

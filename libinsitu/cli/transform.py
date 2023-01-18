@@ -85,7 +85,9 @@ def process_network(network, station_id, out_filename, args) :
     in_files = list_files(args.in_files, handler)
 
     new = not os.path.exists(out_filename)
-    mode = "w" if new else "a"
+
+    # If file exists, put it in read only until we process an input file, to avoid changing its mtime
+    mode = "w" if new else "r"
     ncfile = Dataset(out_filename, mode=mode)
 
     if new :
@@ -112,6 +114,12 @@ def process_network(network, station_id, out_filename, args) :
                 if not new and args.incremental and os.path.exists(status_file) and older_than(infile, status_file):
                     info("File %s is older than status file %s : Skipping", infile, status_file)
                     continue
+
+                # First processed file ? reopen the file in write mode => this will update its mtime
+                if mode == "r" :
+                    ncfile.close()
+                    ncfile = Dataset(out_filename, mode="a")
+                    mode = "a"
 
                 chunk_start, chunk_end = process_chunck(handler, infile, ncfile, args, properties)
 
