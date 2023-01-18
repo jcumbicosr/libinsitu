@@ -1,6 +1,7 @@
 1.3.1 :
 * Removed support for plotly for now : dependencies were broken
 * Embed current version in __version__ automatically
+* Update Qc within "transform" flow
 
 1.3 :
 * Fixed bug splitting meta data with "," to lists

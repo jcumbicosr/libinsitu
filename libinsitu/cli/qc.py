@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 
-from libinsitu import openNetCDF, getNetworkId, readShortname, info, LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, \
-    older_than, update_qc_flags
+from libinsitu import openNetCDF, getNetworkId, readShortname, info, older_than, update_qc_flags
 from libinsitu.common import netcdf_to_dataframe
-from libinsitu.log import LogContext
-from libinsitu.qc.qc_utils import flagData, write_flags, cleanup_data, visual_qc, compute_sun_pos
+from libinsitu.log import set_log_context
+from libinsitu.qc.qc_utils import visual_qc
+
 
 def parser() :
 
@@ -33,6 +33,8 @@ def main() :
 
     args = parser().parse_args()
 
+    set_log_context(file=args.input)
+
     # Open in read or update mode
     mode = 'a' if args.update else 'r'
     ncfile = openNetCDF(args.input, mode=mode)
@@ -41,46 +43,46 @@ def main() :
     network_id = getNetworkId(ncfile)
     station_id = readShortname(ncfile)
 
-    with LogContext(network=network_id, station_id=station_id, file=args.input) :
+    set_log_context(network=network_id, station_id=station_id)
 
-        info("Start of QC")
+    info("Start of QC")
 
-        params = dict(
+    params = dict(
+        start_time=args.from_date,
+        end_time=args.to_date,
+        rename_cols=True)
+
+    if args.from_date is None and args.output is not None :
+        # By default, show 5 years of data in graph ouptput
+        params["rel_start_time"] = relativedelta(years=-5)
+
+    # Incremental mode : skip if more recent
+    if args.incremental and args.output and os.path.exists(args.output) and older_than(args.input, args.output) :
+        info("Incremental mode : Output file %s is already present and more recent. Skipping" % args.output)
+        return
+
+    # Load NetCDF timeseries as pandas Dataframe
+
+
+    if args.output :
+
+        df = netcdf_to_dataframe(ncfile, **params)
+
+        visual_qc(
+            df,
+            with_horizons=args.with_horizons,
+            with_mc_clear=args.with_mc_clear)
+
+        # Save to output file
+        plt.savefig(args.output)
+        plt.close()
+
+    if args.update :
+
+        update_qc_flags(
+            ncfile,
             start_time=args.from_date,
-            end_time=args.to_date,
-            rename_cols=True)
-
-        if args.from_date is None and args.output is not None :
-            # By default, show 5 years of data in graph ouptput
-            params["rel_start_time"] = relativedelta(years=-5)
-
-        # Incremental mode : skip if more recent
-        if args.incremental and args.output and os.path.exists(args.output) and older_than(args.input, args.output) :
-            info("Incremental mode : Output file %s is already present and more recent. Skipping" % args.output)
-            return
-
-        # Load NetCDF timeseries as pandas Dataframe
-
-
-        if args.output :
-
-            df = netcdf_to_dataframe(ncfile, **params)
-
-            visual_qc(
-                df,
-                with_horizons=args.with_horizons,
-                with_mc_clear=args.with_mc_clear)
-
-            # Save to output file
-            plt.savefig(args.output)
-            plt.close()
-
-        if args.update :
-
-            update_qc_flags(
-                ncfile,
-                start_time=args.from_date,
-                end_time=args.to_date)
+            end_time=args.to_date)
 
 
 

@@ -47,12 +47,20 @@ def wrap(log_f) :
 # Uncaught exception hook
 def log_except_hook(*exc_info):
     trace = "".join(traceback.format_exception(*exc_info))
-    logger.critical("Unhandled exception. %s", trace)
+    logger.critical("Unhandled exception. %s : %s.\n%s" % (exc_info[0], exc_info[1], trace))
 
 
 def obj2json(obj) :
     serialized = jsonpickle.encode(obj)
     return json.dumps(json.loads(serialized), indent=2)
+
+def set_log_context(network=None, station_id=None, file=None) :
+    if network :
+        setattr(log_context_data, "network", network)
+    if station_id :
+        setattr(log_context_data, "station_id", station_id)
+    if file:
+        setattr(log_context_data, "file", file)
 
 class LogContext(object):
     def __init__(self, network=None, station_id=None, file=None):
@@ -65,15 +73,17 @@ class LogContext(object):
         return self
 
     def __exit__(self, et, ev, tb):
-        for key in self.context.keys():
-            if self.context[key] and hasattr(log_context_data, key) :
-                delattr(log_context_data, key)
 
         # In case of error, adds context to it
         if ev != None and not isinstance(ev, SystemExit):
             raise_from(Exception(
                 "Exception: %s. Context : %s" % (str(ev), str(self.context))), ev)
             return True
+        else:
+            # Cleanup context
+            for key in self.context.keys():
+                if self.context[key] and hasattr(log_context_data, key):
+                    delattr(log_context_data, key)
 
 class IgnoreAndLogExceptions(object):
     def __init__(self, network=None, station_id=None, file=None):
