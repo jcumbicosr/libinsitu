@@ -71,8 +71,8 @@ VALID_COLS = [
     "Comment"]
 
 # Variable attributes
-VALID_MIN_ATTR = "_valid_min"
-VALID_MAX_ATTR = "_valid_max"
+VALID_MIN_ATTR = "valid_min_"
+VALID_MAX_ATTR = "valid_max_"
 FILL_VALUE_ATTR = "_FillValue"
 
 DEFAULT_FILL_VALUE = -999

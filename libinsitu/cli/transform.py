@@ -2,9 +2,6 @@
 import datetime
 import os.path
 from os.path import basename, dirname
-
-import numpy as np
-
 from libinsitu import update_qc_flags
 from libinsitu.common import *
 from libinsitu.cdl import *
