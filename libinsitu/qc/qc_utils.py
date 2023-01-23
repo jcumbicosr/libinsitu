@@ -306,7 +306,7 @@ def write_flags(ncfile, flags_df) :
 
     for colname in flags_df.columns :
         if not colname in flag_masks :
-            warning("Flag %s not found in QC flags DSL. Skipping" % colname)
+            info("Flag %s not found in QC flags DSL. Skipping" % colname)
             continue
 
         colvalues = flags_df[colname]

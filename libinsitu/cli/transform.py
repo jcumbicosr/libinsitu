@@ -145,7 +145,7 @@ def process_network(network, station_id, out_filename, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
-    if min_date is not None :
+    if QC_FLAGS_VAR in ncfile.variables and min_date is not None :
         # We need to wait for everything to be processed before computing QC (instead of computing it chunk by chunk),
         # because some provider split components into several input files (like SKYNET)
         info("Processing QC flags on [%s - %s]" % (min_date, max_date))
