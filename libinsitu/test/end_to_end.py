@@ -12,7 +12,7 @@ from libinsitu.cli import transform, cat
 
 CURR_DIR = path.dirname(__file__)
 
-def generic_test(network, station) :
+def generic_test(network, station, filter=None) :
 
     tmp_dir = mkdtemp()
     outfile = path.join(tmp_dir, "out.nc")
@@ -29,7 +29,10 @@ def generic_test(network, station) :
         transform.main()
 
     # Cat as CSV
-    with patch("sys.argv", ["cat.py", "-s", "-t", "csv", "-o", outcsv, outfile]):
+    args = ["cat.py", "-s", "-t", "csv", "-o", outcsv, outfile]
+    if filter :
+        args += ["-f", filter]
+    with patch("sys.argv", args):
         cat.main()
 
     # Read and compare CSV files
@@ -41,7 +44,8 @@ def generic_test(network, station) :
 def test_ABOM() :
     generic_test("ABOM", "ADE")
 
-
+def test_BSRN() :
+    generic_test("BSRN", "ILO", filter="1994-06-01T06")
 
 if __name__ == '__main__':
     pytest.main(sys.argv)
