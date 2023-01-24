@@ -9,6 +9,7 @@ from pathlib import PurePath
 from typing import Dict
 from zipfile import ZipFile
 
+import pandas as pd
 from pandas import DataFrame
 
 from libinsitu import match_pattern
@@ -24,8 +25,9 @@ def map_cols(data, mapping) :
 class InSituHandler :
     """ Virtual class to be implemented for each new network """
     
-    def __init__(self, properties):
+    def __init__(self, properties, entries_extensions=[".txt"]):
         self.properties = properties.copy()
+        self.entries_extensions = entries_extensions # Used for zip archive : select the entries to process
 
         # Also adds lower case version of properties
         for key, val in properties.items() :
@@ -53,17 +55,30 @@ class InSituHandler :
                 names = thezip.namelist()
 
                 if len(names) == 1 :
-                    entry = names[0]
-                elif zip_entry is not None: # Explicit zip entry request after !
+                    entries = [names[0]]
+                elif zip_entry is not None: # Explicit zip entry request after ! in the file pattern
                     if not zip_entry in names :
                         raise Exception("Missing zip entry '%s' in '%s'" % (zip_entry, filename))
-                    entry = zip_entry
+                    entries = [zip_entry]
                 else:
-                    # TODO : This was a default harcoded : should be better to set it in each subclass
-                    entry = [tmp for tmp in thezip.namelist() if '.txt' in tmp][0]
+                    # Select the entries matching the correct extensions
+                    entries = set()
+                    for entry in thezip.namelist() :
+                        for ext in self.entries_extensions :
+                            if ext in entry :
+                                entries.add(entry)
+                    entries = list(entries)
 
-                stream = thezip.open(entry, mode="r")
-                return self._read_chunk(stream)
+                dfs = []
+                for entry in entries :
+                    stream = thezip.open(entry, mode="r")
+                    dfs.append(self._read_chunk(stream, entryname=entry))
+
+                # Sort by time
+                dfs = sorted(dfs, key=lambda df : df.index[0])
+
+                return pd.concat(dfs)
+
 
         else :
             with open(filename, "rt", encoding=encoding) as f :
@@ -178,7 +193,7 @@ class InSituHandler :
         return self.properties["Network_AvailableData"].split(",")
 
     @abstractmethod
-    def _read_chunk(self, stream) -> DataFrame:
+    def _read_chunk(self, stream, entryname="") -> DataFrame:
         """
         Should return a panda DataFrame, with a datetime index and columns correponding to #DATA_VARIABLES, as defined in common.py.
         Missing values should be np.nan
