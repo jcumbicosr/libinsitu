@@ -13,7 +13,7 @@ import pandas as pd
 from pandas import DataFrame
 
 from libinsitu import match_pattern
-from libinsitu.log import warning, debug
+from libinsitu.log import warning, debug, set_log_context
 
 ZERO_DEG_K = 273.15
 
@@ -71,6 +71,9 @@ class InSituHandler :
 
                 dfs = []
                 for entry in entries :
+
+                    # set_log_context(file="%s!%s" % (filename, entry))
+
                     stream = thezip.open(entry, mode="r")
                     dfs.append(self._read_chunk(stream, entryname=entry))
 

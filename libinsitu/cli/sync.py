@@ -13,8 +13,7 @@ from dateutil.relativedelta import relativedelta
 import requests
 import jmespath
 import re
-
-from toolz import memoize
+import functools
 
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
@@ -347,7 +346,7 @@ def http_list(network, stations_info, url_pattern, path_pattern, start_date, end
 
     return url_paths, url_end_dates
 
-@memoize
+@functools.cache
 def get_json(url) :
     return requests.get(url).json()
 

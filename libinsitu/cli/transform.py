@@ -285,7 +285,8 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
     # Error if chunk starts before start time
     if sum(time_idx < 0) > 0 :
-        raise Exception("Chunk start (%s) is before output start time. Skipping" % (time2str(chunk_start)))
+        raise Exception("Chunk start (%s) is before output start time (%s). Skipping" % (
+            time2str(chunk_start), start_date64(ncfile)))
 
     # Warning if resolution seems different
     # Error if scrictREsolution is set
