@@ -69,15 +69,15 @@ class Stat() :
         self.sum += series.sum()
         self.count += series.count()
 
-def print_meta(df) :
+def print_meta(df, out=sys.stdout) :
 
     def print_dict(dic, indent=0) :
         for key, val in dic.items() :
             if isinstance(val, dict) :
-                print("#%s %s:" % (" " * indent, key))
+                print("#%s %s:" % (" " * indent, key), file=out)
                 print_dict(val, indent+2)
             else:
-                print("#%s %s = %s" % (" " * indent, key, str(val)))
+                print("#%s %s = %s" % (" " * indent, key, str(val)), file=out)
 
     print_dict(df.attrs)
 
@@ -106,6 +106,7 @@ def parser() :
     parser = argparse.ArgumentParser(description='Dump content of NetCDF insitu data (CF compliant)')
     parser.add_argument('filename', metavar='<file.nc> or <http://opendap-url/.nc>', type=str, help='Input file or URL')
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
+    parser.add_argument('--output', '-o', help='Output file. stdout if no set (default)', default=None)
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
     parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
@@ -155,15 +156,19 @@ def main() :
         chunked=True,
         steps=args.steps, chunk_size=args.chunk_size)
 
-    if args.stats :
+    if args.output is not None:
+        out = open(args.output, 'w')
+    else:
+        out = sys.stdout
 
-        show_stats(chunks)
+    if args.stats :
+        show_stats(chunks, out=out)
 
     else:
+        print_data(chunks, args, out=out)
 
-        print_data(chunks, args)
+def print_data(chunks, args, out=sys.stdout) :
 
-def print_data(chunks, args) :
     header = True
     formatters = None
     for chunk in chunks:
@@ -174,7 +179,7 @@ def print_data(chunks, args) :
         chunk = format_QC(chunk, args.qc_format)
 
         if header and args.header:
-            print_meta(chunk)
+            print_meta(chunk, out=out)
 
         if formatters is None:
             formatters = build_formatters(chunk)
@@ -183,16 +188,16 @@ def print_data(chunks, args) :
             break
 
         if args.type == "text" :
-            chunk.to_string(sys.stdout, justify="left", header=header, formatters=formatters)
-            print("")
+            chunk.to_string(out, justify="left", header=header, formatters=formatters)
+            print("", file=out)
         elif args.type == "csv" :
-            df_to_csv(chunk, index_label="time", header=header)
+            df_to_csv(chunk, index_label="time", header=header, out=out)
 
         header = False
 
-def show_stats(chunks) :
+def show_stats(chunks, out=sys.stdout) :
 
-    console = Console()
+    console = Console(file=out)
 
     stats = defaultdict(lambda : Stat())
     for chunk in chunks :

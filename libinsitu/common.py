@@ -144,6 +144,11 @@ def parseCSV(res_path, key = "ID") :
     res = dict()
     rows = DictReader(read_res(res_path))
     for row in rows:
+
+        # Skip commented lines
+        if "#" in row[key] :
+            continue
+
         res[row[key]] = {key: parse_value(val) for key, val in row.items()}
     return res
 

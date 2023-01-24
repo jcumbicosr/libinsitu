@@ -371,15 +371,15 @@ class BaseMatplotlibGraphs(BaseGraphs):
         nPosTOA = sum(posTOA)
 
         NbDays = len(self.meas_df.index[self.GHI > 0].normalize().unique())
-        AvgGHI = sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
-        AvgDHI = sum(self.DIF[self.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
-        AvgDNI = sum(self.DNI[self.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
+        AvgGHI = np.nan if NbDays == 0 else sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
+        AvgDHI = np.nan if NbDays == 0 else sum(self.DIF[self.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
+        AvgDNI = np.nan if NbDays == 0 else sum(self.DNI[self.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvailGHI = np.nan if nPosTOA == 0 else sum((self.GHI > -2) & posTOA) / nPosTOA * 100
         AvailDHI = np.nan if nPosTOA == 0 else sum((self.DIF > -2) & posTOA) / nPosTOA * 100
         AvailDNI = np.nan if nPosTOA == 0 else sum((self.DNI > -2) & posTOA) / nPosTOA * 100
 
-        DateStrStart = self.meas_df.index[self.GHI > 0][0].strftime("%Y-%m-%d")
-        DateStrEnd = self.meas_df.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
+        DateStrStart = "" if NbDays == 0 else self.meas_df.index[self.GHI > 0][0].strftime("%Y-%m-%d")
+        DateStrEnd = "" if NbDays == 0 else self.meas_df.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
 
         ax01 = plt.subplot(gs0[0, 8])
         ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)

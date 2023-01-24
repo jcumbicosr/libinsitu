@@ -1,7 +1,11 @@
+1.3.* :
+* Fixed IEA_PVPS after updates of convention : Time -> time
+
 1.3.1 :
 * Removed support for plotly for now : dependencies were broken
 * Embed current version in __version__ automatically
 * Update Qc within "transform" flow
+* Fixed missing requirements 
 
 1.3 :
 * Fixed bug splitting meta data with "," to lists
