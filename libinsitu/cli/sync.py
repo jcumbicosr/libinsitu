@@ -14,6 +14,8 @@ import requests
 import jmespath
 import re
 
+from toolz import memoize
+
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
 from datetime import datetime, timedelta
@@ -52,7 +54,9 @@ def prepare_properties(network, properties) :
     """ Adds prefix Station_ adds env variables (more user/passord)"""
 
     properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
-    properties["station_id"] = properties["Station_ID"].lower()
+    for key, val in list(properties.items()) :
+        if val is not None and isinstance(val, str) :
+            properties[key.lower()] = val.lower()
 
     # Add environment variable prefixed by the network
     for key, val in os.environ.items() :
@@ -70,7 +74,7 @@ def get_pattern_period(path_pattern) :
     elif "YYYY" in placeholders :
         return "yearly"
     else:
-        raise("No time pattern found in %s" % path_pattern)
+        return "static"
 
 def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=None, end_date=None) :
 
@@ -98,6 +102,8 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
         start_date = start_date.replace(day=1)
     elif period == "yearly":
         start_date = start_date.replace(month=1, day=1)
+    elif period == "static" :
+        pass
     else:
         raise Exception("Unsupported period : %s" % period)
 
@@ -115,6 +121,9 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
             # format input URL
             url = pattern.format(**properties, **date_dict)
 
+            if "+json" in url :
+                url = resolve_json(url)
+
             if '*' in path_pattern :
                 # Wildcard in output file pattern ? take the end of the url as filename
                 path = os.path.basename(url)
@@ -127,13 +136,16 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
             if "!" in path :
                 path  = path.split("!")[0]
 
-            urls[url] = path
+            if url is not None :
+                urls[url] = path
 
             # Next date
             if period == "monthly" :
                 date += ONE_MONTH
             elif period == "yearly" :
                 date += ONE_YEAR
+            elif period == "static" :
+                break
             else:
                 raise Exception("Unsupported period : %s" % period)
 
@@ -142,15 +154,15 @@ def list_urls_for_one_station(properties, url_pattern, path_pattern, start_date=
                 end_dates[url] = date
 
 
-    if "[" in url_pattern :
+    if "<" in url_pattern :
 
         # There is an alternative [one,two] in the pattern
-        reg = re.compile(r'.*(\[.*\]).*')
+        reg = re.compile(r'.*(\<.*\>).*')
         match = reg.match(url_pattern)
-        options = match.group(1).replace("[", "").replace("]", "").split(",")
+        options = match.group(1).replace("<", "").replace(">", "").split(",")
 
         # Replace the options by a placeholder
-        pattern = re.sub('\[.*\]', '{i}', url_pattern)
+        pattern = re.sub('\<.*\>', '{i}', url_pattern)
 
         # Loop on options
         for option in options :
@@ -335,18 +347,31 @@ def http_list(network, stations_info, url_pattern, path_pattern, start_date, end
 
     return url_paths, url_end_dates
 
-def http_json_list(url_pattern) :
+@memoize
+def get_json(url) :
+    return requests.get(url).json()
 
+def resolve_json(url_pattern) :
+    """Transform https+json pattern into http"""
     url, jsme_filter = url_pattern.split("|")
     url = url.replace("+json", "")
 
+    info("Entering request: " + url_pattern)
+
     # Get JSON
-    js = requests.get(url).json()
+    js = get_json(url)
 
     # Apply JMSE filter
     urls = jmespath.search(jsme_filter, js)
 
-    return {url: os.path.basename(url) for url in urls}
+    if len(urls) > 1 :
+        raise Exception("Expected 1 url for '%s', got : %s" % (url_pattern, urls))
+    if len(urls) == 0 :
+        warning("URL resolution failed for '%s'" % url_pattern)
+        return None
+    else:
+        info("Resolved '%s' => '%s'" %  (url_pattern, urls[0]))
+        return urls[0]
 
 def ftp_list(network, stations_info, url_pattern) :
     url_paths = dict()
@@ -399,11 +424,11 @@ def main() :
 
     url_end_dates = dict()
 
-    if "+json" in url_pattern :
-        # Use http+json parsing
-        url_paths = http_json_list(url_pattern=url_pattern)
+    #if "+json" in url_pattern :
+    #    # Use http+json parsing
+    #    url_paths = http_json_list(url_pattern=url_pattern)
 
-    elif url_pattern.startswith("http") :
+    if url_pattern.startswith("http") :
 
         # Use http syncing
         url_paths, url_end_dates = http_list(
