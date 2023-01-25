@@ -214,7 +214,7 @@ def ftp_get(url, out_path, dry_run=False) :
         set ftp:ssl-force true; 
         set ftp:ssl-protect-data true; 
         set ssl:verify-certificate no; 
-        open ftp://{domain} {user_pass}; mirror --verbose --ignore-time --no-perms {dry_run} {src} {dest}
+        open ftp://{domain} {user_pass}; mirror --parallel=10 --verbose --ignore-time --no-perms {dry_run} {src} {dest}
     """.format(
         user_pass=user_pass,
         domain=domain,
