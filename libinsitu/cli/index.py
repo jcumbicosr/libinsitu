@@ -156,7 +156,10 @@ def process_station(start_day, outfile, istation, infile) :
             if QC_FLAGS_VAR in in_df :
                 qc_col = in_df[QC_FLAGS_VAR]
                 for flag, mask in qc_masks(in_df).items() :
-                    data_dic[QC_COUNT_PATTTERN % flag] = is_daylight & ((qc_col & mask) != 0)
+                    daylight_flags = is_daylight & ((qc_col & mask) != 0)
+
+                    # Daily sum
+                    data_dic[QC_COUNT_PATTTERN % flag] = daylight_flags.resample('D').sum()
 
             with WRITE_LOCK :
 
@@ -208,7 +211,6 @@ def write_series(out_nc, istation, var_name, series, ref_day) :
 
     if end_idx >= nb_times :
         time_var[0:end_idx+1] = np.arange(ref_day, end_day+1)
-
 
 
     out_var = out_nc.variables[var_name]
