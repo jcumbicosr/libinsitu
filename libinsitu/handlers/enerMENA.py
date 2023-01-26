@@ -79,7 +79,7 @@ def read_mesor(stream, na_values=NA_VALUES):
 
 class EnerMENAHandler(InSituHandler) :
 
-    def _read_chunk(self, stream):
+    def _read_chunk(self, stream, entryname=None):
 
         metadata, data = read_mesor(stream)
 

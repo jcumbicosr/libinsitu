@@ -22,7 +22,7 @@ IRRADIANCE_COL="Irradiance(W/m2)"
 
 class SkyNetHandler(InSituHandler) :
 
-    def _read_chunk(self, stream):
+    def _read_chunk(self, stream, entryname=None):
 
         out_col, year = read_header(stream)
 

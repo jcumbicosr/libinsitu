@@ -12,34 +12,56 @@ from libinsitu.cli import transform, cat
 
 CURR_DIR = path.dirname(__file__)
 
-def generic_test(network, station, filter=None) :
+# Global var set by setup
+outfile = None
+outcsv = None
+inputdir = None
+expected_dir = None
 
+# -- Util functions
+
+def init_dirs(network) :
+
+    global outfile, outcsv, inputdir, expected_dir
     tmp_dir = mkdtemp()
     outfile = path.join(tmp_dir, "out.nc")
     outcsv = path.join(tmp_dir, "out.csv")
     inputdir = path.join(CURR_DIR, "data", "in", network)
-    expected_csv = path.join(CURR_DIR, "data", "expected", network + ".csv")
+    expected_dir = path.join(CURR_DIR, "data", "expected")
 
     # Change current folder
     project_dir = path.join(CURR_DIR, "..", "..")
     chdir(project_dir)
 
+def run_main(main_f, args) :
+    with patch("sys.argv", args):
+        main_f()
+
+def input_to_nc(network, station) :
+    run_main(transform.main, ["transform.py", "-n",  network, "-s", station, outfile, inputdir])
+
+def generic_test(network, station, filter=None) :
+
+    init_dirs(network)
+
     # Transform input to NetCDF
-    with patch("sys.argv", ["transform.py", "-n",  network, "-s", station, outfile, inputdir]):
-        transform.main()
+    input_to_nc(network, station)
 
     # Cat as CSV
     args = ["cat.py", "-s", "-t", "csv", "-o", outcsv, outfile]
     if filter :
         args += ["-f", filter]
-    with patch("sys.argv", args):
-        cat.main()
+    run_main(cat.main, args)
 
     # Read and compare CSV files
+    expected_csv = path.join(expected_dir, "%s.csv" % network)
     expected_df = read_csv(expected_csv, parse_dates=["time"])
     actual_df = read_csv(outcsv, parse_dates=["time"])
 
     assert_frame_equal(expected_df, actual_df)
+
+# -- Actual tests
+
 
 def test_ABOM() :
     generic_test("ABOM", "ADE")

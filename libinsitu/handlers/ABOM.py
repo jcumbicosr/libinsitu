@@ -6,7 +6,7 @@ from libinsitu.handlers.base_handler import InSituHandler
 
 class ABOMHandler(InSituHandler) :
 
-    def _read_chunk(self, stream) :
+    def _read_chunk(self, stream, entryname=None) :
 
         def date_parser(years, months, days, hours, minutes):
             strs = years + "/" + months + "/" + days + " " + hours + ":" + minutes

@@ -10,7 +10,7 @@ TIMEZONE=2
 
 class SAURANHandler(InSituHandler) :
 
-    def _read_chunk(self, stream) :
+    def _read_chunk(self, stream, entryname=None) :
 
         GHI_Col = self.properties["Station_GHI_Col"]
         DHI_Col = self.properties["Station_DHI_Col"]

@@ -16,7 +16,7 @@ MAPPING = dict(
 
 class BSRNHandler(InSituHandler) :
 
-    def _read_chunk(self, stream) :
+    def _read_chunk(self, stream, entryname=None) :
 
         data, metadata = parse_bsrn(stream)
 

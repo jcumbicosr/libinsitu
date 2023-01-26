@@ -110,7 +110,7 @@ def parser() :
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
     parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
     parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
-    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=None)
+    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=QC_NONE)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
     parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")

@@ -165,13 +165,13 @@ class MaplotLibGraphs(BaseMatplotlibGraphs):
             wspace=0.00)
 
         plt.subplot(gs3b[1:3, 6])
-        self.histo_qc(self.GHI, self.flag_df.KT, 'GHI/TOA', y_label=True)
+        self.histo_qc(self.GHI, self.flags.KT, 'GHI/TOA', y_label=True)
 
         plt.subplot(gs3b[1:3, 7])
-        self.histo_qc(self.DNI, self.flag_df.Kn, 'DNI/TOANI')
+        self.histo_qc(self.DNI, self.flags.Kn, 'DNI/TOANI')
 
         plt.subplot(gs3b[1:3, 8])
-        self.histo_qc(self.DIF, self.flag_df.K, 'DIF/GHI',legend_pos='upper left')
+        self.histo_qc(self.DIF, self.flags.K, 'DIF/GHI',legend_pos='upper left')
 
         if self.cams_df is None :
             gs3 = GridSpec(7, 3)

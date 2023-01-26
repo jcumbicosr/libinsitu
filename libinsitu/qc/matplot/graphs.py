@@ -12,7 +12,6 @@ from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
 
-from libinsitu.log import debug
 from libinsitu.qc.base_graphs import BaseGraphs
 from libinsitu._version import __version__
 
@@ -101,8 +100,8 @@ class BaseMatplotlibGraphs(BaseGraphs):
             h_lt[h_lt < 0] = h_lt[h_lt < 0] + 24
             axe.plot(mdates.date2num(index), h_lt, 'k--', linewidth=0.75, alpha=0.8)
 
-        plot_limit(self.sp_df.SR_h) # Sunrise
-        plot_limit(self.sp_df.SS_h) # Sunset
+        plot_limit(self.SR_h) # Sunrise
+        plot_limit(self.SS_h) # Sunset
 
         im00.set_clim(0, cmax)
         axe.text(mdates.date2num(index)[0] + 5, 21, label, size=10)
@@ -246,8 +245,6 @@ class BaseMatplotlibGraphs(BaseGraphs):
             for a, b, c in limits:
                 yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
 
-                debug(x)
-
                 # Poly appromimation
                 tx = np.arange(min(x), max(x), 100)
                 fpoly = np.poly1d(np.polyfit(x, yy, 5))
@@ -282,7 +279,7 @@ class BaseMatplotlibGraphs(BaseGraphs):
         return self.generic_qc_graph(
             legend="BSRN-2C : {:.2f}% ".format(self.stat_test['T2C_bsrn_kt']),
             x=self.SZA[filter], xlabel='Solar zenith angle (°)', xrange=[10, 95],
-            y=self.flag_df.K[filter], ylabel='DIF/GHI (-)', yrange = [0, 1.25],
+            y=self.flags.K[filter], ylabel='DIF/GHI (-)', yrange = [0, 1.25],
             lines=[line],
             clim_ratio=0.8)
 
@@ -296,8 +293,8 @@ class BaseMatplotlibGraphs(BaseGraphs):
 
         return self.generic_qc_graph(
             legend = "SERI-kn : {:.2f}% ".format(self.stat_test['T2C_seri_knkt']),
-            x=self.flag_df.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
-            y=self.flag_df.Kn[filter], ylabel='DNI/TOANI (-)', yrange=(0, 0.8),
+            x=self.flags.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
+            y=self.flags.Kn[filter], ylabel='DNI/TOANI (-)', yrange=(0, 0.8),
             lines=[line], clim_ratio=0.1)
 
     def seri_k(self) :
@@ -310,8 +307,8 @@ class BaseMatplotlibGraphs(BaseGraphs):
 
         return self.generic_qc_graph(
             legend="SERI-K : {:.2f}% ".format(self.stat_test['T2C_seri_kkt']),
-            x=self.flag_df.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
-            y=self.flag_df.K[filter], ylabel='DIF/GHI (-)', yrange=(0, 1.4),
+            x=self.flags.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
+            y=self.flags.K[filter], ylabel='DIF/GHI (-)', yrange=(0, 1.4),
             lines=[line],
             clim_ratio=0.1)
 
@@ -357,9 +354,6 @@ class BaseMatplotlibGraphs(BaseGraphs):
         gs0 = GridSpec(9, 12)
         gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
 
-        climate = _get_meta(self.meas_df, CLIMATE_ATTRS)
-        country = _get_meta(self.meas_df, STATION_COUNTRY_ATTRS)
-        source = _get_meta(self.meas_df, NETWORK_NAME_ATTRS)
 
         CodeInfo = {
             "project": "CAMS2-73",
@@ -370,7 +364,7 @@ class BaseMatplotlibGraphs(BaseGraphs):
         posTOA = self.TOA > 0
         nPosTOA = sum(posTOA)
 
-        NbDays = len(self.meas_df.index[self.GHI > 0].normalize().unique())
+        NbDays = len(self.time.index[self.GHI > 0].normalize().unique())
         AvgGHI = np.nan if NbDays == 0 else sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDHI = np.nan if NbDays == 0 else sum(self.DIF[self.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDNI = np.nan if NbDays == 0 else sum(self.DNI[self.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
@@ -378,17 +372,17 @@ class BaseMatplotlibGraphs(BaseGraphs):
         AvailDHI = np.nan if nPosTOA == 0 else sum((self.DIF > -2) & posTOA) / nPosTOA * 100
         AvailDNI = np.nan if nPosTOA == 0 else sum((self.DNI > -2) & posTOA) / nPosTOA * 100
 
-        DateStrStart = "" if NbDays == 0 else self.meas_df.index[self.GHI > 0][0].strftime("%Y-%m-%d")
-        DateStrEnd = "" if NbDays == 0 else self.meas_df.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
+        DateStrStart = "" if NbDays == 0 else self.time.index[self.GHI > 0][0].strftime("%Y-%m-%d")
+        DateStrEnd = "" if NbDays == 0 else self.time.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
 
         ax01 = plt.subplot(gs0[0, 8])
-        ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + source, size=FONT_SIZE)
+        ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + self.source, size=FONT_SIZE)
         ax01.text(0.01, Y0 - 1 * dY, 'Station: '+ self.station_id + ': ' + self.station_name, size=FONT_SIZE)  # 'ID/ Station'
         ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(self.latitude), size=FONT_SIZE)
         ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(self.longitude), size=FONT_SIZE)
         ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(self.elevation), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(country), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(climate), size=FONT_SIZE)
+        ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(self.country), size=FONT_SIZE)
+        ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(self.climate), size=FONT_SIZE)
         ax01.axis('off')
 
         ax02 = plt.subplot(gs0[0, 10])
@@ -466,8 +460,8 @@ class BaseMatplotlibGraphs(BaseGraphs):
         data4plot = DataFrame(
             {'kc': self.GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
              'SAA': vSAA[idxPlot] * 180 / np.pi, \
-             'day': self.meas_df[idxPlot].index.floor(freq='D')}, \
-            index=self.meas_df[idxPlot].index)
+             'day': self.time[idxPlot].index.floor(freq='D')}, \
+            index=self.time[idxPlot].index)
         data4plot = data4plot.join(Dailydata, on='day', how='left')
         ix = data4plot.Avgkc > 0
         xPlot = data4plot.SAA[ix].values
@@ -531,9 +525,4 @@ class BaseMatplotlibGraphs(BaseGraphs):
 
 
 
-def _get_meta(df, keys) :
-    """Try several keys to get Meta data"""
-    for key in keys :
-        if key in df.attrs :
-            return df.attrs[key]
-    return "-"
+

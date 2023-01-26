@@ -23,8 +23,8 @@ from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_
 from libinsitu.log import warning, info
 import numpy as np
 
+from libinsitu.qc.base_graphs import _get_meta
 from libinsitu.qc.matplot import MaplotLibGraphs
-from libinsitu.qc.matplot.graphs import _get_meta
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)

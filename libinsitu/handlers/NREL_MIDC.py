@@ -20,7 +20,7 @@ ONE_DAY = timedelta(days=1)
 
 class NRELHandler(InSituHandler) :
 
-    def _read_chunk(self, stream) :
+    def _read_chunk(self, stream, entryname=None) :
 
         # Check file is not Error from REST API
         first_line = stream.readline()

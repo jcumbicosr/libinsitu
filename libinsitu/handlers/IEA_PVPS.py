@@ -12,7 +12,7 @@ DATE_COLS = dict(
 
 class IEA_PVPSHandler(InSituHandler) :
 
-    def _read_chunk(self, stream):
+    def _read_chunk(self, stream, entryname=None):
         df = pd.read_csv(stream, comment="#", na_values=NA_VALUES)
 
         df["time"] = pd.to_datetime(dict((key, df[val]) for key, val in DATE_COLS.items()))
