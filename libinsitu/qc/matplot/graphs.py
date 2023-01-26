@@ -363,8 +363,9 @@ class BaseMatplotlibGraphs(BaseGraphs):
 
         posTOA = self.TOA > 0
         nPosTOA = sum(posTOA)
+        timePosGHI = self.time[self.GHI > 0]
 
-        NbDays = len(self.time.index[self.GHI > 0].normalize().unique())
+        NbDays = len(timePosGHI.normalize().unique())
         AvgGHI = np.nan if NbDays == 0 else sum(self.GHI[self.GHI > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDHI = np.nan if NbDays == 0 else sum(self.DIF[self.DIF > 0]) * 1 / 60 / NbDays * 365 / 1000
         AvgDNI = np.nan if NbDays == 0 else sum(self.DNI[self.DNI > 0]) * 1 / 60 / NbDays * 365 / 1000
@@ -372,8 +373,8 @@ class BaseMatplotlibGraphs(BaseGraphs):
         AvailDHI = np.nan if nPosTOA == 0 else sum((self.DIF > -2) & posTOA) / nPosTOA * 100
         AvailDNI = np.nan if nPosTOA == 0 else sum((self.DNI > -2) & posTOA) / nPosTOA * 100
 
-        DateStrStart = "" if NbDays == 0 else self.time.index[self.GHI > 0][0].strftime("%Y-%m-%d")
-        DateStrEnd = "" if NbDays == 0 else self.time.index[self.GHI > 0][-1].strftime("%Y-%m-%d")
+        DateStrStart = "" if NbDays == 0 else timePosGHI[0].strftime("%Y-%m-%d")
+        DateStrEnd = "" if NbDays == 0 else timePosGHI[-1].strftime("%Y-%m-%d")
 
         ax01 = plt.subplot(gs0[0, 8])
         ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + self.source, size=FONT_SIZE)
