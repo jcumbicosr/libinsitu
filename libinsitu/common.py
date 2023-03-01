@@ -181,7 +181,7 @@ def getStationInfo(network, station_id) :
 def getNetworkInfo(network) :
     networks = getNetworksInfo()
     if not network in networks :
-        raise Exception("Network %s not found in Network infp of %s" % network)
+        raise Exception("Network %s not found in Network info" % network)
     return networks[network]
 
 def is_uniform(vector) :

@@ -10,6 +10,7 @@ from libinsitu.handlers.SAURAN import SAURANHandler
 from libinsitu.handlers.SKYNET import SkyNetHandler
 from libinsitu.handlers.enerMENA import EnerMENAHandler
 from libinsitu.handlers.base_handler import InSituHandler
+from libinsitu.handlers.METEO_FRANCE import MeteoFranceHandler
 
 # Static map of handlers
 HANDLERS = {
@@ -23,7 +24,8 @@ HANDLERS = {
     "SURFRAD" : RADHandler,
     "SOLRAD" : RADHandler,
     "SKYNET" : SkyNetHandler,
-    "IEA_PVPS" : IEA_PVPSHandler
+    "IEA_PVPS" : IEA_PVPSHandler,
+    "METEO_FRANCE": MeteoFranceHandler
 }
 
 def listNetworks() :

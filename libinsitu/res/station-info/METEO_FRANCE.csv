@@ -1,0 +1,2 @@
+ID,WMOID,Name,Latitude,Longitude,Elevation,Timezone,Address,City,Region,Country,SurfaceType,TopographyType,RuralUrban,Climate,OperationStatus,TimeResolution,ContactName,Institute,Url,CommissionDate,DecommissionDate,StartDate,EndDate,Comment
+NCE,,Nice,43.64,7.209,0,UTC+02:00,,Nice,PACA,France,asphalt,flat,urban,,,1M,"",,,,,2015-01-01,,
