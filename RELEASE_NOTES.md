@@ -1,5 +1,8 @@
-1.3.* :
+1.3.2 :
 * Fixed IEA_PVPS after updates of convention : Time -> time
+* Added end to end tests for BSRN data
+* Added end to end tests for QC
+* Added virtualenv to tests, to ensure proper requirements.txt
 
 1.3.1 :
 * Removed support for plotly for now : dependencies were broken

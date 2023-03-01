@@ -12,6 +12,7 @@ from libinsitu.cli import transform, cat, qc
 
 
 CURR_DIR = path.dirname(__file__)
+print("Current folder : %s" % CURR_DIR)
 
 # Global var set by setup
 outfile = None

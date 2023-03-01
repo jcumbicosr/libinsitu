@@ -18,6 +18,6 @@ test:
 	rm -rf $(TSTENV)
 	virtualenv $(TSTENV)
 	. $(TSTENV)/bin/activate
-	$(TSTENV)/bin/pip install dist/*.whl
+	$(TSTENV)/bin/pip install dist/*.whl --force-reinstall
 	$(TSTENV)/bin/pip install pytest
 	$(TSTENV)/bin/pytest libinsitu/test/*.py
