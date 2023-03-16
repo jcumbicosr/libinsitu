@@ -5,13 +5,15 @@ import pytest
 import sys
 from os import path, chdir
 from tempfile import mkdtemp, mktemp
+
+from numpy.ma.testutils import assert_array_equal
 from pandas import read_csv
-from pandas._testing import assert_frame_equal
+from pandas._testing import assert_frame_equal, assert_series_equal
 import filecmp
 import numpy as np
 
 from libinsitu import dataframe_to_netcdf, netcdf_to_dataframe, ELEVATION_VAR, LATITUDE_VAR, LONGITUDE_VAR, \
-    STATION_NAME_VAR
+    STATION_NAME_VAR, write_flags
 from libinsitu.cli import transform, cat, qc
 
 
@@ -26,6 +28,13 @@ outcsv = None
 inputdir = None
 expected_dir = None
 tmp_dir = None
+
+# Dummy values used in tests
+latitude = 42.0
+longitude = 7.0
+elevation = 100
+station_id = "station_1"
+network_id = "my_network"
 
 
 #region -- Util functions
@@ -71,9 +80,12 @@ def generic_test(network, station, filter=None) :
     assert_frame_equal(expected_df, actual_df)
 
 
+def time_str_to_dt64(time_str) :
+    return np.datetime64(BASE_DATE + " " + time_str, 'ns')
+
 def mk_timeseries(rows) :
     """Create pandas dataset from dict of time_str => {col:val, col2:val2} """
-    data = {np.datetime64(BASE_DATE + " " + k) : v for k, v in rows.items()}
+    data = {time_str_to_dt64(time) : values for time, values in rows.items()}
     return pd.DataFrame.from_dict(data, orient="index")
 
 #endregion
@@ -110,12 +122,6 @@ def test_encoding_decoding_round_trip() :
         "00:02": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
     })
 
-    latitude  = 42.0
-    longitude = 7.0
-    elevation = 100
-    station_id = "station_1"
-    network_id = "my_network"
-
     # Transform to NetCDF
     dataframe_to_netcdf(
         df, ncfilename,
@@ -138,6 +144,68 @@ def test_encoding_decoding_round_trip() :
     assert out_df.attrs[STATION_NAME_VAR] == station_id
     assert out_df.attrs["time_coverage_start"] == '2021-01-01T00:00:00'
     assert out_df.attrs["time_coverage_end"] == '2021-01-01T00:02:00'
+
+
+def test_qc_filters():
+
+    ncfilename = mktemp()
+
+    # Data
+    df = mk_timeseries({
+        "00:01": dict(GHI=1400.0, BNI=1400.0, DHI=1300.0),
+        "00:02": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
+        "00:03": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
+    })
+
+    # QC flags
+    flags = mk_timeseries({
+        "00:01": dict(T1C_ppl_GHI=False, tracker_off=False),
+        "00:02": dict(T1C_ppl_GHI=True, tracker_off=False),
+        "00:03": dict(T1C_ppl_GHI=False, tracker_off=True),
+    })
+
+    ncfile = dataframe_to_netcdf(
+        df, ncfilename,
+        station_name=station_id, network_name=network_id,
+        latitude=latitude, longitude=longitude, elevation=elevation,
+        close=False, process_qc=False)
+
+    # Manually write QC flags
+    write_flags(ncfile, flags)
+
+    # Reload NetCDF file as Dataframe
+    out_df = netcdf_to_dataframe(
+        ncfile,
+        skip_na=True,
+        expand_qc=True)
+
+    # Check flags are the same
+    assert_series_equal(out_df["QC.T1C_ppl_GHI"], flags.T1C_ppl_GHI, check_names=False)
+    assert_series_equal(out_df["QC.tracker_off"], flags.tracker_off, check_names=False)
+
+    def check_filtering(skip_qc, expected_times) :
+        out_df = netcdf_to_dataframe(
+            ncfile,
+            skip_na=True,
+            skip_qc=skip_qc)
+
+        times = np.array(list(time_str_to_dt64(time) for time in expected_times))
+
+        assert_array_equal(out_df.index.values, times)
+
+    # Not filtering
+    check_filtering(False, ["00:01", "00:02", "00:03"])
+
+    # Filter any flag
+    check_filtering(True, ["00:01"])
+
+    # Filter only one flag
+    check_filtering(["T1C_ppl_GHI"], ["00:01", "00:03"])
+
+    # Filter all but one flag
+    check_filtering(["!T1C_ppl_GHI"], ["00:01", "00:02"])
+
+
 
 
 #endregion

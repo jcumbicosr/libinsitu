@@ -414,7 +414,7 @@ def netcdf_to_dataframe(
         chunk_size=CHUNK_SIZE,
         steps=1,
         rename_cols=False,
-        filter_qc=False):
+        expand_qc=False):
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index.
 
@@ -428,7 +428,7 @@ def netcdf_to_dataframe(
 
             You can also provide a list of flags to filter : `["T3C_bsrn_3cmp", "T2C_seri_kn_kt"]`
 
-            Or filter o any flags but some, by prepending '!' : `["!T3C_bsrn_3cmp", "!T2C_seri_kn_kt"]`
+            Or filter on any flags but some, by prepending '!' : `["!T3C_bsrn_3cmp", "!T2C_seri_kn_kt"]`
 
             For full list of flags, see the [online doc](https://libinsitu.readthedocs.io/en/latest/qc.html)
 
@@ -443,8 +443,9 @@ def netcdf_to_dataframe(
         :param chunked: If True, does not load the whole file in memory at once : returns an iterator on Dataframe chunks.
         :param chunk_size: Size of chunks for chunked data
         :param steps: Downsampling (1 by default)
+        :param expand_qc: If True, expand the QC bitmaps into one boolean column for each flag with name "QC.<flag>"
 
-        :return: Pandas Dataframe, or iterator on Dataframes is chunk is activated
+        :return: Pandas Dataframe, or iterator on Dataframes if chunking is activated
         """
 
     chunks = __nc2df(
@@ -462,7 +463,8 @@ def netcdf_to_dataframe(
         chunk_size=chunk_size,
         steps=steps,
         rename=rename_cols,
-        skip_qc=skip_qc)
+        skip_qc=skip_qc,
+        expand_qc=expand_qc)
 
     # Handling either single result or chunked generator
     if not chunked :
@@ -512,7 +514,7 @@ def _skip_qc_to_mask(df, flags) :
     # At this point, flags is a list of flags or negative (!) flags
 
     # Extract (!)
-    neg = [flag.starts_with("!") for flag in flags]
+    neg = [flag.startswith("!") for flag in flags]
     flags = list(flag.replace("!", "") for flag in flags)
 
     # Ensure not mixed negative and positive flags
@@ -526,12 +528,26 @@ def _skip_qc_to_mask(df, flags) :
         return reduce(
             lambda a, b : a & ~b,
             list(masks[flag] for flag in flags),
-            initial=ones_mask)
+            ones_mask)
     else:
         return reduce(
             lambda a, b: a | b,
-            list(masks[flag] for flag in flags),
-            initial=0)
+            list(masks[flag] for flag in flags), 0)
+
+
+
+def _expand_qc(df) :
+
+    # Get bitmaps
+    bitmaps = df[QC_FLAGS_VAR]
+
+    #  Create column applying mask for each one
+    return {
+        "QC.%s" % col : bitmaps & mask > 0
+        for col, mask in qc_masks(df).items()}
+
+
+
 
 def __nc2df(
         ncfile : Union[Dataset, str],
@@ -547,7 +563,9 @@ def __nc2df(
         password=None,
         chunked=False,
         chunk_size=CHUNK_SIZE,
-        steps=1, rename=True) :
+        steps=1, rename=True,
+        expand_qc=False) :
+
     """Private generator use by nc2df """
 
     if isinstance(ncfile, str) :
@@ -606,6 +624,13 @@ def __nc2df(
         if skip_qc and QC_FLAGS_VAR in df.columns :
             qc_mask = _skip_qc_to_mask(df, skip_qc)
             df = df[(df[QC_FLAGS_VAR] & qc_mask) == 0]
+
+        if expand_qc and QC_FLAGS_VAR in df.columns :
+            flags = _expand_qc(df)
+            del df[QC_FLAGS_VAR]
+
+            for col, values in flags.items() :
+                df[col] = values
 
         # Rename variables
         if rename :
@@ -767,7 +792,7 @@ def getProperties(network_id, station_id) :
         getStationInfo(network_id, station_id))
 
 def qc_masks(df) :
-    """Parse metadata of a QC bitmap and returns dict of meaning => mask"""
+    """Parse metadata of a QC bitmap and returns dict of flag name => mask"""
     attrs = df.attrs["variables"][QC_FLAGS_VAR]
     return {meaning: mask for meaning, mask in zip(
         attrs["flag_meanings"].split(),

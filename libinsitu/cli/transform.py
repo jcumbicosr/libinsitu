@@ -237,10 +237,12 @@ def dataframe_to_netcdf(
         longitude=None,
         elevation=None,
         process_qc=True,
+        close=True,
         network_props = dict(),
         station_props = dict()) :
     """
     Transform a Dataframe of olar irradiance data to NetCDF file.
+
 
     :param data: The dataframe. It should contain GHI, DHI, BNI columns in W.m-2 and be indexed by UTC time (Datetime index)
     :param out_filename: Name of output file
@@ -250,6 +252,7 @@ def dataframe_to_netcdf(
     :param longitude: Station longitude. Can also be passed as 'Longitude' in station properties
     :param elevation: Station elevation.  Can also be passed as 'Elevation' in station properties
     :param process_qc: Process and embed QC flags (true be default)
+    :param close: Close netcdf file at the end of process
     :param network_props: Dict of additional network properties (without Network_ prefix), as used in base.cdl
     :param station_props: Dict of additional station properties (without Station_ prefix) as used in base.cdl
     """
@@ -279,7 +282,7 @@ def dataframe_to_netcdf(
     end_time = data.index[-1]
 
     update_props("Station_StartDate", start_time.strftime("%Y-%m-%d"))
-    update_props("LastData", time2str(data.index.values[-1], seconds=True))
+    update_props("LastData", time2str(end_time, seconds=True))
 
     # Create file
     ncfile = Dataset(out_filename, mode="w")
@@ -293,7 +296,9 @@ def dataframe_to_netcdf(
             update_qc_flags(ncfile)
 
     finally:
-        ncfile.close()
+        if close :
+            ncfile.close()
+        return ncfile
 
 
 
