@@ -67,7 +67,10 @@ def update_meta(input, output, network=None, dry_run=False, delete=False, update
 
     handler = HANDLERS[network](properties)
 
-    init_nc(outds, properties, handler.data_vars(), dry_run, delete)
+    init_nc(
+        outds, properties, handler.data_vars(),
+        dry_run=dry_run,
+        delete_attrs=delete)
 
     if inds != outds :
 

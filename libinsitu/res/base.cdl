@@ -205,7 +205,7 @@ variables:
 
     # Time information
     :time_coverage_start = "{Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
-    :time_coverage_end = "{Station_EndDate}T00:00:00";  # Last data [Dataset Discovery v1.0]
+    :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
     :time_coverage_resolution = "P{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
     :local_time_zone = "{Station_Timezone}" ;
     :date_created = "{CreationTime}";
@@ -228,9 +228,9 @@ variables:
 
     # Location of station
     :network_region = "{Network_Region}";
-    :station_address =  "{Station_Address}" ;
-    :station_city =  "{Station_City}" ;
-    :station_country =  "{Station_Country}" ;
+    :station_address = "{Station_Address}" ;
+    :station_city = "{Station_City}" ;
+    :station_country = "{Station_Country}" ;
 
     # Commission / decommission dates
     :station_commision_date  =  "{Station_CommissionDate}";

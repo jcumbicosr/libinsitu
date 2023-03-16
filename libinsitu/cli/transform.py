@@ -274,9 +274,12 @@ def dataframe_to_netcdf(
     res_sec = get_df_resolution(data)
     update_props("Station_TimeResolution", "%dM" % (res_sec // 60))
 
-    # Take the start of station time from the DataFrame
-    start_time = data.index[-1]
+    # Fill time extent
+    start_time = data.index[0]
+    end_time = data.index[-1]
+
     update_props("Station_StartDate", start_time.strftime("%Y-%m-%d"))
+    update_props("LastData", time2str(data.index.values[-1], seconds=True))
 
     # Create file
     ncfile = Dataset(out_filename, mode="w")
