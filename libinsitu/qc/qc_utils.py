@@ -16,7 +16,7 @@ from diskcache import Cache
 from pandas import DataFrame
 
 from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
-    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe
+    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, \
     GLOBAL_TIME_RESOLUTION_ATTR
@@ -159,12 +159,13 @@ def qc_stats(meas_df, sp_df, flag_df) :
         'T3C_bsrn': percent(flag_df.T3C_bsrn_3cmp, GHI, DIF, DNI)}
 
 
+
 def cleanup_data(df, freq=None):
     """Cleanup and resample data"""
 
     # Default resolution : take the one from the source
     if freq is None:
-        freq = df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
+        freq = get_df_resolution(df)
 
     # Not UTC ?
     if df.index.tz is not None:
@@ -445,14 +446,17 @@ def update_qc_flags(ncfile, start_time=None, end_time=None) :
     """ Compute and update QC flags on NCFile """
 
     df = netcdf_to_dataframe(ncfile, start_time=start_time, end_time=end_time, rename_cols=True)
+    flags_df = compute_qc_flags(df)
+    write_flags(ncfile, flags_df)
 
-    lat = float(df.attrs[LATITUDE_VAR])
-    lon = float(df.attrs[LONGITUDE_VAR])
-    alt = float(df.attrs[ELEVATION_VAR])
+
+def compute_qc_flags(df, lat=None, lon=None, alt=None) :
+
+    lat = lat if lat is not None else float(df.attrs[LATITUDE_VAR])
+    lon = lon if lon is not None else  float(df.attrs[LONGITUDE_VAR])
+    alt = alt if alt is not None else  float(df.attrs[ELEVATION_VAR])
 
     # Update NetCDF file with QC
     df = cleanup_data(df)
     sp_df = compute_sun_pos(df, lat, lon, alt)
-    flags_df = flagData(df, sp_df)
-
-    write_flags(ncfile, flags_df)
+    return flagData(df, sp_df)

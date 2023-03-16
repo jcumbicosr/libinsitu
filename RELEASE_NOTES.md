@@ -1,3 +1,7 @@
+*:
+* Added function dataframe_to_netcdf() to encode NetCDF from an existing dataframe
+* Updated the Convention to include QC flags in it
+
 1.3.2 :
 * Fixed IEA_PVPS after updates of convention : Time -> time
 * Added end to end tests for BSRN data

@@ -1,13 +1,11 @@
-#!/usr/bin/env python
-import datetime
 import os.path
 from os.path import basename, dirname
 from libinsitu import update_qc_flags
 from libinsitu.common import *
 from libinsitu.cdl import *
+from libinsitu.common import _prepare_properties
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
 from libinsitu.log import debug, info, warning, logger, LogContext, error
-from libinsitu._version import __version__
 import argparse
 
 
@@ -71,11 +69,6 @@ def process_network(network, station_id, out_filename, args) :
     # Get properties for this station
     properties = getProperties(network, station_id)
 
-    now = datetime.now().isoformat()
-
-    properties["UpdateTime"] = now
-    properties["CreationTime"] = now
-    properties["Version"] = __version__
 
     handler : InSituHandler = HANDLERS[network](properties)
 
@@ -97,6 +90,9 @@ def process_network(network, station_id, out_filename, args) :
 
     # Loop on input files
     for infile in in_files :
+
+        info("processing chunk : %s", infile)
+
         with LogContext(file=os.path.basename(infile)):
 
             # Safe execution : do not stop on error
@@ -118,7 +114,12 @@ def process_network(network, station_id, out_filename, args) :
                     ncfile = Dataset(out_filename, mode="a")
                     mode = "a"
 
-                chunk_start, chunk_end = process_chunck(handler, infile, ncfile, args, properties)
+                data = handler.read_chunk(infile)
+
+                chunk_start, chunk_end = process_chunck(
+                    data, ncfile, properties,
+                    check=args.check,
+                    strict_resolution=args.strict_resolution)
 
                 # Store extent of update
                 min_date = nmin(chunk_start, min_date)
@@ -170,7 +171,7 @@ def idx2slice(idx) :
 
     return idx
 
-def check_and_assign(ncfile, data, times_idx, size_before, args) :
+def check_and_assign(ncfile, data, times_idx, size_before, check=False) :
 
     # Check once for all if new chunk overlaps
     overlapping_mask = times_idx < size_before
@@ -188,7 +189,7 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
             fill_value = getattr(var, FILL_VALUE_ATTR, DEFAULT_FILL_VALUE)
             new_values[np.isnan(new_values)] = fill_value
 
-        if not np.any(overlapping_mask) or not args.check:
+        if not np.any(overlapping_mask) or not check:
             # No overlap with previous data ? no need for check
             var[idx2slice(times_idx)] = new_values
 
@@ -227,14 +228,74 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
             var[idx2slice(times_idx[write_mask])] = new_values[write_mask]
 
+def dataframe_to_netcdf(
+        data,
+        out_filename,
+        station_name,
+        network_name=None,
+        latitude=None,
+        longitude=None,
+        elevation=None,
+        process_qc=True,
+        network_props = dict(),
+        station_props = dict()) :
+    """
+    Transform a Dataframe of olar irradiance data to NetCDF file.
+
+    :param data: The dataframe. It should contain GHI, DHI, BNI columns in W.m-2 and be indexed by UTC time (Datetime index)
+    :param out_filename: Name of output file
+    :param station_name: Station name. Can also be passed as 'Name' in station properties
+    :param network_name: Network name. Can also be passed as 'Name' in network properties
+    :param latitude: Station latitude. Can also be passed as 'Latitude' in station properties
+    :param longitude: Station longitude. Can also be passed as 'Longitude' in station properties
+    :param elevation: Station elevation.  Can also be passed as 'Elevation' in station properties
+    :param process_qc: Process and embed QC flags (true be default)
+    :param network_props: Dict of additional network properties (without Network_ prefix), as used in base.cdl
+    :param station_props: Dict of additional station properties (without Station_ prefix) as used in base.cdl
+    """
+
+    properties = _prepare_properties(
+        network_props,
+        station_props)
+
+    def update_props(key, value) :
+        if value is not None and not key in properties :
+            properties[key] = value
+
+    update_props("Station_ID", station_name)
+    update_props("Station_Name", station_name)
+    update_props("Network_ID", network_name)
+    update_props("Network_LongName", network_name)
+    update_props("Station_Latitude", latitude)
+    update_props("Station_Longitude", longitude)
+    update_props("Station_Elevation", elevation)
+
+    # Guess the resolution from the input
+    res_sec = get_df_resolution(data)
+    update_props("Station_TimeResolution", "%dM" % (res_sec // 60))
+
+    # Take the start of station time from the DataFrame
+    start_time = data.index[-1]
+    update_props("Station_StartDate", start_time.strftime("%Y-%m-%d"))
+
+    # Create file
+    ncfile = Dataset(out_filename, mode="w")
+    try :
+        init_nc(ncfile, properties, [])
+
+        # Transform data
+        process_chunck(data, ncfile, properties)
+
+        if process_qc :
+            update_qc_flags(ncfile)
+
+    finally:
+        ncfile.close()
 
 
-def process_chunck(handler, infile, ncfile, args, properties):
 
-    info("processing chunk : %s", infile)
 
-    # Read data
-    data = handler.read_chunk(infile)
+def process_chunck(data, ncfile, properties, strict_resolution=False, check=False):
 
     if data is None or len(data) == 0 :
         warning("Chunk is empty")
@@ -298,7 +359,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
             if actual_resolution != resolution_s:
                 warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s))
-                if args.strict_resolution :
+                if strict_resolution :
                     warning("Strict resolution requested : skipping")
                     return
 
@@ -320,7 +381,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
     timeVar[next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values
-    check_and_assign(ncfile, data, time_idx, size_before, args)
+    check_and_assign(ncfile, data, time_idx, size_before, check)
 
     info("Chunk processed successfully")
 

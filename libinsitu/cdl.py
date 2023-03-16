@@ -222,7 +222,7 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
 
     try:
         # Try to load custom CDL first
-        custom_name = properties["Network_ID"] + ".cdl"
+        custom_name = properties.get("Network_ID", "") + ".cdl"
         cdl = parse_cdl(read_res(custom_name), properties)
         info("Used custom CDL : %s" % custom_name)
 

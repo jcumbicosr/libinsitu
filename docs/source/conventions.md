@@ -272,6 +272,42 @@ float P(time) ;
 
 ```
 
+## Quality flags
+
+Optionally, we propose to include quality check (QC) flags directly in the NetCDF file, as bitmap variable. 
+
+We follow the recommendations of [CF convention on flags](https://cfconventions.org/Data/cf-conventions/cf-conventions-1.10/cf-conventions.html#flags) for encoding and meta data.
+We use *unsigned int* variable named **QC** with each bit assigned to a given flag.
+
+Here is the corresponding CDL
+
+```
+uint QC(time) ;
+    QC:long_name = "QC flag status";
+    QC:comment = "Flag=1 means QC test failed";
+    QC:coordinates = "time latitude longitude elevation "
+    QC:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
+    QC:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+    QC:_FillValue = 0;
+```
+
+In this case, the bitmap is organized as follow :
+
+| Bit index | Flag           |
+|-----------|----------------|
+| 0         | T1C_ppl_GHI    |
+| 1         | T1C_erl_GHI    |
+| 2         | T1C_ppl_DIF    |
+| 3         | T1C_erl_DIF    |
+| 4         | T1C_ppl_DNI    |
+| 5         | T1C_erl_DNI    |
+| 6         | T2C_bsrn_kt    |
+| 7         | T2C_seri_kn_kt |
+| 8         | T2C_seri_k_kt  |
+|9 | T3C_bsrn_3cmp  |
+| 10 | tracker_off    |
+
+
 
 ## Global attributes 
 

@@ -2,8 +2,10 @@ from collections import defaultdict
 from concurrent.futures.thread import ThreadPoolExecutor
 from csv import DictReader
 from datetime import datetime, timedelta
+from functools import reduce
 from typing import Union
 from urllib.parse import urlsplit, quote_plus
+from libinsitu._version import __version__
 
 import numpy as np
 from dateutil.relativedelta import relativedelta
@@ -388,6 +390,14 @@ def match_pattern(pattern, value, properties=dict()) :
 
     return res
 
+def get_df_resolution(df) :
+    """Get resolution of a time series Dataframe in seconds. Either from metdata or from guessing it"""
+    if GLOBAL_TIME_RESOLUTION_ATTR in df.attrs :
+        return df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
+
+    # Guess it from data
+    return df.index.to_series().diff().median().total_seconds()
+
 def netcdf_to_dataframe(
         ncfile : Union[Dataset, str],
         start_time: Union[datetime, datetime64]=None,
@@ -403,7 +413,8 @@ def netcdf_to_dataframe(
         chunked=False,
         chunk_size=CHUNK_SIZE,
         steps=1,
-        rename_cols=False) :
+        rename_cols=False,
+        filter_qc=False):
     """
         Load NETCDF in-situ file (or part of it) into a panda Dataframe, with time as index.
 
@@ -411,7 +422,16 @@ def netcdf_to_dataframe(
         :param ncfile: NetCDF Dataset or filename, or OpenDAP URL
         :param rename_cols: If True (default) rename solar irradiance columns as per convention (GHI, BNI, DHI)
         :param drop_duplicates: If true (default), duplicate rows are droppped
-        :param skip_qc: If True, skip lines with bad QC (at least one failing)
+        :param skip_qc:
+
+            If true, filter rows of having any failing QC. False by default (no filter).
+
+            You can also provide a list of flags to filter : `["T3C_bsrn_3cmp", "T2C_seri_kn_kt"]`
+
+            Or filter o any flags but some, by prepending '!' : `["!T3C_bsrn_3cmp", "!T2C_seri_kn_kt"]`
+
+            For full list of flags, see the [online doc](https://libinsitu.readthedocs.io/en/latest/qc.html)
+
         :param skip_na: If True, drop rows containing only nan values
         :param start_time: Start time (first record by default) : Datetime or datetime64
         :param end_time: End time (last record by default) : Datetile or datetime64
@@ -423,6 +443,7 @@ def netcdf_to_dataframe(
         :param chunked: If True, does not load the whole file in memory at once : returns an iterator on Dataframe chunks.
         :param chunk_size: Size of chunks for chunked data
         :param steps: Downsampling (1 by default)
+
         :return: Pandas Dataframe, or iterator on Dataframes is chunk is activated
         """
 
@@ -478,6 +499,39 @@ def __all_attributes(ncfile) :
     attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
 
     return attrs
+
+def _skip_qc_to_mask(df, flags) :
+
+    # 32 ones bitmap
+    ones_mask = 0xffffffff
+    if flags is True:
+        return ones_mask
+    if not flags :
+        return 0
+
+    # At this point, flags is a list of flags or negative (!) flags
+
+    # Extract (!)
+    neg = [flag.starts_with("!") for flag in flags]
+    flags = list(flag.replace("!", "") for flag in flags)
+
+    # Ensure not mixed negative and positive flags
+    if neg[1:] != neg[:-1] :
+        raise Exception("You cannot mix positive and negative (!) flags")
+
+    masks = qc_masks(df)
+
+    if neg[0]:
+        # Negative flags
+        return reduce(
+            lambda a, b : a & ~b,
+            list(masks[flag] for flag in flags),
+            initial=ones_mask)
+    else:
+        return reduce(
+            lambda a, b: a | b,
+            list(masks[flag] for flag in flags),
+            initial=0)
 
 def __nc2df(
         ncfile : Union[Dataset, str],
@@ -550,7 +604,8 @@ def __nc2df(
             df = df.dropna(axis=0, how='all', subset=subset)
 
         if skip_qc and QC_FLAGS_VAR in df.columns :
-            df = df[df[QC_FLAGS_VAR] == 0]
+            qc_mask = _skip_qc_to_mask(df, skip_qc)
+            df = df[(df[QC_FLAGS_VAR] & qc_mask) == 0]
 
         # Rename variables
         if rename :
@@ -559,7 +614,6 @@ def __nc2df(
                     if source in df.columns :
                         warning("Renaming %s -> %s" % (source, dest))
                         df = df.rename(columns={source:dest})
-
 
         return df
 
@@ -687,18 +741,30 @@ def getNetworkId(attributes_or_ncfile) :
 def getStationId(attributes_or_ncfile) :
     return getMult(attributes_or_ncfile, STATION_ID_ATTRS)
 
+def _prepare_properties(
+        station_properties,
+        network_properties) :
+    """Prefix properties with Network_ and Station_, and add 'live' properties """
+
+    res = dict(
+        **{STATION_PREFIX + k: v for k, v in station_properties.items()},
+        **{NETWORK_PREFIX + k: v for k, v in network_properties.items()})
+
+    # Add live properties
+    now = datetime.now().isoformat()
+
+    res["UpdateTime"] = now
+    res["CreationTime"] = now
+    res["Version"] = __version__
+    return res
+
+
 def getProperties(network_id, station_id) :
     """Gather Network_ and Station_ properties """
 
-    # Get properties for this station
-    properties = {STATION_PREFIX + k : v for k, v in getStationInfo(network_id, station_id).items()}
-
-    # Add properties of this network
-    for key, val in getNetworkInfo(network_id).items():
-        properties[NETWORK_PREFIX + key] = val
-
-    return properties
-
+    return _prepare_properties(
+        getNetworkInfo(network_id),
+        getStationInfo(network_id, station_id))
 
 def qc_masks(df) :
     """Parse metadata of a QC bitmap and returns dict of meaning => mask"""
