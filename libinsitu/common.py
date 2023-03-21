@@ -424,7 +424,7 @@ def netcdf_to_dataframe(
         :param drop_duplicates: If true (default), duplicate rows are droppped
         :param skip_qc:
 
-            If true, filter rows of having any failing QC. False by default (no filter).
+            If true, filters rows having any failing QC. False by default (no filter).
 
             You can also provide a list of flags to filter : `["T3C_bsrn_3cmp", "T2C_seri_kn_kt"]`
 
@@ -543,7 +543,7 @@ def _expand_qc(df) :
 
     #  Create column applying mask for each one
     return {
-        "QC.%s" % col : bitmaps & mask > 0
+        "QC.%s" % col : (bitmaps & mask > 0).astype(int)
         for col, mask in qc_masks(df).items()}
 
 

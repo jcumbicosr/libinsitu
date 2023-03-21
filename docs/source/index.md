@@ -5,7 +5,7 @@
 The aim is to improve **standardization** and **interoperability**, to leverage development of new tools.  
 
 It provides :
-* A set of [CLI utilities](cli/index.md) and [Python functions](api.md) to :
+* A set of [CLI utilities](cli/index) and [Python functions](api/index) to :
   * Transform **raw input files** into **NetCDF** format
   * **Explore & query** NetCDF files, and transform it to various formats (*CSV*, *JSON*, *text*, *pandas Dataframes*)
   * Flag data with **quality checks** and produce graphs for **visual quality control**
@@ -57,7 +57,7 @@ The source code is available of our {gitref}`gitlab </>`
 maxdepth: 2
 ---
 Introduction <self>
-api
+api/index
 cli/index
 data
 conventions

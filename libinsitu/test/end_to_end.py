@@ -205,7 +205,10 @@ def test_qc_filters():
     # Filter all but one flag
     check_filtering(["!T1C_ppl_GHI"], ["00:01", "00:02"])
 
-
+    # Should fail for non existing flags
+    with pytest.raises(Exception) as e:
+        check_filtering(["foo"], [])
+    assert e.type == KeyError
 
 
 #endregion

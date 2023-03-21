@@ -108,12 +108,25 @@ def parser() :
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--output', '-o', help='Output file. stdout if no set (default)', default=None)
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
-    parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
-    parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
-    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=QC_NONE)
+    parser.add_argument(
+        '--skip-qc', '-sq', metavar="[True | False | flag1,flag2,flag3 | !flag1]",
+        help="Skip lines with bad QC. Can be True (skip any QC flag), False (no filter, default), "
+             "or comma separated list of QC flag names (skip only those failing test), "
+             "possibly prefixed with '!' (consider all flags but those ones)",
+             default=False)
+    parser.add_argument(
+        '--filter', '-f',
+        metavar="<time-filter>",
+        help="Time filter : <time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'")
+    parser.add_argument(
+        '--qc-format', '-qf',
+        metavar="<format>",
+        choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND],
+        help="Format for QC flags [none (default), mask, names or expand]",
+        default=QC_NONE)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
-    parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")
+    parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Use with --header to print meta data only")
     parser.add_argument('--cols', '-c', metavar="<col1>,<col2> ..", help="Selection of columns. All by default")
     parser.add_argument('--user', '-u', help='User login (or TDS_USER env var), for URL',
                         default=os.environ.get("TDS_USER", None))
@@ -145,16 +158,33 @@ def main() :
         else :
             args.qc_format = QC_NAMES
 
+    # Parse skip_qc
+    skip_qc = args.skip_qc
+    if skip_qc != False :
+        if skip_qc.lower() in ["1", "true"] :
+            skip_qc = True
+        else:
+            skip_qc = args.skip_qc.split(",")
+
+
+    # Add QC to cols ?
+    if cols is not None and args.qc_format is not QC_NONE :
+        cols += [QC_FLAGS_VAR]
+
+    expand_qc = (args.qc_format == QC_EXPAND) or args.stats
+
     chunks = netcdf_to_dataframe(
         args.filename,
         fromTime, toTime,
         user=args.user, password=args.password,
         drop_duplicates=True,
         skip_na=args.skip_na,
-        skip_qc=args.skip_qc,
+        skip_qc=skip_qc,
         vars=cols,
         chunked=True,
-        steps=args.steps, chunk_size=args.chunk_size)
+        steps=args.steps,
+        expand_qc=expand_qc,
+        chunk_size=args.chunk_size)
 
     if args.output is not None:
         out = open(args.output, 'w')
@@ -201,9 +231,6 @@ def show_stats(chunks, out=sys.stdout) :
 
     stats = defaultdict(lambda : Stat())
     for chunk in chunks :
-
-        chunk = format_QC(chunk, QC_EXPAND)
-
         for col in chunk.columns :
             series = chunk[col]
             stats[col].accumulate(series)
@@ -272,10 +299,8 @@ def format_QC(df, qc_format) :
 
     elif qc_format == QC_EXPAND :
 
-        for flag, mask in masks_dict.items():
-            colname = "%s.%s" % (QC_FLAGS_VAR, flag)
-            df[colname] = np.where(qc_col & mask == 0, 0, 1)
-        del df[QC_FLAGS_VAR]
+        # Done before via the "expand" param of netcdf_to_dataframe
+        pass
 
     elif qc_format == QC_NAMES :
         res = Series(data="", index=df.index, dtype=np.object)

@@ -241,8 +241,7 @@ def dataframe_to_netcdf(
         network_props = dict(),
         station_props = dict()) :
     """
-    Transform a Dataframe of olar irradiance data to NetCDF file.
-
+    Transforms a Dataframe of solar irradiance to a well encoded NetCDF file.
 
     :param data: The dataframe. It should contain GHI, DHI, BNI columns in W.m-2 and be indexed by UTC time (Datetime index)
     :param out_filename: Name of output file
@@ -253,8 +252,8 @@ def dataframe_to_netcdf(
     :param elevation: Station elevation.  Can also be passed as 'Elevation' in station properties
     :param process_qc: Process and embed QC flags (true be default)
     :param close: Close netcdf file at the end of process
-    :param network_props: Dict of additional network properties (without Network_ prefix), as used in base.cdl
-    :param station_props: Dict of additional station properties (without Station_ prefix) as used in base.cdl
+    :param network_props: Dict of additional network properties (without `Network_` prefix), as used in base.cdl
+    :param station_props: Dict of additional station properties (without `Station_` prefix) as used in base.cdl
     """
 
     properties = _prepare_properties(

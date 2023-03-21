@@ -285,7 +285,8 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 
 
 
-def write_flags(ncfile, flags_df) :
+def write_flags(ncfile, flags_df):
+    """Update flags in NetCDF file"""
 
     # Parse CDL : use defaultdict to avoid warning
     # XXX try to not parse it twice and get it from above
@@ -450,7 +451,15 @@ def update_qc_flags(ncfile, start_time=None, end_time=None) :
     write_flags(ncfile, flags_df)
 
 
-def compute_qc_flags(df, lat=None, lon=None, alt=None) :
+def compute_qc_flags(df, lat=None, lon=None, alt=None):
+    """
+
+    :param df: Dataframe of irradiance
+    :param lat: Latitude (or passed in df.attrs)
+    :param lon: Longitude (or passed in df.attrs)
+    :param alt: Altitude (or passed in df.attrs)
+    :return: New dataframe of QC flags. This dataframe may contain additional timestamps to fill complete days.
+    """
 
     lat = lat if lat is not None else float(df.attrs[LATITUDE_VAR])
     lon = lon if lon is not None else  float(df.attrs[LONGITUDE_VAR])
