@@ -1,4 +1,4 @@
-*:
+1.4 :
 * Added function dataframe_to_netcdf() to encode NetCDF from an existing dataframe
 * Updated the Convention to include QC flags in it
 * Added filter on QC in netcdf_to_dataframe() and cat.py CLI command
