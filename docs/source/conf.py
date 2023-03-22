@@ -26,6 +26,8 @@ extensions = [
     'sphinxarg.ext',
     'gitrep2']
 
+myst_enable_extensions = ['attrs_block', 'attrs_inline']
+
 # These folders are copied to the documentation's HTML output
 html_static_path = ['_static']
 

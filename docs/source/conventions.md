@@ -272,7 +272,8 @@ float P(time) ;
 
 ```
 
-## Quality flags
+{#quality-flags}
+## Quality flags 
 
 Optionally, we propose to include quality check (QC) flags directly in the NetCDF file, as bitmap variable. 
 
@@ -291,22 +292,9 @@ uint QC(time) ;
     QC:_FillValue = 0;
 ```
 
-In this case, the bitmap is organized as follow :
+The list of flags si up to the producer of data and depends on the usage.
 
-| Bit index | Flag           |
-|-----------|----------------|
-| 0         | T1C_ppl_GHI    |
-| 1         | T1C_erl_GHI    |
-| 2         | T1C_ppl_DIF    |
-| 3         | T1C_erl_DIF    |
-| 4         | T1C_ppl_DNI    |
-| 5         | T1C_erl_DNI    |
-| 6         | T2C_bsrn_kt    |
-| 7         | T2C_seri_kn_kt |
-| 8         | T2C_seri_k_kt  |
-|9 | T3C_bsrn_3cmp  |
-| 10 | tracker_off    |
-
+The list of flags currently produced by *libinsitu* are detailed [in a dedicated section](qc.md#qc-flags)
 
 
 ## Global attributes 
