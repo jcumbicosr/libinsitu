@@ -159,9 +159,9 @@ def test_qc_filters():
 
     # QC flags
     flags = mk_timeseries({
-        "00:01": dict(T1C_ppl_GHI=False, tracker_off=False),
-        "00:02": dict(T1C_ppl_GHI=True, tracker_off=False),
-        "00:03": dict(T1C_ppl_GHI=False, tracker_off=True),
+        "00:01": dict(T1C_ppl_GHI=0, tracker_off=0),
+        "00:02": dict(T1C_ppl_GHI=1, tracker_off=0),
+        "00:03": dict(T1C_ppl_GHI=0, tracker_off=1),
     })
 
     ncfile = dataframe_to_netcdf(

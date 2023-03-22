@@ -767,8 +767,8 @@ def getStationId(attributes_or_ncfile) :
     return getMult(attributes_or_ncfile, STATION_ID_ATTRS)
 
 def _prepare_properties(
-        station_properties,
-        network_properties) :
+        network_properties,
+        station_properties) :
     """Prefix properties with Network_ and Station_, and add 'live' properties """
 
     res = dict(
