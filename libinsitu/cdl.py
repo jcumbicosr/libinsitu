@@ -218,16 +218,11 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
     update_attributes(ncfile, cdl.global_attributes, dry_run, delete_attrs)
 
 
-def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False) :
+def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False, custom_cdl=None) :
 
-    try:
-        # Try to load custom CDL first
-        custom_name = properties.get("Network_ID", "") + ".cdl"
-        cdl = parse_cdl(read_res(custom_name), properties)
-        info("Used custom CDL : %s" % custom_name)
-
-    except FileNotFoundError:
-        cdl = parse_cdl(read_res(CDL_PATH), properties)
+    # Read CDL from resource or custom file
+    cdl_file = read_res(CDL_PATH) if custom_cdl is None else open(custom_cdl, "r")
+    cdl = parse_cdl(cdl_file, properties)
 
     # Ensures all requested data vars are defined
     missing_vars = set(data_var for data_var in data_vars if data_var not in cdl.variables)

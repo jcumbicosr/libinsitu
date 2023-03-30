@@ -89,7 +89,11 @@ def process_network(network, station_id, args) :
     if new :
         # Nc File does not exist ==> create it
         info("File '%s' was not there. Initializing it.", args.out)
-        init_nc(ncfile, properties, [])
+        init_nc(
+            ncfile,
+            properties,
+            data_vars=[],
+            custom_cdl=args.cdl)
 
     min_date = None
     max_date = None
@@ -245,7 +249,8 @@ def dataframe_to_netcdf(
         process_qc=True,
         close=True,
         network_props = dict(),
-        station_props = dict()) :
+        station_props = dict(),
+        custom_cdl=None) :
     """
     Transforms a Dataframe of solar irradiance to a well encoded NetCDF file.
 
@@ -260,6 +265,7 @@ def dataframe_to_netcdf(
     :param close: Close netcdf file at the end of process
     :param network_props: Dict of additional network properties (without `Network_` prefix), as used in base.cdl
     :param station_props: Dict of additional station properties (without `Station_` prefix) as used in base.cdl
+    :param custom_cdl: File path to custom schema.cdl file
     """
 
     properties = _prepare_properties(
@@ -295,7 +301,9 @@ def dataframe_to_netcdf(
         init_nc(ncfile, properties, [])
 
         # Transform data
-        process_chunck(data, ncfile, properties)
+        process_chunck(
+            data, ncfile, properties,
+            custom_cdl=custom_cdl)
 
         if process_qc :
             update_qc_flags(ncfile)
@@ -308,7 +316,7 @@ def dataframe_to_netcdf(
 
 
 
-def process_chunck(data, ncfile, properties, strict_resolution=False, check=False):
+def process_chunck(data, ncfile, properties, strict_resolution=False, check=False, custom_cdl=None):
 
     if data is None or len(data) == 0 :
         warning("Chunk is empty")
@@ -334,7 +342,7 @@ def process_chunck(data, ncfile, properties, strict_resolution=False, check=Fals
     missing_vars = list(col for col in columns if not col in ncfile.variables)
     if len(missing_vars) > 0:
         info("Adding missing vars : %s", missing_vars)
-        init_nc(ncfile, properties, missing_vars)
+        init_nc(ncfile, properties, missing_vars, custom_cdl=custom_cdl)
 
     # Ensure all timestamps fall into resolution
     exact_idx = (times_sec % resolution_s) == 0
@@ -431,7 +439,7 @@ def parser() :
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--generic-csv', '-g', metavar='<mapping.json>', help='Use a generic CSV parser with custom mapping. Tu be used in conjonction with --station-metadata')
     parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
-    parser.add_argument('--dsl', metavar='<schema.dsl>', help="Use a custom DSL (NetCDF schema)")
+    parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
     parser.add_argument(
         '--incremental', '-i', default=False, action='store_true',
         help="Incremental mode, skipping input files having a '.done' status files")
