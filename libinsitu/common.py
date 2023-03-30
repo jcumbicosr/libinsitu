@@ -141,17 +141,20 @@ STATION_START_DATA_ATTR = "time_coverage_start"
 SECOND = timedelta64(1, 's')
 CDL_PATH = "base.cdl"
 
-def parseCSV(res_path, key = "ID") :
+def parseCSV(res_path, key = "ID", resource=True) :
     """Generic parser """
     res = dict()
-    rows = DictReader(read_res(res_path))
+
+    file = read_res(res_path) if resource else open(res_path, 'r')
+    rows = DictReader(file)
     for row in rows:
 
         # Skip commented lines
         if "#" in row[key] :
             continue
 
-        res[row[key]] = {key: parse_value(val) for key, val in row.items()}
+        # We force ID to stay a String
+        res[row[key]] = {k: val if k == key else parse_value(val) for k, val in row.items()}
     return res
 
 def getStationsInfo(network) :
@@ -174,8 +177,12 @@ def touch(filename):
         with open(filename,'a') :
             pass
 
-def getStationInfo(network, station_id) :
-    stations = getStationsInfo(network)
+def getStationInfo(network, station_id, custom_file=None) :
+
+    if custom_file :
+        stations = parseCSV(custom_file, resource=False)
+    else:
+        stations = getStationsInfo(network)
     if not station_id in stations :
         raise Exception("Station %s not found in Station Info of %s" % (station_id, network))
     return stations[station_id]
@@ -784,12 +791,12 @@ def _prepare_properties(
     return res
 
 
-def getProperties(network_id, station_id) :
+def getProperties(network_id, station_id, custom_station_file=None) :
     """Gather Network_ and Station_ properties """
 
     return _prepare_properties(
         getNetworkInfo(network_id),
-        getStationInfo(network_id, station_id))
+        getStationInfo(network_id, station_id, custom_file=custom_station_file))
 
 def qc_masks(df) :
     """Parse metadata of a QC bitmap and returns dict of flag name => mask"""

@@ -5,6 +5,7 @@ from libinsitu.common import *
 from libinsitu.cdl import *
 from libinsitu.common import _prepare_properties
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
+from libinsitu.handlers.GenericCSVHandler import GenericCSVHandler
 from libinsitu.log import debug, info, warning, logger, LogContext, error
 import argparse
 
@@ -64,25 +65,30 @@ def list_files(in_files, handler) :
     return in_files
 
 
-def process_network(network, station_id, out_filename, args) :
+def process_network(network, station_id, args) :
 
-    # Get properties for this station
-    properties = getProperties(network, station_id)
+    # Get properties for this station (possibly from a custom CSV file)
+    properties = getProperties(
+        network,
+        station_id,
+        args.station_metadata)
 
-
-    handler : InSituHandler = HANDLERS[network](properties)
+    if args.generic_csv :
+        handler = GenericCSVHandler(properties, args.generic_csv)
+    else:
+        handler : InSituHandler = HANDLERS[network](properties)
 
     in_files = list_files(args.in_files, handler)
 
-    new = not os.path.exists(out_filename)
+    new = not os.path.exists(args.out)
 
     # If file exists, put it in read only until we process an input file, to avoid changing its mtime
     mode = "w" if new else "r"
-    ncfile = Dataset(out_filename, mode=mode)
+    ncfile = Dataset(args.out, mode=mode)
 
     if new :
         # Nc File does not exist ==> create it
-        info("File '%s' was not there. Initializing it.", out_filename)
+        info("File '%s' was not there. Initializing it.", args.out)
         init_nc(ncfile, properties, [])
 
     min_date = None
@@ -111,7 +117,7 @@ def process_network(network, station_id, out_filename, args) :
                 # First processed file ? reopen the file in write mode => this will update its mtime
                 if mode == "r" :
                     ncfile.close()
-                    ncfile = Dataset(out_filename, mode="a")
+                    ncfile = Dataset(args.out, mode="a")
                     mode = "a"
 
                 data = handler.read_chunk(infile)
@@ -423,14 +429,21 @@ def parser() :
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True, choices=listNetworks())
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--incremental', '-i', default=False, action='store_true',
-                        help="Incremental mode, skipping input files having a '.done' status files")
-    parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true',
-                        help="Skip chunks having a different resulution")
+    parser.add_argument('--generic-csv', '-g', metavar='<mapping.json>', help='Use a generic CSV parser with custom mapping. Tu be used in conjonction with --station-metadata')
+    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
+    parser.add_argument('--dsl', metavar='<schema.dsl>', help="Use a custom DSL (NetCDF schema)")
+    parser.add_argument(
+        '--incremental', '-i', default=False, action='store_true',
+        help="Incremental mode, skipping input files having a '.done' status files")
+    parser.add_argument(
+        '--strict-resolution', '-sr', default=False, action='store_true',
+        help="Skip chunks having a different resulution")
     parser.add_argument('--no-qc', default=False, action='store_true', help="Do not compute QC flags")
     parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")
-    parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path,
-                        help='Separate folder for .done/.err files')
+    parser.add_argument(
+        '--status-folder', '-f',
+        metavar='<folder>', type=dir_path,
+        help='Separate folder for .done/.err files')
     return parser
 
 def main():
@@ -441,7 +454,7 @@ def main():
     station_id  = args.station_id
 
     with LogContext(network=network, station_id=station_id):
-        process_network(network, station_id, args.out, args)
+        process_network(network, station_id, args)
 
 if __name__ == '__main__':
     main()
