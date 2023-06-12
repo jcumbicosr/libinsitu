@@ -791,11 +791,16 @@ def _prepare_properties(
     return res
 
 
-def getProperties(network_id, station_id, custom_station_file=None) :
+def getProperties(network_id, station_id) :
     """Gather Network_ and Station_ properties """
 
     return _prepare_properties(
         getNetworkInfo(network_id),
+        getStationInfo(network_id, station_id))
+
+def getCustomProperties(network_id, station_id, custom_station_file) :
+    return _prepare_properties(
+        dict(),
         getStationInfo(network_id, station_id, custom_file=custom_station_file))
 
 def qc_masks(df) :

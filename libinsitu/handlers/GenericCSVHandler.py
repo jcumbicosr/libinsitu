@@ -1,3 +1,5 @@
+import os.path
+
 from libinsitu.handlers import InSituHandler
 import json
 import pandas as pd
@@ -101,12 +103,16 @@ class GenericCSVHandler(InSituHandler) :
         with open(mapping_file, "r") as f:
             js = json.load(f)
 
-        super().__init__(properties)
+        super().__init__(properties, binary=True)
 
         mapping = js["mapping"]
 
         self.time_mapping = TimeMapping(mapping["time"])
         self.separator = js.get("separator", ",")
+        self.skip_lines = js.get("skip_lines", None)
+
+        if isinstance(self.skip_lines, list) :
+            self.skip_lines = [i-1 for i in self.skip_lines]
 
         del mapping["time"]
         self.var_mappings = {key: VarMapping(key, val) for key, val in mapping.items()}
@@ -133,18 +139,27 @@ class GenericCSVHandler(InSituHandler) :
     def _dtypes(self) :
         dtypes = {k:str for k in self.time_mapping.cols()}
         for map in self.var_mappings.values() :
-            dtypes[map.col] = np.float
+            dtypes[map.col] = float
         return dtypes
 
     def _read_chunk(self, stream, entryname=None) :
+
+        _, extension = os.path.splitext(entryname)
+        extension = extension.lower()
 
         all_cols = self.time_mapping.cols()
         for var_mapping in self.var_mappings.values() :
             all_cols += var_mapping.cols()
 
-        args = dict(sep=self.separator,
+        args = dict(
             usecols=all_cols,
             dtype=self._dtypes())
+
+        if self.separator and extension == ".csv":
+            args["sep"] = self.separator
+
+        if self.skip_lines is not None :
+            args["skiprows"] = self.skip_lines
 
         # Mapping done by index : no header, overriding it
         headers = self._generate_header()
@@ -153,10 +168,23 @@ class GenericCSVHandler(InSituHandler) :
             args["names"] = list(headers.values())
             args["usecols"] = list(headers.keys())
 
-        df = pd.read_csv(stream, **args)
+        if extension == ".csv":
+            df = pd.read_csv(stream, **args)
+        elif extension == ".xlsx":
+            df = pd.read_excel(stream, **args, engine='openpyxl')
+        elif extension == ".xls" :
+            df = pd.read_excel(stream, **args, engine="xlrd")
+        else:
+            raise Exception("Format not supported : %s" % extension)
+
+
+        print(df)
 
         # Parse time and remove source columns
         df = self.time_mapping.parse_time(df)
+
+
+        print(df)
 
         # Parse data
         for var_name, mapping in self.var_mappings.items() :
@@ -166,3 +194,6 @@ class GenericCSVHandler(InSituHandler) :
 
     def data_vars(self):
         return list(self.var_mappings.keys())
+
+    def pattern(self):
+        return "*"

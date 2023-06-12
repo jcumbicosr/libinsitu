@@ -325,7 +325,7 @@ def enrich_coords(network, rows, nc_climate, ids=None) :
 
     tzFinder = TimezoneFinder()
 
-    for row in rows:
+    for i, row in enumerate(rows):
 
         if ids is not None and row["ID"] not in ids :
             continue
@@ -333,8 +333,15 @@ def enrich_coords(network, rows, nc_climate, ids=None) :
         lat = str2val(row["Latitude"])
         lon = str2val(row["Longitude"])
 
+        print("Processing ID %d. %d/%d" % (row["ID"], i, len(rows)))
+
+        print("Enrich  address")
         enrich_address(network, row, lat, lon)
+
+        print("Enrich  climate")
         enrich_climate(nc_climate, row, lat, lon)
+
+        print("Enrich  timezone")
         enrich_timezone(tzFinder, row, lat, lon)
 
     return rows

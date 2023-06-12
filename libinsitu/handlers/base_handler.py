@@ -25,9 +25,10 @@ def map_cols(data, mapping) :
 class InSituHandler :
     """ Virtual class to be implemented for each new network """
     
-    def __init__(self, properties, entries_extensions=[".txt"]):
+    def __init__(self, properties, entries_extensions=[".txt"], binary=False):
         self.properties = properties.copy()
         self.entries_extensions = entries_extensions # Used for zip archive : select the entries to process
+        self.binary = binary
 
         # Also adds lower case version of properties
         for key, val in properties.items() :
@@ -46,7 +47,7 @@ class InSituHandler :
         if filename.endswith(".gz") :
             with open(filename, "rb") as f:
                 stream =  TextIOWrapper(GzipFile(fileobj=f), encoding=encoding)
-                return self._read_chunk(stream)
+                return self._read_chunk(stream, entryname=filename)
 
         elif filename.endswith('.zip'):  # check if file is a zipped (.zip) file
 
@@ -84,8 +85,13 @@ class InSituHandler :
 
 
         else :
-            with open(filename, "rt", encoding=encoding) as f :
-                return self._read_chunk(f)
+            if self.binary :
+                f = open(filename, "rb")
+            else:
+                f = open(filename, "rt", encoding=encoding)
+
+            with f :
+                return self._read_chunk(f, entryname=filename)
 
     @abstractmethod
     def pattern(self):

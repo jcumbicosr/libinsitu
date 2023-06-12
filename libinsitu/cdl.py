@@ -221,7 +221,12 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
 def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False, custom_cdl=None) :
 
     # Read CDL from resource or custom file
-    cdl_file = read_res(CDL_PATH) if custom_cdl is None else open(custom_cdl, "r")
+    if custom_cdl is None:
+        cdl_file = read_res(CDL_PATH)
+    else:
+        info("Using custom CDL file %s" % custom_cdl)
+        cdl_file = open(custom_cdl, "r")
+
     cdl = parse_cdl(cdl_file, properties)
 
     # Ensures all requested data vars are defined

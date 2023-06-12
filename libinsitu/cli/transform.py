@@ -67,15 +67,29 @@ def list_files(in_files, handler) :
 
 def process_network(network, station_id, args) :
 
-    # Get properties for this station (possibly from a custom CSV file)
-    properties = getProperties(
-        network,
-        station_id,
-        args.station_metadata)
+    if args.generic :
 
-    if args.generic_csv :
-        handler = GenericCSVHandler(properties, args.generic_csv)
+        if not args.station_metadata :
+            raise Exception("Missing file path for custom station metadata")
+
+        properties = getCustomProperties(
+            network,
+            station_id,
+            args.station_metadata)
+
+        handler = GenericCSVHandler(properties, args.generic)
     else:
+
+        # Check network
+        all_networks = listNetworks()
+        if not network in all_networks:
+            raise Exception("Bad Network %s. Should be one of %s" % (network, str(all_networks)))
+
+        # Get all properties
+        properties = getProperties(
+            network,
+            station_id)
+
         handler : InSituHandler = HANDLERS[network](properties)
 
     in_files = list_files(args.in_files, handler)
@@ -129,7 +143,8 @@ def process_network(network, station_id, args) :
                 chunk_start, chunk_end = process_chunck(
                     data, ncfile, properties,
                     check=args.check,
-                    strict_resolution=args.strict_resolution)
+                    strict_resolution=args.strict_resolution,
+                    custom_cdl=args.cdl)
 
                 # Store extent of update
                 min_date = nmin(chunk_start, min_date)
@@ -435,9 +450,9 @@ def parser() :
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
-    parser.add_argument('--network', '-n', help='Network name', required=True, choices=listNetworks())
+    parser.add_argument('--network', '-n', help='Network name', required=True)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--generic-csv', '-g', metavar='<mapping.json>', help='Use a generic CSV parser with custom mapping. Tu be used in conjonction with --station-metadata')
+    parser.add_argument('--generic', '-g', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --station-metadata')
     parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
     parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
     parser.add_argument(
