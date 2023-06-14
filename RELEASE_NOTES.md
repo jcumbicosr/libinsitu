@@ -1,3 +1,6 @@
+1.5: 
+* Added generic encoding from Excel and CSV in CLI commands
+
 1.4 :
 * Added function dataframe_to_netcdf() to encode NetCDF from an existing dataframe
 * Updated the Convention to include QC flags in it
