@@ -1,5 +1,6 @@
 import os.path
 
+from libinsitu import parseTimezone
 from libinsitu.handlers import InSituHandler
 import json
 import pandas as pd
@@ -177,14 +178,13 @@ class GenericCSVHandler(InSituHandler) :
         else:
             raise Exception("Format not supported : %s" % extension)
 
-
-        print(df)
-
         # Parse time and remove source columns
         df = self.time_mapping.parse_time(df)
 
-
-        print(df)
+        # Parse timezone
+        tz = self.properties.get("Station_Timezone", None)
+        if tz :
+            df.index -= parseTimezone(tz)
 
         # Parse data
         for var_name, mapping in self.var_mappings.items() :

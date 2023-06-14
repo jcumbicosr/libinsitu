@@ -67,17 +67,17 @@ def list_files(in_files, handler) :
 
 def process_network(network, station_id, args) :
 
-    if args.generic :
+    if args.mapping :
 
-        if not args.station_metadata :
+        if not args.metadata :
             raise Exception("Missing file path for custom station metadata")
 
         properties = getCustomProperties(
             network,
             station_id,
-            args.station_metadata)
+            args.metadata)
 
-        handler = GenericCSVHandler(properties, args.generic)
+        handler = GenericCSVHandler(properties, args.mapping)
     else:
 
         # Check network
@@ -452,8 +452,8 @@ def parser() :
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--generic', '-g', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --station-metadata')
-    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
+    parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --metadata')
+    parser.add_argument('--metadata', '-md', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
     parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
     parser.add_argument(
         '--incremental', '-i', default=False, action='store_true',
