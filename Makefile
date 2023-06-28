@@ -1,6 +1,7 @@
 .PHONY: doc test package tst-upload
 
 TSTENV=.tstenv
+PYTHONPATH=$(CURDIR)
 
 clean:
 	rm -r dist
@@ -21,3 +22,6 @@ test:
 	$(TSTENV)/bin/pip install dist/*.whl --force-reinstall
 	$(TSTENV)/bin/pip install pytest
 	$(TSTENV)/bin/pytest libinsitu/test/*.py
+
+test-local:
+	PYTHONPATH=$(PYTHONPATH) pytest libinsitu/test/*.py

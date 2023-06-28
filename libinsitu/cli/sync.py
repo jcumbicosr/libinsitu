@@ -1,26 +1,27 @@
 #!/usr/bin/env python
+import argparse
+import functools
+import gzip
 import os.path
+import re
 import shutil
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from email.utils import parsedate_to_datetime
 from tempfile import NamedTemporaryFile
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
-import gzip
-import subprocess
-import pytz
-from dateutil.relativedelta import relativedelta
-import requests
+
 import jmespath
-import re
-import functools
+import pytz
+import requests
+from dateutil.relativedelta import relativedelta
+from dotenv import load_dotenv
 
 from libinsitu import STATION_PREFIX, touch
 from libinsitu.common import getStationsInfo, DATE_FORMAT, parse_value, getNetworksInfo, parse_bool
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
 from libinsitu.log import info, warning, LogContext, IgnoreAndLogExceptions
-import argparse
 
 SOURCE_URL_ATTR="SourceURL"
 RAW_PATH_ATTR="RawDataPath"

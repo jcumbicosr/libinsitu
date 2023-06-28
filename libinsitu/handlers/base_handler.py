@@ -6,14 +6,13 @@ from glob import glob
 from gzip import GzipFile
 from io import TextIOWrapper
 from pathlib import PurePath
-from typing import Dict
 from zipfile import ZipFile
 
 import pandas as pd
 from pandas import DataFrame
 
 from libinsitu import match_pattern
-from libinsitu.log import warning, debug, set_log_context
+from libinsitu.log import warning, debug
 
 ZERO_DEG_K = 273.15
 

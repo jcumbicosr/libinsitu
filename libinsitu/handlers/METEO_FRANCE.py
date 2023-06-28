@@ -1,8 +1,9 @@
 
 
-from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
-from libinsitu.handlers.base_handler import InSituHandler, map_cols
 import pandas as pd
+
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR
+from libinsitu.handlers.base_handler import InSituHandler
 
 
 class MeteoFranceHandler(InSituHandler) :

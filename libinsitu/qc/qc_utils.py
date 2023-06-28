@@ -8,6 +8,7 @@ import os
 from enum import Enum
 from urllib.request import urlopen
 
+import numpy as np
 import pandas as pd
 import pvlib
 import sg2
@@ -18,13 +19,10 @@ from pandas import DataFrame
 from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
     STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution
 from libinsitu.cdl import parse_cdl, initVar
-from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR, \
-    GLOBAL_TIME_RESOLUTION_ATTR
+from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR
 from libinsitu.log import warning, info
-import numpy as np
-
-from libinsitu.qc.base_graphs import _get_meta
-from libinsitu.qc.matplot import MaplotLibGraphs
+from libinsitu.qc.graphs import Graphs
+from libinsitu.qc.graphs.base import _get_meta
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -358,8 +356,7 @@ def visual_qc(
         station_name = None,
         with_horizons = False,
         with_mc_clear = False,
-        show_flag=ShowFlag.SHOW,
-        engine="matplotlib"):
+        show_flag=ShowFlag.SHOW):
 
     """
     Generates matplotlib graphs for visual QC
@@ -421,14 +418,8 @@ def visual_qc(
     # Statistics on QC flags
     stat_test = qc_stats(df, sp_df, flags_df)
 
-    # Pick class depending on engine
-    Clazz = {
-        "matplotlib" : MaplotLibGraphs,
-        #"plotly" : PlotlyGraphs
-    }[engine]
-
     # Draw figures
-    graph = Clazz(
+    graph = Graphs(
         meas_df=df,
         sp_df=sp_df,
         flag_df=flags_df,

@@ -1,14 +1,14 @@
+import argparse
 import os.path
 from os.path import basename, dirname
+
 from libinsitu import update_qc_flags
-from libinsitu.common import *
 from libinsitu.cdl import *
+from libinsitu.common import *
 from libinsitu.common import _prepare_properties
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
 from libinsitu.handlers.GenericCSVHandler import GenericCSVHandler
-from libinsitu.log import debug, info, warning, logger, LogContext, error
-import argparse
-
+from libinsitu.log import debug, info, warning, logger, LogContext
 
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'

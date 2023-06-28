@@ -1,11 +1,12 @@
+from datetime import datetime, timedelta
+
+import pandas as pd
 from pvlib.iotools.midc import MIDC_VARIABLE_MAP, TZ_MAP
+
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, WIND_SPEED_VAR, \
     WIND_DIRECTION_VAR, NA_VALUES
 from libinsitu.handlers.base_handler import InSituHandler, ZERO_DEG_K
-import pandas as pd
-from datetime import datetime, timedelta
-
-from libinsitu.log import warning, info
+from libinsitu.log import warning
 
 VARIABLE_MAP = {
     'ghi' : GLOBAL_VAR,

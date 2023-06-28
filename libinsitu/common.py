@@ -1,27 +1,25 @@
-from collections import defaultdict
-from concurrent.futures.thread import ThreadPoolExecutor
-from csv import DictReader
-from datetime import datetime, timedelta
-from functools import reduce
-from typing import Union
-from urllib.parse import urlsplit, quote_plus
-from libinsitu._version import __version__
-
-import numpy as np
-from dateutil.relativedelta import relativedelta
-from netCDF4 import *
-from numpy import timedelta64, datetime64
-from numpy.ma import is_masked
-from numpy.typing import NDArray
-from pandas import DataFrame
-import pandas as pd
-from pkgutil import get_data
 import os
 import re
 import sys
+from collections import defaultdict
+from concurrent.futures.thread import ThreadPoolExecutor
+from csv import DictReader
+from datetime import datetime
+from functools import reduce
+from pkgutil import get_data
+from typing import Union
+from urllib.parse import urlsplit, quote_plus
 
+import numpy as np
+import pandas as pd
+from dateutil.relativedelta import relativedelta
+from netCDF4 import *
+from numpy import timedelta64, datetime64
+from numpy.typing import NDArray
+from pandas import DataFrame
 from six import StringIO
 
+from libinsitu._version import __version__
 from libinsitu.log import warning
 
 # Name of dimensions and variables

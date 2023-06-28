@@ -1,10 +1,11 @@
 import argparse
+import sys
 
 from pandas import DataFrame
 
-from libinsitu import getProperties, getNetworksInfo, getStationInfo, getStationsInfo, VALID_COLS, df_to_csv, df_to_json
+from libinsitu import getNetworksInfo, getStationsInfo, VALID_COLS, df_to_csv, df_to_json
 from libinsitu.handlers import listNetworks
-import sys
+
 
 def parser() :
     parser = argparse.ArgumentParser(description='Prints / export meta data about networks and stations')

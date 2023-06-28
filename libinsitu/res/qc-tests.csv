@@ -1,0 +1,2 @@
+name,condition,domain,components,source
+GHI_PPL_UL_TOANI_SZA,GHI > 1.5 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 100,,,

@@ -3,10 +3,10 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from libinsitu import info
-from libinsitu.qc.matplot.graphs import BaseMatplotlibGraphs, MC_CLEAR_COLOR
+from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR
 
 
-class MaplotLibGraphs(BaseMatplotlibGraphs):
+class Graphs(BaseGraphs):
 
     def main_layout(self) :
         """ Render main layout """
