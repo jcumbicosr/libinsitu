@@ -7,6 +7,7 @@ from csv import DictReader
 from datetime import datetime
 from functools import reduce
 from pkgutil import get_data
+from types import SimpleNamespace
 from typing import Union
 from urllib.parse import urlsplit, quote_plus
 
@@ -139,7 +140,7 @@ STATION_START_DATA_ATTR = "time_coverage_start"
 SECOND = timedelta64(1, 's')
 CDL_PATH = "base.cdl"
 
-def parseCSV(res_path, key = "ID", resource=True) :
+def parseCSV(res_path, key = "ID", resource=True, as_objects=False) :
     """Generic parser """
     res = dict()
 
@@ -153,6 +154,10 @@ def parseCSV(res_path, key = "ID", resource=True) :
 
         # We force ID to stay a String
         res[row[key]] = {k: val if k == key else parse_value(val) for k, val in row.items()}
+
+        if as_objects :
+            res[row[key]] = SimpleNamespace(**res[row[key]])
+
     return res
 
 def getStationsInfo(network) :

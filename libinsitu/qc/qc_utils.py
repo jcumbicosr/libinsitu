@@ -17,7 +17,7 @@ from diskcache import Cache
 from pandas import DataFrame
 
 from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
-    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution
+    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution, parseCSV
 from libinsitu.cdl import parse_cdl, initVar
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR
 from libinsitu.log import warning, info
@@ -32,6 +32,21 @@ MAX_VAL = 5000.0
 
 CAMS_EMAIL_ENV = "CAMS_EMAIL"
 
+QC_TESTS_FILE = "qc-tests.csv"
+
+# Cache to description of flags
+_FLAGS = None
+
+def get_flags() :
+    global _FLAGS
+
+    if _FLAGS is None :
+        _FLAGS = parseCSV(QC_TESTS_FILE, key="name", as_objects=True)
+        for name, flag in _FLAGS.items() :
+            flag.components = flag.components.split(",")
+
+    return _FLAGS
+
 
 def flagData(meas_df, sp_df):
     """
@@ -40,18 +55,18 @@ def flagData(meas_df, sp_df):
     :return: QC flags. -1: no processed. 0: processed and ok. 1: Processed and failed
     """
 
-    MinDailyShareFlag = 0.2
-
-    # Aliases
+    # Setup alias as local variables for evualuation of the flags
     GHI = meas_df.GHI
-    DIF = meas_df.DHI
-    DNI = meas_df.BNI
+    DHI = meas_df.DHI
+    DIF = DHI # Alias
+    BNI = meas_df.BNI
+    DNI = BNI # Alias
 
     TOA = sp_df.TOA
     TOANI = sp_df.TOANI
     GAMMA_S0 = sp_df.GAMMA_S0
 
-    GHI_est = DIF + DNI * np.cos(sp_df.THETA_Z)
+    GHI_est = DHI + BNI * np.cos(sp_df.THETA_Z)
     SZA = sp_df.THETA_Z * 180 / np.pi
 
     size = len(meas_df.GHI)
@@ -60,67 +75,33 @@ def flagData(meas_df, sp_df):
     KT[TOA >= 1] = GHI[TOA >= 1] / TOA[TOA >= 1]
 
     Kn = np.zeros(size)
-    Kn[TOANI >= 1] = DNI[TOANI >= 1] / TOANI[TOANI >= 1]
+    Kn[TOANI >= 1] = BNI[TOANI >= 1] / TOANI[TOANI >= 1]
 
     K = np.zeros(size)
     K[GHI >= 1] = DIF[GHI >= 1] / GHI[GHI >= 1]
 
-    # % % -----------   Calculation of the individual QC flags -----------------
-    # BSRN one-component test
     flag_df = DataFrame(index=meas_df.index)
-    flag_df["T1C_ppl_GHI"] = (TOA > 0) & (
-            (GHI <= -4) | (GHI > 1.5 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 100))
-    flag_df["T1C_erl_GHI"] = (TOA > 0) & (
-            (GHI <= -2) | (GHI > 1.2 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
-    flag_df["T1C_ppl_DIF"] = (TOA > 0) & (
-            (DIF <= -4) | (DIF > 0.95 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 50))
-    flag_df["T1C_erl_DIF"] = (TOA > 0) & (
-            (DIF <= -2) | (DIF > 0.75 * TOANI * np.sin(GAMMA_S0) ** 1.2 + 30))
-    flag_df["T1C_ppl_DNI"] = (TOA > 0) & ((DNI <= -4) | (DNI > TOANI))
-    flag_df["T1C_erl_DNI"] = (TOA > 0) & (
-            (DNI <= -2) | (DNI > 0.95 * TOANI * np.sin(GAMMA_S0) ** 0.2 + 10))
 
-    flag_df["Kn"] = Kn
-    flag_df["K"] = K
-    flag_df["KT"] = KT
+    # Loop on flags definition
+    for name, flag_def in get_flags().items() :
 
-    # BSRN two-component test
-    flag_df["T2C_bsrn_kt"] = ((TOA > 0) & (GHI > 50)) & (
-                ((SZA < 75) & (K > 1.05)) |
-                ((SZA >= 75) & (K > 1.1)))
+        # Evaluate the expression
+        test_ok = eval(
+            flag_def.condition,
+            dict(),
+            locals())
 
-    # SERI-QC two-component test
-    flag_df["T2C_seri_kn_kt"] = (TOA > 0) & ((Kn > KT) | (Kn > 0.8) | (KT > 1.35))
-    flag_df["T2C_seri_k_kt"] = (TOA > 0) & (
-                ((KT < 0.6) & (K > 1.1)) | ((KT >= 0.6) & (K > 0.95)) | (KT > 1.35))
+        domain_ok = eval(
+            flag_def.domain,
+            dict(),
+            locals())
 
-    # BSRN three-component test
-    flag_df["T3C_bsrn_3cmp"] = (TOA > 0) & (
-                ((SZA <= 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.08)) | (
-                    (SZA > 75) & (GHI > 50) & (np.abs(GHI / GHI_est - 1) > 0.15)))
+        # Combina the two in a condition
 
-    # Tracker off test
-    GHI_clear = 0.8 * TOA
-    DIF_clear = 0.165 * GHI_clear
-    DNI_clear = GHI_clear - DIF_clear
-
-    flag_df["tracker_off"] = ((SZA <= 85) &
-                                    ((GHI_clear - GHI) / (GHI_clear + GHI) < 0.2) &
-                                    ((DNI_clear - DNI) / (DNI_clear + DNI) > 0.95))
-    # % % Combination of individual QC tests
-
-    # if at least one of the test is positive, we flag all data (to be eventually refined)
-    flag_df["QCtot"] = flag_df["T1C_erl_GHI"] | flag_df["T1C_erl_DIF"] | \
-                       flag_df["T1C_erl_DNI"] | flag_df["T2C_bsrn_kt"] | \
-                       flag_df["T2C_seri_kn_kt"] | flag_df["T2C_seri_k_kt"] | \
-                       flag_df["T3C_bsrn_3cmp"] | flag_df["tracker_off"]
-
-    # Evalue the share of flag data per day
-    DailyFlagStat = flag_df["QCtot"].resample('D').sum() / (TOA > 0).resample('D').sum()
-
-    # filter if at least on test fail or the number of flag per day exceeds the minimal share
-    flag_df["QCfinal"] = flag_df["QCtot"] | np.in1d(flag_df.index.normalize(),
-                                                    DailyFlagStat[DailyFlagStat > MinDailyShareFlag].index.normalize())
+        flag_df[name] = np.select(
+            [~domain_ok, ~test_ok],
+            [-1, 1],
+            default=0)
 
     return flag_df
 
