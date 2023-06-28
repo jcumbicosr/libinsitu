@@ -48,6 +48,8 @@ def init_dirs(network) :
     inputdir = path.join(CURR_DIR, "data", "in", network)
     expected_dir = path.join(CURR_DIR, "data", "expected")
 
+    print("Temp dir : ", tmp_dir)
+
     # Change current folder
     project_dir = path.join(CURR_DIR, "..", "..")
     chdir(project_dir)

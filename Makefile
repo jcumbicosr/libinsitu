@@ -1,8 +1,6 @@
-.PHONY: doc test package tst-upload
+.PHONY: doc test test-local package tst-upload 
 
-PYTHONPATH=.
 TSTENV=.tstenv
-PYTHONPATH=$(CURDIR)
 
 clean:
 	rm -r dist
@@ -16,11 +14,7 @@ tst-upload:
 upload:
 	twine upload -u oie-minesparistech dist/libinsitu*
 
-test-local:
-	echo $(PYTHONPATH)
-	pytest libinsitu/test/*.py
-
-test:
+test: clean package
 	rm -rf $(TSTENV)
 	virtualenv $(TSTENV)
 	. $(TSTENV)/bin/activate
@@ -29,4 +23,4 @@ test:
 	$(TSTENV)/bin/pytest libinsitu/test/*.py
 
 test-local:
-	PYTHONPATH=$(PYTHONPATH) pytest libinsitu/test/*.py
+	PYTHONPATH=. pytest libinsitu/test/*.py

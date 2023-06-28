@@ -578,9 +578,19 @@ class BaseGraphs:
 
         vK = comp[idxSC] / ref[idxSC]
         idx_sort = np.argsort(vK.values)
-        im = plt.scatter(
-            vSAA[idx_sort] * 180 / np.pi, vSEA[idx_sort] * 180 / np.pi,
-            s=1, c=vK[idx_sort],
+
+        # Prevent crash when empty data
+        if len(vK) > np.sum(vK.isna()):
+            x = vSAA[idx_sort] * 180 / np.pi
+            y = vSEA[idx_sort] * 180 / np.pi
+            c = vK[idx_sort]
+        else:
+            x = []
+            y = []
+            c = []
+
+        im = plt.scatter(x, y,
+            s=1, c=c,
             cmap=COLORMAP_SHADING,
             marker='s', alpha=.5)
 
