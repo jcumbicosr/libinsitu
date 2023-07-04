@@ -153,10 +153,31 @@ variables:
 	uint QC(time) ;
 	    *:long_name = "QC flag status";
 	    *:comment = "Flag=1 means QC test failed";
+	    *:standard_name = "quality_flag";
 	    *:coordinates = "time latitude longitude elevation "
-	    *:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
-	    *:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
-        *:_FillValue = 0;
+
+
+    uint QC_run(time) ;
+	    *:long_name = "QC flag run";
+	    *:standard_name = "quality_flag_processed";
+	    *:comment = "Flag=1 means QC test has run. 0 means it was outside of flag domain";
+	    *:coordinates = "time latitude longitude elevation"
+
+
+     int QC_level_GHI(time) ;
+	    *:long_name = "QC level for GHI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation"
+
+     int QC_level_DHI(time) ;
+	    *:long_name = "QC level for DHI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation"
+
+     int QC_level_BNI(time) ;
+	    *:long_name = "QC level for BNI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation"
 
 # Global attributes
 

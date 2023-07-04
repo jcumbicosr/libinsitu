@@ -326,7 +326,8 @@ def dataframe_to_netcdf(
     finally:
         if close :
             ncfile.close()
-        return ncfile
+
+    return ncfile
 
 
 

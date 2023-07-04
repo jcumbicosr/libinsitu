@@ -35,6 +35,7 @@ PRESSURE_VAR = "P"
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
 QC_FLAGS_VAR = "QC"
+QC_RUN_VAR = "QC_run"
 
 # Columns for station info, in order of apparition
 VALID_COLS = [
@@ -79,9 +80,13 @@ FILL_VALUE_ATTR = "_FillValue"
 DEFAULT_FILL_VALUE = -999
 
 # Alternate names often found for variables
-ALTERNATE_NAMES = {
+ALTERNATE_COMP_NAMES = {
     DIFFUSE_VAR : ["DIF"],
     DIRECT_VAR : ["DNI"]
+}
+
+ALTERNATE_COMP_NAMES_INV = {
+    val : key for key, vals in ALTERNATE_COMP_NAMES.items() for val in vals
 }
 
 # Meta data variables
@@ -644,7 +649,7 @@ def __nc2df(
 
         # Rename variables
         if rename :
-            for dest, sources in ALTERNATE_NAMES.items():
+            for dest, sources in ALTERNATE_COMP_NAMES.items():
                 for source in sources :
                     if source in df.columns :
                         warning("Renaming %s -> %s" % (source, dest))

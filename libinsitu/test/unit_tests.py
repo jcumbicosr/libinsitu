@@ -1,16 +1,18 @@
 from datetime import datetime, timedelta
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
+from netCDF4 import Dataset
+from numpy.ma.testutils import assert_array_equal
 from numpy.testing import assert_array_equal
 
-from pandas import DataFrame
-
-from libinsitu import match_pattern, to_range, flagData
+from libinsitu import match_pattern, to_range, flagData, QCFlag, write_flags, dataframe_to_netcdf
 from libinsitu.common import is_uniform, parse_value, parseTimezone
 import pytest
 import sys
+
+from libinsitu.test.utils import mk_timeseries, tmp_filename
+
 
 def test_is_uniform() :
 
@@ -56,9 +58,9 @@ def test_torange() :
 
 def test_flag_data():
 
-    FLAGS = dict(f1=SimpleNamespace(
-        bit=1, name ="f1", condition="GHI > DIF", domain="GHI > 0", components=["GHI", "DNI"]
-    ))
+    # Static flags as if they came from CSV file
+    flags = dict(f1=QCFlag(
+        bit=1, name ="f1", condition="GHI > DIF", domain="GHI > 0", components=["GHI", "DHI"]))
 
     meas_df = mk_timeseries(
         GHI = [0, 10, 10, 10, np.nan],
@@ -71,25 +73,63 @@ def test_flag_data():
         GAMMA_S0 = 0,
         THETA_Z = 0)
 
-    with patch("libinsitu.qc.qc_utils.get_flags", return_value=FLAGS) :
+    with patch("libinsitu.qc.qc_utils.get_flags", return_value=flags) :
+
         flags = flagData(meas_df, sp_df)
 
         assert_array_equal(
             flags.f1,
-            [-1, 0, 1, 1, -1])
+            [-1, 0, 1, -1, -1])
 
-def mk_timeseries(**dic):
-    """Creates a time series Dataframe from a dict of values """
-    nb = len(list(dic.values())[0])
+def test_write_flags():
 
-    # Expand single value
-    for name, vals in dic.items() :
-        if not isinstance(vals, list) :
-            dic[name] = [vals] * nb
+    # Static flags as if they came from CSV file
+    flags = dict(
+        f1=QCFlag(bit=1, name="f1", components=[]),
+        f2=QCFlag(bit=2, name="f2", components=[]))
 
-    dic["times"] = [datetime(2000, 1, 1, h, 0, 0) for h in range(0, nb)]
-    df = DataFrame.from_dict(dic)
-    return df.set_index("times")
+    data_df = mk_timeseries(DHI=[1, 2, 3])
+
+    flags_df = mk_timeseries(
+        f1=[0, 1, -1],
+        f2=[1, 0, -1])
+
+    tmp_file = tmp_filename()
+
+    print("temp file", tmp_file)
+
+    nc = dataframe_to_netcdf(
+        data_df,
+        station_name="FOO",
+        network_name="BAR",
+        out_filename=tmp_file,
+        process_qc=False,
+        close=False)
+
+    with patch("libinsitu.qc.qc_utils.get_flags", return_value=flags):
+
+
+        write_flags(nc, flags_df)
+
+        qc_var = nc.variables["QC"]
+        qc_run_var = nc.variables["QC_run"]
+
+        print(qc_var.flag_masks)
+
+        # Check meta data are correctly filled
+        assert qc_var.flag_meanings == "f1 f2"
+        assert_array_equal(qc_var.flag_masks, [1, 2])
+
+        assert qc_run_var.flag_meanings == "f1 f2"
+        assert_array_equal(qc_run_var.flag_masks, [1, 2])
+
+        # Check masks are correctly computed
+        assert_array_equal(qc_var[:], [2, 1, 0]) # error flags
+        assert_array_equal(qc_run_var[:], [3, 3, 0])  # Qc computed flags
+
+
+
+
 
 if __name__ == '__main__':
     pytest.main(sys.argv)

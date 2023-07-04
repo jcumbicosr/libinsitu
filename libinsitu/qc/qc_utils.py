@@ -17,8 +17,9 @@ from diskcache import Cache
 from pandas import DataFrame
 
 from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
-    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution, parseCSV
-from libinsitu.cdl import parse_cdl, initVar
+    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution, parseCSV, ALTERNATE_COMP_NAMES_INV, \
+    QC_RUN_VAR
+from libinsitu.cdl import parse_cdl, initVar, get_cdl
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR
 from libinsitu.log import warning, info
 from libinsitu.qc.graphs import Graphs
@@ -37,15 +38,36 @@ QC_TESTS_FILE = "qc-tests.csv"
 # Cache to description of flags
 _FLAGS = None
 
+class QCFlag :
+    def __init__(self, bit, name, components, condition=None, domain=None, source=None):
+        self.name = name
+        self.bit = bit
+        self.components = components
+        self.condition = condition
+        self.domain = domain
+        self.source = source
+
+    def mask(self):
+        return 2 ** (self.bit-1)
+
+
 def get_flags() :
     global _FLAGS
+
 
     if _FLAGS is None :
         _FLAGS = parseCSV(QC_TESTS_FILE, key="name", as_objects=True)
         for name, flag in _FLAGS.items() :
             flag.components = flag.components.split(",")
 
+            # Replace alternative component names with canonical ones
+            flag.components = [ALTERNATE_COMP_NAMES_INV.get(comp, comp) for comp in flag.components]
+
+        # TRansform to flag object
+        _FLAGS = {name:QCFlag(**flag) for name, flag  in _FLAGS.items()}
+
     return _FLAGS
+
 
 
 def flagData(meas_df, sp_df):
@@ -64,40 +86,53 @@ def flagData(meas_df, sp_df):
 
     TOA = sp_df.TOA
     TOANI = sp_df.TOANI
-    GAMMA_S0 = sp_df.GAMMA_S0
+    THETA_Z = sp_df.THETA_Z
 
-    GHI_est = DHI + BNI * np.cos(sp_df.THETA_Z)
+    GHI_est = DHI + BNI * np.cos(THETA_Z)
     SZA = sp_df.THETA_Z * 180 / np.pi
 
     size = len(meas_df.GHI)
 
-    KT = np.zeros(size)
-    KT[TOA >= 1] = GHI[TOA >= 1] / TOA[TOA >= 1]
-
-    Kn = np.zeros(size)
-    Kn[TOANI >= 1] = BNI[TOANI >= 1] / TOANI[TOANI >= 1]
-
-    K = np.zeros(size)
-    K[GHI >= 1] = DIF[GHI >= 1] / GHI[GHI >= 1]
+    Kt = GHI / TOA
+    Kn = BNI / TOANI
+    K = DIF / GHI
 
     flag_df = DataFrame(index=meas_df.index)
+
+    cache = dict()
+
+    def eval_formula(formula, _locals) :
+        formula = formula.replace("^", "**").replace("≤", " <= ").replace("≥", " >= ")
+
+        # Add all numpy function to local scope
+        _locals = _locals.copy()
+        _locals.update(np.__dict__)
+
+        if not formula in cache :
+            try:
+                cache[formula] = eval(formula, dict(), _locals)
+            except Exception as e :
+                raise Exception("Error while evaluating '%s'" % formula) from e
+
+        return cache[formula]
 
     # Loop on flags definition
     for name, flag_def in get_flags().items() :
 
         # Evaluate the expression
-        test_ok = eval(
+        test_ok = eval_formula(
             flag_def.condition,
-            dict(),
             locals())
 
-        domain_ok = eval(
+        domain_ok = eval_formula(
             flag_def.domain,
-            dict(),
             locals())
+
+        # Mark NA flags as outside of the domain
+        for comp in flag_def.components :
+            domain_ok = domain_ok & (~meas_df[comp].isna())
 
         # Combina the two in a condition
-
         flag_df[name] = np.select(
             [~domain_ok, ~test_ok],
             [-1, 1],
@@ -267,49 +302,66 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 def write_flags(ncfile, flags_df):
     """Update flags in NetCDF file"""
 
-    # Parse CDL : use defaultdict to avoid warning
-    # XXX try to not parse it twice and get it from above
-    cdl = parse_cdl(read_res(CDL_PATH), attributes=DefaultDict(lambda : "-"))
+    # Get default CDL : XXX support for custom one ?
+    cdl = get_cdl(init=True)
+
+    flags = get_flags()
 
     # Create var if not present yet
-    if not QC_FLAGS_VAR in ncfile.variables :
-        initVar(ncfile, cdl.variables[QC_FLAGS_VAR])
+    for var in [QC_FLAGS_VAR, QC_RUN_VAR] :
+        if var in ncfile.variables :
+            warning("%s was already present, updating it :" % var)
+        initVar(ncfile, cdl.variables[var])
 
-    qc_var = ncfile.variables[QC_FLAGS_VAR]
+        ncvar = ncfile.variables[var]
+        ncvar.setncattr("flag_meanings", " ".join(flags.keys()))
+        ncvar.setncattr("flag_masks", [flag.mask() for flag in flags.values()])
+
+        # Update meanings and flags
 
     # Build a dictionary of masks
-    flag_masks = dict((flag, mask) for flag, mask in zip(qc_var.flag_meanings.split(), qc_var.flag_masks))
-
-    info("Flag masks  : %s" % flag_masks)
+    flag_masks = {flag.name: flag.mask() for flag in flags.values()}
 
     # Output
-    out_masks = np.zeros(len(flags_df))
+    def write_values(var, values_df) :
 
-    for colname in flags_df.columns :
-        if not colname in flag_masks :
-            info("Flag %s not found in QC flags DSL. Skipping" % colname)
-            continue
+        values_df = values_df.astype(int)
+        out_masks = np.zeros(len(values_df), dtype=int)
 
-        colvalues = flags_df[colname]
+        for colname in values_df.columns :
+            if not colname in flag_masks :
+                warning("Flag %s not found in QC flags DSL. Skipping" % colname)
+                continue
 
-        out_masks += colvalues.values * flag_masks[colname]
+            out_masks += values_df[colname].values * flag_masks[colname]
 
-    # Compute IDX
-    dates = flags_df.index.values
-    times_sec = datetime64_to_sec(ncfile, dates)
-    time_idx = seconds_to_idx(ncfile, times_sec)
+        # Compute IDX
+        dates = values_df.index.values
+        times_sec = datetime64_to_sec(ncfile, dates)
+        time_idx = seconds_to_idx(ncfile, times_sec)
 
-    # Assign flags
-    time_var = getTimeVar(ncfile)
-    max_time = len(time_var)
+        # Assign flags
+        time_var = getTimeVar(ncfile)
+        max_time = len(time_var)
 
-    out_idx = time_idx > max_time -1
-    if np.any(out_idx) :
-        warning("Index of of time range. Truncating %d values" % np.sum(out_idx))
-        time_idx = time_idx[~out_idx]
-        out_masks = out_masks[~out_idx]
+        out_idx = time_idx > max_time -1
+        if np.any(out_idx) :
+            warning("Index of of time range. Truncating %d values" % np.sum(out_idx))
+            time_idx = time_idx[~out_idx]
+            out_masks = out_masks[~out_idx]
 
-    qc_var[time_idx] = out_masks
+        var[time_idx] = out_masks
+
+    # Flags for failing tests
+    write_values(
+        ncfile.variables[QC_FLAGS_VAR],
+        flags_df == 1)
+
+    # Flags for run tests
+    write_values(
+        ncfile.variables[QC_RUN_VAR],
+        flags_df != -1)
+
 
 def compute_sun_pos(df, lat, lon, alt) :
     """Call sg2 on data"""

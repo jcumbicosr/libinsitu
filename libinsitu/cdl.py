@@ -1,13 +1,16 @@
 import re
 from copy import deepcopy
 from typing import Dict
-from libinsitu import STATION_NAME_VAR
+from libinsitu import STATION_NAME_VAR, DefaultDict
 from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
     fill_str, TIME_VAR
 from libinsitu.log import info, warning
+import numpy as np
 
 
 SYSTEM_ATTRIBUTES = ["_FillValue"]
+
+
 
 class Variable :
     def __init__(self, name, type, dimensions):
@@ -21,6 +24,30 @@ class CDL :
         self.dimensions : Dict[str, int] = {}
         self.variables : Dict[str, Variable] = {}
         self.global_attributes = {}
+
+
+# Cache to CDL
+_CDL:CDL = None
+
+def init_cdl(properties=DefaultDict(lambda : "-"), custom_cdl = None) :
+    global _CDL
+    # Read CDL from resource or custom file
+    if custom_cdl is None:
+        cdl_file = read_res(CDL_PATH)
+    else:
+        info("Using custom CDL file %s" % custom_cdl)
+        cdl_file = open(custom_cdl, "r")
+    _CDL = parse_cdl(cdl_file, properties)
+
+def get_cdl(init=False) :
+    if _CDL is None:
+        if not init :
+            raise Exception("No CDL set yet")
+        else:
+            init_cdl(DefaultDict(lambda : "-"))
+    return _CDL
+
+
 
 def replace_placeholders(strval, attributes) :
 
@@ -220,14 +247,9 @@ def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
 
 def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs=False, custom_cdl=None) :
 
-    # Read CDL from resource or custom file
-    if custom_cdl is None:
-        cdl_file = read_res(CDL_PATH)
-    else:
-        info("Using custom CDL file %s" % custom_cdl)
-        cdl_file = open(custom_cdl, "r")
+    init_cdl(properties, custom_cdl)
 
-    cdl = parse_cdl(cdl_file, properties)
+    cdl = get_cdl()
 
     # Ensures all requested data vars are defined
     missing_vars = set(data_var for data_var in data_vars if data_var not in cdl.variables)
@@ -249,9 +271,9 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
     if not dry_run :
 
         # Init scalar vars
-        netcdf.variables[LONGITUDE_VAR][0] = properties["Station_Longitude"]
-        netcdf.variables[LATITUDE_VAR][0] = properties["Station_Latitude"]
-        netcdf.variables[ELEVATION_VAR][0] = properties["Station_Elevation"]
+        netcdf.variables[LONGITUDE_VAR][0] = properties.get("Station_Longitude", np.nan)
+        netcdf.variables[LATITUDE_VAR][0] = properties.get("Station_Latitude", np.nan)
+        netcdf.variables[ELEVATION_VAR][0] = properties.get("Station_Elevation", np.nan)
 
         fill_str(netcdf, STATION_NAME_VAR, properties["Station_ID"])
 
