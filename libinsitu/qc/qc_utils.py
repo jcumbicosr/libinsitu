@@ -4,8 +4,12 @@ Created on Thu Jun 23 10:09:54 2022
 
 @author: y-m.saint-drenan
 """
+from enum import IntEnum
 import os
+from collections import defaultdict
 from enum import Enum
+from functools import reduce
+from operator import or_
 from urllib.request import urlopen
 
 import numpy as np
@@ -16,14 +20,14 @@ from appdirs import user_cache_dir
 from diskcache import Cache
 from pandas import DataFrame
 
-from libinsitu import CDL_PATH, read_res, DefaultDict, datetime64_to_sec, seconds_to_idx, getTimeVar, QC_FLAGS_VAR, \
-    STATION_ID_ATTRS, STATION_NAME_VAR, netcdf_to_dataframe, get_df_resolution, parseCSV, ALTERNATE_COMP_NAMES_INV, \
-    QC_RUN_VAR
-from libinsitu.cdl import parse_cdl, initVar, get_cdl
-from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR
+from libinsitu.cdl import initVar, get_cdl
+from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, \
+    DIFFUSE_VAR, DIRECT_VAR, parseCSV, ALTERNATE_COMP_NAMES_INV, get_df_resolution, \
+    getTimeVar, QC_FLAGS_VAR, seconds_to_idx, datetime64_to_sec, STATION_NAME_VAR, STATION_ID_ATTRS, QC_RUN_VAR, netcdf_to_dataframe
 from libinsitu.log import warning, info
 from libinsitu.qc.graphs import Graphs
 from libinsitu.qc.graphs.base import _get_meta
+from libinsitu.qc.graphs.main_layout import GraphId
 
 cachedir = user_cache_dir("libinsitu")
 cache = Cache(cachedir)
@@ -38,14 +42,21 @@ QC_TESTS_FILE = "qc-tests.csv"
 # Cache to description of flags
 _FLAGS = None
 
+class FlagLevel(IntEnum) :
+    NIGHT = -5
+    MISSING = -1
+    OUT_2C_DOMAIN = 15
+
 class QCFlag :
-    def __init__(self, bit, name, components, condition=None, domain=None, source=None):
+    def __init__(self, name, components, bit=-1, condition=None, domain=None, source=None, level=None, group_level=None):
         self.name = name
         self.bit = bit
         self.components = components
         self.condition = condition
         self.domain = domain
         self.source = source
+        self.level = level
+        self.group_level = group_level
 
     def mask(self):
         return 2 ** (self.bit-1)
@@ -56,12 +67,14 @@ def get_flags() :
 
 
     if _FLAGS is None :
-        _FLAGS = parseCSV(QC_TESTS_FILE, key="name", as_objects=True)
+        _FLAGS = parseCSV(QC_TESTS_FILE, key="name")
         for name, flag in _FLAGS.items() :
-            flag.components = flag.components.split(",")
+            flag["components"] = flag["components"].split(",")
 
             # Replace alternative component names with canonical ones
-            flag.components = [ALTERNATE_COMP_NAMES_INV.get(comp, comp) for comp in flag.components]
+            flag["components"] = [ALTERNATE_COMP_NAMES_INV.get(comp, comp) for comp in flag["components"]]
+            flag["level"] = int(flag["level"]) if flag["level"] else None
+            flag["group_level"] = int(flag["group_level"]) if flag["group_level"] else None
 
         # TRansform to flag object
         _FLAGS = {name:QCFlag(**flag) for name, flag  in _FLAGS.items()}
@@ -141,36 +154,175 @@ def flagData(meas_df, sp_df):
     return flag_df
 
 
-def qc_stats(meas_df, sp_df, flag_df) :
+def _combine_flags(flags_list) :
+    """Combine several series of flags into one
+    -1 in one of the flag in -1
+    1 if one of the flags is 1, 0 otherwize"""
 
-    GHI = meas_df.GHI
-    DIF = meas_df.DHI
-    DNI = meas_df.BNI
+    if len(flags_list) == 1:
+        return flags_list[0]
 
-    TOA = sp_df.TOA
+    conds = []
+    res = []
+    for flags in flags_list :
+        conds.insert(0, flags == -1)
+        conds.append(flags == 1)
+        res.insert(0, -1)
+        res.append(1)
+    return np.select(conds, res, 0)
 
-    def percent(flags, *components) :
-        filt = TOA > 0
-        for component in components :
-            filt = filt & (component > -2)
 
-        tot = sum(filt)
-        if tot == 0 :
+def _group_flags() :
+    """Build a  Dict of Component => Number of component (1, 2, 3) => level => [tests]"""
+    flags = get_flags()
+
+    # Dict of Component => Number of component (1, 2, 3) => level => [tests]
+    flags_dict = defaultdict(
+        lambda: defaultdict(
+            lambda: defaultdict(list)))
+
+    # Dict of group_level = [flags]
+    groups = defaultdict(list)
+
+    for flag in flags.values():
+        nb_comp = len(flag.components)
+
+        # Skip flags to be ignored in level
+        if flag.level == -1 or flag.level is None:
+            continue
+
+        for component in flag.components:
+            flags_dict[component][nb_comp][flag.level].append(flag)
+
+        if flag.group_level is not None:
+            groups[flag.group_level].append(flag)
+
+    # Add group flags to all its components
+    for level, flags in groups.items():
+
+        # All components
+        components = reduce(or_, [set(flag.components) for flag in flags])
+
+        for comp in components :
+            for flag in flags:
+                flags_dict[comp][len(flag.components)][level].append(flag)
+
+
+    return flags_dict
+
+
+
+
+def _compute_grouped_flag_values(flag_groups, flags_df) :
+    """Compute combined values for each group of flags <component, nb_comp, level>"""
+
+    return {
+        comp: {
+            nb_comp: {
+                level : _combine_flags([flags_df[flag.name] for flag in flags])
+                for level, flags in flags_per_level.items()
+            } for nb_comp, flags_per_level in flags_per_comp.items()
+        } for comp, flags_per_comp in flag_groups.items()
+    }
+
+def _compute_levels_per_nb_comp(
+        flag_values,
+        out_domain_value,
+        fallback_values) :
+    """
+    Compute flag values for a given number of components (1C, 2C, 3C) :
+    returns either the hightest matching level, or (10*nb_comp -5) if one out of domain (-1) value is found.
+
+    """
+
+    # Sort flag values by descending levels
+    flag_values = dict(sorted(flag_values.items(), reverse=True))
+
+    condlist = []
+    choicelist = []
+
+    # Loop on flags by descending order
+    for level, flags in flag_values.items():
+
+        # Out of domain => out of domain value
+        condlist.append(flags == -1)
+        choicelist.append(out_domain_value)
+
+        condlist.append(flags == 0)
+        choicelist.append(level)
+
+    return np.select(
+        condlist,
+        choicelist,
+        fallback_values)
+
+def _highest_level(flags_per_level) :
+    return max(flags_per_level.keys())
+
+def _compute_levels_per_comp(
+        comp_flags_values,
+        comp_values,
+        sza) :
+
+    flags_1C = comp_flags_values[1]
+    flags_2C = comp_flags_values[2]
+    flags_3C = comp_flags_values[3]
+
+    # Starting levels : -5 for night. -1 for missing values
+    levels = np.select(
+        [sza > 90, comp_values.isna()], [FlagLevel.NIGHT, FlagLevel.MISSING])
+
+    #for nb_comp, flags in comp_flags_values.items()
+
+    # Process 1C - Only process samples having level >= 0
+    levels[levels == 0] = _compute_levels_per_nb_comp(flags_1C, 5, 0)
+
+    # Process 2C - Only process samples having level >= highest_1c (10 usually)
+    highest_1c = _highest_level(flags_1C)
+    levels[levels == highest_1c] = _compute_levels_per_nb_comp(flags_2C, 15, highest_1c)
+
+    # Process 2C - Only process samples having level >= highest_2c (24 usually)
+    highest_2c = _highest_level(flags_2C)
+    levels[levels == highest_2c] = _compute_levels_per_nb_comp(flags_3C, 25, highest_2c)
+
+    return levels
+
+def compute_qc_level(flags_df, meas_df, sp_df) :
+
+    # Get flags per component => nb component and level
+    flag_groups = _group_flags()
+
+    grouped_flag_values = _compute_grouped_flag_values(flag_groups, flags_df)
+
+    res_df = DataFrame(index=meas_df.index)
+
+    # Loop on components
+    for comp, comp_flags_values in grouped_flag_values.items() :
+
+        res_df[comp] = _compute_levels_per_comp(
+            comp_flags_values,
+            meas_df[comp],
+            sp_df.SZA)
+
+    return res_df
+
+
+def qc_stats(flag_df) :
+
+    def percent(component) :
+
+        flag_values = flag_df[component]
+
+        filter = (flag_values != -1)
+        tot_nb = sum(filter)
+
+        if tot_nb == 0 :
             return np.nan
         else:
-            return sum(flags & filt) / tot * 100
+            return sum(flag_values == 1) / tot_nb * 100
 
-    return  {
-        'T1C_erl_GHI': percent(flag_df.T1C_erl_GHI, GHI),
-        'T1C_ppl_GHI': percent(flag_df.T1C_ppl_GHI, GHI),
-        'T1C_erl_DIF': percent(flag_df.T1C_erl_DIF, DIF),
-        'T1C_ppl_DIF': percent(flag_df.T1C_ppl_DIF, DIF),
-        'T1C_erl_DNI': percent(flag_df.T1C_erl_DNI, DNI),
-        'T1C_ppl_DNI': percent(flag_df.T1C_ppl_DNI, DNI),
-        'T2C_bsrn_kt': percent(flag_df.T2C_bsrn_kt, GHI),
-        'T2C_seri_knkt': percent(flag_df.T2C_seri_kn_kt, DNI, GHI),
-        'T2C_seri_kkt': percent(flag_df.T2C_seri_k_kt, DIF, GHI),
-        'T3C_bsrn': percent(flag_df.T3C_bsrn_3cmp, GHI, DIF, DNI)}
+    return {col : percent(col) for col in flag_df.columns}
+
 
 
 
@@ -380,6 +532,15 @@ class ShowFlag(Enum):
     SHOW="show" # Show all data
     FLAG="flag" # Flag errors in red
 
+
+def _compute_qc_final(flags_df) :
+    """Ads QcFinal to tests"""
+    QCfinal = np.zeros(len(flags_df), dtype=int)
+    for comp in flags_df.columns :
+        data = flags_df[comp]
+        QCfinal = QCfinal | (data == 1)
+    flags_df["QCfinal"] = QCfinal
+
 def visual_qc(
         df,
         latitude = None,
@@ -389,10 +550,12 @@ def visual_qc(
         station_name = None,
         with_horizons = False,
         with_mc_clear = False,
-        show_flag=ShowFlag.SHOW):
+        show_flag=ShowFlag.SHOW,
+        graph_id:GraphId=None):
 
     """
     Generates matplotlib graphs for visual QC
+
 
     :param df: Dataframe of input irradiance. It should have a time index and 3 columns : GHI, DHI, BNI).
                This dataframe can typically be obtained with netcdf_to_dataframe(... rename_cols=True)
@@ -403,6 +566,7 @@ def visual_qc(
     :param station_id: Name of the station (optional). Can also be passed as meta data (.attrs) of the Dataframe
     :param with_horizons: True to compute horizons (requires network)
     :param with_mc_clear: True to compute mc_clear from SODA (requires SODA credentials and network access)
+    :param graph_id: If not None, only display a specific graph
     """
 
     # Resample to the minute to produce graph
@@ -448,8 +612,11 @@ def visual_qc(
         ShowFlag.FLAG : 1
     }[show_flag]
 
+    _compute_qc_final(flags_df)
+
+
     # Statistics on QC flags
-    stat_test = qc_stats(df, sp_df, flags_df)
+    stat_test = qc_stats(flags_df)
 
     # Draw figures
     graph = Graphs(
@@ -463,7 +630,10 @@ def visual_qc(
         station_id=station_id, station_name=station_name,
         show_flag=flag)
 
-    return graph.main_layout()
+    if graph_id is None :
+        return graph.main_layout()
+    else:
+        return graph.plot_individual(graph_id)
 
 
 def update_qc_flags(ncfile, start_time=None, end_time=None) :

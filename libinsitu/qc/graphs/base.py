@@ -1,3 +1,5 @@
+from typing import List
+
 import matplotlib as mpl
 from matplotlib import dates as mdates, pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -13,7 +15,9 @@ from matplotlib.colors import ListedColormap
 from libinsitu._version import __version__
 
 NB_MIN_IN_DAY = 24 * 60
-FONT_SIZE = 8
+FONT_SIZE = "medium"
+TEXT_ANNOTATION_SIZE="small"
+
 MC_CLEAR_COLOR = 'mediumseagreen'
 
 def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
@@ -32,6 +36,16 @@ COLORMAP_SHADING = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor
 def conv2(v1, v2, m, mode='same'):
     tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
     return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
+
+
+class Text :
+    def __init__(self, text, x, y, rotation, size=TEXT_ANNOTATION_SIZE):
+        self.text = text
+        self.x = x
+        self.y = y
+        self.rotation = rotation
+        self.size = size
+
 
 class BaseGraphs:
     """ Base class holding source data to compute graph. Implementations inherit from it """
@@ -140,7 +154,7 @@ class BaseGraphs:
             index.values[0],
             index.values[-1]))
 
-        axe.set_ylabel(label + " (W/m2)", size=8)
+        axe.set_ylabel(label + " (W/m2)")
         plt.setp(axe.get_xticklabels(), visible=False)
 
     def plot_heatmap_timeseries(self, label, data, cmax):
@@ -181,9 +195,8 @@ class BaseGraphs:
         plot_limit(self.SS_h) # Sunset
 
         im00.set_clim(0, cmax)
-        axe.text(mdates.date2num(index)[0] + 5, 21, label, size=10)
+        axe.text(mdates.date2num(index)[0] + 5, 21, label)
 
-        mpl.rcParams['ytick.labelsize'] = FONT_SIZE
         plt.xlim((index.values[0], index.values[-1]))
         plt.ylim((0, 24))
 
@@ -228,8 +241,6 @@ class BaseGraphs:
 
         axe.set_ylabel(y_label, fontsize=FONT_SIZE)
         plt.xlim((index.values[0], index.values[-1]))
-        mpl.rcParams['xtick.labelsize'] = FONT_SIZE
-        mpl.rcParams['ytick.labelsize'] = FONT_SIZE
         axe.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         axe.xaxis_date()
 
@@ -261,7 +272,15 @@ class BaseGraphs:
         return axe
 
 
-    def generic_qc_graph(self, x, y, xlabel, ylabel, xrange, yrange, legend, lines, clim_ratio=0.25) :
+    def generic_qc_graph(
+            self,
+            x, y,
+            xlabel, ylabel,
+            xrange, yrange,
+            legend,
+            lines,
+            clim_ratio=0.25,
+            texts : List[Text] =[]):
         """ Generic function to display QC heat map with limits """
 
         info("Plotting QC test: %s" % legend)
@@ -290,21 +309,35 @@ class BaseGraphs:
         for x, y in lines :
             plt.plot(x, y, 'k--', alpha=0.4, linewidth=0.8)
 
-        plt.xlabel(xlabel, fontsize=FONT_SIZE)
-        plt.ylabel(ylabel, fontsize=FONT_SIZE)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
 
         plt.xlim(xrange)
         plt.ylim([
             yrange[0],
             yrange[1] * 1.2])
 
+        for text in texts :
+            plt.text(
+                text.x,
+                text.y,
+                text.text,
+                size=text.size,
+                rotation=text.rotation,
+                horizontalalignment='left',
+                verticalalignment='bottom',
+                rotation_mode='anchor')
+
         return im
 
-    def plot_bsrn_1c(self, component, component_name, limits) :
+    def plot_ul_1c(self, component, component_name, limits, texts) :
 
-        legend= 'BSRN 1C ' + component_name + ": {:.2f}% / {:.2f}%".format(
-            self.stat_test['T1C_ppl_' + component_name],
-            self.stat_test['T1C_erl_' + component_name])
+        # Texts contain the name of the flag : go fetch it and adds percentage
+        for text in texts :
+            flag_name = text.text
+            text.text = "%s (%.2f%%)" % (flag_name, self.stat_test[flag_name])
+
+        legend = component_name + " range test"
 
         # XXX should be done beforehand
         filter = (self.TOA > 0) & (component > 0) & (component < 2000) & (self.TOA > 0) & (self.TOA < 2000)
@@ -315,7 +348,7 @@ class BaseGraphs:
         TOANI = self.TOANI[filter]
         GAMMA_S0 = self.GAMMA_S0[filter]
 
-        # Draw limits
+        # Draw limits as lines
         limits_xy = []
 
         if len(x) > 0 :
@@ -330,13 +363,14 @@ class BaseGraphs:
 
         self.generic_qc_graph(
             x=x, y=y,
-            xlabel='Top of atmosphere (TOA) (W/m2)',
-            ylabel=component_name + "W/m2",
+            xlabel='Top of atmosphere (TOAHI) (W/m2)',
+            ylabel=component_name + " (W/m2)",
             xrange=[1, 1300],
             yrange=[0, 1400],
             legend=legend,
             lines=limits_xy,
-            clim_ratio=0.25)
+            clim_ratio=0.25,
+            texts=texts)
 
         #if ShowFlag == 1:
         #    plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
@@ -618,3 +652,5 @@ def _get_meta(df, keys) :
         if key in df.attrs :
             return df.attrs[key]
     return "-"
+
+

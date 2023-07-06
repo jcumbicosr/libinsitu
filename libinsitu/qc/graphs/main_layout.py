@@ -1,15 +1,42 @@
+from strenum import StrEnum
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from libinsitu import info
-from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR
+from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text
+import enum
 
+class GraphId(StrEnum) :
+    UL_1C_GHI = enum.auto()
+    UL_1C_DNI = enum.auto()
+    UL_1C_DIF = enum.auto()
+
+# Filled automatically by the individual_graph decorator
+INDIVIDUAL_PLOTS = dict()
+
+STANDALONE_FONT_SIZE = 12
+LAYOUT_FONT_SIZE = 10
+
+# Decorator to flag individual hraph metjhod with their names
+def individual_graph(graph_id) :
+    def decorator(method) :
+        INDIVIDUAL_PLOTS[graph_id] = method
+        def wrapper(*args, **kwargs) :
+            return method(*args, **kwargs)
+    return decorator
 
 class Graphs(BaseGraphs):
 
+    def __init__(self, *args, **kargs):
+        BaseGraphs.__init__(self, *args, **kargs)
+
+        self.within_main_layout = False
+
     def main_layout(self) :
         """ Render main layout """
+        self.within_main_layout = True
 
         info("QC: visual plot preparation")
         fig = plt.figure(figsize=(19.2, 9.93))
@@ -27,14 +54,14 @@ class Graphs(BaseGraphs):
 
         # -- Plot time series
 
-        plt.subplot(grid[0, 0])
-        self.plot_timeseries("GHI", self.GHI, 1400)
+        #plt.subplot(grid[0, 0])
+        #self.plot_timeseries("GHI", self.GHI, 1400)
 
-        plt.subplot(grid[1, 0])
-        self.plot_timeseries("DNI", self.DNI, 1400)
+        #plt.subplot(grid[1, 0])
+        #self.plot_timeseries("DNI", self.DNI, 1400)
 
-        plt.subplot(grid[2, 0])
-        self.plot_timeseries("DIF", self.DIF, 1000)
+        #plt.subplot(grid[2, 0])
+        #self.plot_timeseries("DIF", self.DIF, 1000)
 
         # -- Plot Heatmaps
 
@@ -113,14 +140,13 @@ class Graphs(BaseGraphs):
 
 
         plt.subplot(gs2[0, 2])
-        self.plot_bsrn_1c(self.GHI, "GHI", [[1.5, 1.2, 100], [1.2, 1.2, 50]])
+        self.plot_individual(GraphId.UL_1C_GHI)
 
         plt.subplot(gs2[1, 2])
-        self.plot_bsrn_1c(self.DNI, "DNI", [[1, 0, 0], [0.95, 0.2, 10]])
+        self.plot_individual(GraphId.UL_1C_DNI)
 
         plt.subplot(gs2[2, 2])
-        self.plot_bsrn_1c(self.DIF, "DIF", [[0.95, 1.2, 50],[0.75, 1.2, 30]])
-
+        self.plot_individual(GraphId.UL_1C_DIF)
 
         # BSRN 2C
         plt.subplot(gs2[0, 3])
@@ -199,3 +225,56 @@ class Graphs(BaseGraphs):
 
         plt.subplot(gs3[shadow_row + 2:shadow_row + 4, 2])
         self.shadow_analysis('DNI/TOANI (-)', self.DNI, self.TOANI, 0.65)
+
+
+    def plot_individual(self, graph_id:GraphId) :
+        if not graph_id in INDIVIDUAL_PLOTS :
+            raise Exception("Graph %s not found. List of valid graphs : %s" % (graph_id, str(list(INDIVIDUAL_PLOTS.keys()))))
+
+        graph_method = INDIVIDUAL_PLOTS[graph_id]
+
+        # Standalone individual graph ?
+        font_size = LAYOUT_FONT_SIZE if self.within_main_layout else STANDALONE_FONT_SIZE
+
+        # Set default font size temporarly
+        with plt.rc_context({
+            "font.size": font_size,
+            "xtick.labelsize": 6,
+            "ytick.labelsize": font_size}) :
+
+            graph_method(self)
+
+
+    #
+    # -- List of individual plots
+    #
+
+    @individual_graph(GraphId.UL_1C_GHI)
+    def plot_ul_1c_ghi(self):
+        self.plot_ul_1c(
+            self.GHI, "GHI",
+            limits=[[1.5, 1.2, 100], [1.2, 1.2, 50]],
+            texts=[
+                Text("GHI_PPL_UL_TOANI_SZA", 600, 885, 45),
+                Text("GHI_ERL_UL_TOANI_SZA", 700, 800, 40)])
+
+    @individual_graph(GraphId.UL_1C_DNI)
+    def plot_ul_1c_dni(self):
+        self.plot_ul_1c(
+            self.DNI, "DNI",
+            limits=[[1, 0, 0], [0.95, 0.2, 10]],
+            texts=[
+                Text("DNI_PPL_UL_TOANI", 450, 1420, -2),
+                Text("DNI_ERL_UL_TOANI_SZA", 300, 1020, 12)])
+
+    @individual_graph(GraphId.UL_1C_DIF)
+    def plot_ul_1c_dif(self):
+        self.plot_ul_1c(
+            self.DIF, "DIF",
+            limits=[[0.95, 1.2, 50], [0.75, 1.2, 30]],
+            texts=[
+                Text("DIF_PPL_UL_TOANI_SZA", 750, 700, 33),
+                Text("DIF_ERL_UL_TOANI_SZA", 700, 490, 27)])
+
+
+

@@ -1,1 +1,1 @@
-from .main_layout import Graphs
+from .main_layout import Graphs, GraphId

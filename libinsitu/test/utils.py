@@ -1,5 +1,7 @@
 import os
 import tempfile
+from unittest.mock import patch
+
 from pandas import DataFrame
 from datetime import datetime
 
@@ -18,3 +20,8 @@ def mk_timeseries(**dic):
     dic["times"] = [datetime(2000, 1, 1, 0, min, 0) for min in range(0, nb)]
     df = DataFrame.from_dict(dic)
     return df.set_index("times")
+
+def patch_flags(flags) :
+
+    flags = {flag.name : flag for flag in flags}
+    return patch("libinsitu.qc.qc_utils.get_flags", return_value=flags)
