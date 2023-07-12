@@ -94,6 +94,7 @@ LATITUDE_VAR = "latitude"
 LONGITUDE_VAR = "longitude"
 ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
+STATION_LONG_NAME_VAR= "platform"
 
 # Columns no included in Skip_na
 COL_NOSKIP=["QC"]
@@ -116,6 +117,10 @@ STATION_COUNTRY_ATTRS = [
 
 NETWORK_NAME_ATTRS = [
     "Network_Name", # XXX Old convention
+    "project"]
+
+NETWORK_ID_ATTRS = [
+    "network_id",
     "project"]
 
 # Prefix for global properties

@@ -161,7 +161,7 @@ def test_qc_filters():
 
     # QC flags
     flags = mk_timeseries({
-        "00:01": dict(T1C_ppl_GHI=0, tracker_off=0),
+        "00:01": dict(T1C_ppl_GHI=0, tracker_off=-1),
         "00:02": dict(T1C_ppl_GHI=1, tracker_off=0),
         "00:03": dict(T1C_ppl_GHI=0, tracker_off=1),
     })

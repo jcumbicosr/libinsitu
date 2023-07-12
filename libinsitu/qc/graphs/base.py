@@ -1,24 +1,55 @@
+import enum
+import os.path
+import urllib
+from logging import info
+from urllib.request import urlopen
+
+from six import BytesIO
+from strenum import StrEnum
 from typing import List
 
-import matplotlib as mpl
 from matplotlib import dates as mdates, pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.pyplot import gca
 from pandas import DataFrame
 from pvlib.clearsky import detect_clearsky
 import copy
-from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS
+from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, NETWORK_ID_ATTRS
 from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
+from hashlib import md5
+from libinsitu._version import __version__ as libinsitu_version
+from os import path
 
-from libinsitu._version import __version__
+from libinsitu.log import error
 
 NB_MIN_IN_DAY = 24 * 60
 FONT_SIZE = "medium"
 TEXT_ANNOTATION_SIZE="small"
 
 MC_CLEAR_COLOR = 'mediumseagreen'
+
+GOOGLE_URL_PATTERN = "https://maps.googleapis.com/maps/api/staticmap?center={lat},{lon}&zoom={zoom}&size={width}x{height}&maptype={maptype}"
+KEY_PATTERN="&key={api_key}"
+CACHE_FOLDER = path.expanduser("~/.cache/libinsitu/google_images/")
+
+class GraphId(StrEnum) :
+    INFO = enum.auto()
+    UL_1C_GHI = enum.auto()
+    UL_1C_DNI = enum.auto()
+    UL_1C_DIF = enum.auto()
+
+# Filled automatically by the individual_graph decorator
+INDIVIDUAL_PLOTS = dict()
+
+# Decorator to flag individual hraph metjhod with their names
+def individual_graph(graph_id) :
+    def decorator(method) :
+        INDIVIDUAL_PLOTS[graph_id] = method
+        def wrapper(*args, **kwargs) :
+            return method(*args, **kwargs)
+    return decorator
 
 def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
 
@@ -62,6 +93,7 @@ class BaseGraphs:
             elevation = None,
             station_id="-",
             station_name="-",
+            station_longname = "-",
             show_flag=-1):
 
         """
@@ -95,6 +127,7 @@ class BaseGraphs:
         self.elevation = elevation
         self.station_id = station_id
         self.station_name = station_name
+        self.station_longname = station_longname
 
         self.climate = None
         self.country = None
@@ -117,7 +150,7 @@ class BaseGraphs:
 
         self.climate = _get_meta(meas_df, CLIMATE_ATTRS)
         self.country = _get_meta(meas_df, STATION_COUNTRY_ATTRS)
-        self.source = _get_meta(meas_df, NETWORK_NAME_ATTRS)
+        self.source = _get_meta(meas_df, NETWORK_ID_ATTRS)
 
         self.TOA = sp_df.TOA
         self.TOANI = sp_df.TOANI
@@ -457,20 +490,12 @@ class BaseGraphs:
             lines=[line],
             clim_ratio=0.5)
 
+    @individual_graph(GraphId.INFO)
+    def plot_info(self) :
 
-    def print_info(self) :
-
-        Y0 = 0.90
-        dY = 0.15
-        gs0 = GridSpec(9, 12)
-        gs0.update(left=0.015, right=0.99, bottom=0.05, top=0.99, hspace=0.01, wspace=0.05)
-
-
-        CodeInfo = {
-            "project": "CAMS2-73",
-            "author": 'ARMINES, DLR',
-            "name": 'libinsitu - Visual plausibility control',
-            "vers": __version__}
+        plt.figure(figsize=[12, 5])
+        plt.tight_layout()
+        ax = gca()
 
         posTOA = self.TOA > 0
         nPosTOA = sum(posTOA)
@@ -487,31 +512,47 @@ class BaseGraphs:
         DateStrStart = "" if NbDays == 0 else timePosGHI[0].strftime("%Y-%m-%d")
         DateStrEnd = "" if NbDays == 0 else timePosGHI[-1].strftime("%Y-%m-%d")
 
-        ax01 = plt.subplot(gs0[0, 8])
-        ax01.text(0.01, Y0 - 0 * dY, 'Source: ' + self.source, size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 1 * dY, 'Station: '+ self.station_id + ': ' + self.station_name, size=FONT_SIZE)  # 'ID/ Station'
-        ax01.text(0.01, Y0 - 2 * dY, "latitude: {:.2f}°".format(self.latitude), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 3 * dY, "longitude: {:.2f}°".format(self.longitude), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 4 * dY, "altitude: {:.0f}m".format(self.elevation), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 5 * dY, "country: {} ".format(self.country), size=FONT_SIZE)
-        ax01.text(0.01, Y0 - 6 * dY, "Köppen-Geiger climate: {}".format(self.climate), size=FONT_SIZE)
-        ax01.axis('off')
+        gs = GridSpec(2, 4, wspace=0)
+        gs.update(left=0.02, right=0.92, bottom=0.02, top=0.98, hspace=0.05, wspace=0.05)
 
-        ax02 = plt.subplot(gs0[0, 10])
-        ax02.text(0.01, Y0 - 1 * dY, '.         Period:  {} - {}'.format(DateStrStart, DateStrEnd), size=FONT_SIZE)
-        ax02.text(0.01, Y0 - 2 * dY, '  Annual sums:', size=FONT_SIZE)
-        ax02.text(0.01, Y0 - 3 * dY, 'GHI:   {0:.0f} kWh/m2'.format(AvgGHI), size=FONT_SIZE)
-        ax02.text(0.01, Y0 - 4 * dY, 'DIF:   {0:.0f} kWh/m2'.format(AvgDHI), size=FONT_SIZE)
-        ax02.text(0.01, Y0 - 5 * dY, 'DNI:   {0:.0f} kWh/m2'.format(AvgDNI), size=FONT_SIZE)
-        ax02.text(0.01, Y0 - 6 * dY, CodeInfo["name"] + ' ' + CodeInfo["vers"] + '', size=FONT_SIZE)
-        ax02.axis('off')
+        ax_table1 = plt.subplot(gs[1, 0:2])
+        draw_table(ax_table1, {
+            "Network" : self.source,
+            "Station" : "%s (%s)" % (self.station_id, self.station_longname),
+            "Latitude" : "%.5f°" % self.latitude,
+            "Longitude": "%.5f°" % self.longitude,
+            "Elevation": "%.2fm" % self.elevation,
+            "Country": self.country,
+            "KG climate": self.climate})
 
-        ax03 = plt.subplot(gs0[0, 11])
-        ax03.text(0.01, Y0 - 2 * dY, '        Days of data: {}'.format(NbDays), size=FONT_SIZE)
-        ax03.text(0.01, Y0 - 3 * dY, '      ({0:.1f}% availability)'.format(AvailGHI), size=FONT_SIZE)
-        ax03.text(0.01, Y0 - 4 * dY, '      ({0:.1f}% availability)'.format(AvailDHI), size=FONT_SIZE)
-        ax03.text(0.01, Y0 - 5 * dY, '      ({0:.1f}% availability)'.format(AvailDNI), size=FONT_SIZE)
-        ax03.axis('off')
+        ax_table2 = plt.subplot(gs[1, 2:4])
+
+        format_sum = "%.0f kWh/m2 (%.1f%% avail)"
+        draw_table(ax_table2, {
+            "Period": "%s - %s" % (DateStrStart, DateStrEnd),
+            "Annual sums": "",
+            "GHI" : format_sum % (AvgGHI, AvailGHI),
+            "DIF": format_sum % (AvgDHI, AvailDHI),
+            "DNI": format_sum % (AvgDNI, AvailDNI),
+            "Software" : "libinsitu %s" % libinsitu_version
+        })
+
+        # Draw satelite images
+        ax_world_map = plt.subplot(gs[0, :2])
+        draw_satelite_image(
+            ax_world_map, self.latitude, self.longitude,
+            width=500, height=200, zoom=1,
+            maptype="road",
+            marker=True)
+
+        ax_medium_zoom = plt.subplot(gs[0, 2])
+        draw_satelite_image(
+            ax_medium_zoom, self.latitude, self.longitude, zoom=16,
+            marker=True)
+
+        ax_close_zoom = plt.subplot(gs[0, 3])
+        draw_satelite_image(
+            ax_close_zoom, self.latitude, self.longitude, zoom=20)
 
     def histo_qc(self, comp, x, x_label, legend_pos=None, y_label=False) :
 
@@ -654,3 +695,53 @@ def _get_meta(df, keys) :
     return "-"
 
 
+def draw_satelite_image(ax, lat, lon, zoom, maptype='satellite', width=400, height=400, marker=False) :
+
+    url = GOOGLE_URL_PATTERN.format(
+        lat=lat,
+        lon=lon,
+        zoom=zoom,
+        maptype=maptype,
+        width=width,
+        height=height)
+
+    url_hash = md5(url.encode()).hexdigest()
+
+    os.makedirs(CACHE_FOLDER, exist_ok=True)
+
+    cache_file = path.join(CACHE_FOLDER, url_hash)
+
+    if not path.exists(cache_file) :
+
+        info("Calling google API : %s", url)
+
+        if not "GOOGLE_API_KEY" in os.environ :
+            error("Image was not in cache and env var GOOGLE_API_KEY not set")
+            return
+
+        # Append API KEY
+        api_key = os.environ["GOOGLE_API_KEY"]
+        url = url + KEY_PATTERN.format(api_key=api_key)
+
+        # Save it to cache
+        with open(cache_file, "wb") as f:
+            f.write(urlopen(url).read())
+
+    ax.imshow(plt.imread(cache_file))
+
+    if marker :
+        ax.scatter(width/2, height/2, marker="+", s=150, linewidths=2, color="red")
+    ax.axis(False)
+
+def draw_table(ax, keys_values, x=0.01, y=0.95, height=0.15, width=0.3) :
+
+    ax.axis("off")
+
+    # Display labels
+    for i, text in enumerate(keys_values.keys()) :
+        ax.text(x, y-i*height, text, weight="bold")
+
+
+    # Display values
+    for i, text in enumerate(keys_values.values()) :
+        ax.text(x + width, y-i*height, text)

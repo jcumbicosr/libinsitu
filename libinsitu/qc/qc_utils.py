@@ -20,6 +20,7 @@ from appdirs import user_cache_dir
 from diskcache import Cache
 from pandas import DataFrame
 
+from libinsitu import STATION_LONG_NAME_VAR
 from libinsitu.cdl import initVar, get_cdl
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, \
     DIFFUSE_VAR, DIRECT_VAR, parseCSV, ALTERNATE_COMP_NAMES_INV, get_df_resolution, \
@@ -581,6 +582,7 @@ def visual_qc(
     alt = elevation if elevation else float(df.attrs[ELEVATION_VAR])
     station_id = station_id if station_id else _get_meta(df, STATION_ID_ATTRS)
     station_name = station_name if station_name else _get_meta(df, STATION_NAME_VAR)
+    station_longname = _get_meta(df, STATION_LONG_NAME_VAR) or station_name
 
     # Compute geom & theoretical irradiance
     sp_df = compute_sun_pos(df, lat , lon, alt)
@@ -626,8 +628,12 @@ def visual_qc(
         cams_df=cams_df,
         horizons=horizons,
         stat_test=stat_test,
-        latitude=lat, longitude=lon, elevation=alt,
-        station_id=station_id, station_name=station_name,
+        latitude=lat,
+        longitude=lon,
+        elevation=alt,
+        station_id=station_id,
+        station_name=station_name,
+        station_longname=station_longname,
         show_flag=flag)
 
     if graph_id is None :

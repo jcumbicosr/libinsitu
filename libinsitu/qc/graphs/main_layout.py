@@ -5,27 +5,15 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 from libinsitu import info
-from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text
+from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text, GraphId, INDIVIDUAL_PLOTS, individual_graph
 import enum
 
-class GraphId(StrEnum) :
-    UL_1C_GHI = enum.auto()
-    UL_1C_DNI = enum.auto()
-    UL_1C_DIF = enum.auto()
 
-# Filled automatically by the individual_graph decorator
-INDIVIDUAL_PLOTS = dict()
 
 STANDALONE_FONT_SIZE = 12
 LAYOUT_FONT_SIZE = 10
 
-# Decorator to flag individual hraph metjhod with their names
-def individual_graph(graph_id) :
-    def decorator(method) :
-        INDIVIDUAL_PLOTS[graph_id] = method
-        def wrapper(*args, **kwargs) :
-            return method(*args, **kwargs)
-    return decorator
+
 
 class Graphs(BaseGraphs):
 
@@ -148,6 +136,7 @@ class Graphs(BaseGraphs):
         plt.subplot(gs2[2, 2])
         self.plot_individual(GraphId.UL_1C_DIF)
 
+
         # BSRN 2C
         plt.subplot(gs2[0, 3])
         self.bsrn_2c()
@@ -176,7 +165,7 @@ class Graphs(BaseGraphs):
         # -- Third column
 
         # -- Text info
-        self.print_info()
+        self.plot_info()
 
         # -- QC histograms
         info("QC: histograms of K, Kn & KT")
