@@ -40,27 +40,7 @@ class Graphs(BaseGraphs):
             bottom=0.03, top=0.98,
             hspace=0.02, wspace=0.05)
 
-        # -- Plot time series
-
-        #plt.subplot(grid[0, 0])
-        #self.plot_timeseries("GHI", self.GHI, 1400)
-
-        #plt.subplot(grid[1, 0])
-        #self.plot_timeseries("DNI", self.DNI, 1400)
-
-        #plt.subplot(grid[2, 0])
-        #self.plot_timeseries("DIF", self.DIF, 1000)
-
-        # -- Plot Heatmaps
-
-        plt.subplot(grid[3, 0])
-        self.plot_heatmap_timeseries("GHI", self.GHI, 700)
-
-        plt.subplot(grid[4, 0])
-        self.plot_heatmap_timeseries("DNI", self.DNI, 700)
-
-        plt.subplot(grid[5, 0])
-        self.plot_heatmap_timeseries("DIF", self.DIF, 700)
+        self.plot_heatmaps_ts(grid)
 
         # -- Plot ratios
 
@@ -138,39 +118,32 @@ class Graphs(BaseGraphs):
 
 
         # BSRN 2C
-        plt.subplot(gs2[0, 3])
-        self.bsrn_2c()
+        #plt.subplot(gs2[0, 3])
+        #self.bsrn_2c()
 
         # SERI-Kn
-        plt.subplot(gs2[1, 3])
-        self.seri_kn()
+        #plt.subplot(gs2[1, 3])
+        #self.seri_kn()
 
         # SERI-K
-        plt.subplot(gs2[2, 3])
-        self.seri_k()
+        #plt.subplot(gs2[2, 3])
+        #self.seri_k()
 
         # BSRN Closure
-        plt.subplot(gs2[3, 2])
-        self.bsrn_closure()
+        #plt.subplot(gs2[3, 2])
+        #self.bsrn_closure()
 
         # BRSN Closure ratio
-        plt.subplot(gs2[3, 3])
-        im = self.bsrn_closure_ratio()
+        #plt.subplot(gs2[3, 3])
+        #im = self.bsrn_closure_ratio()
 
         # Color legend
-        cb_ax = fig.add_axes([0.38, 0.04, 0.28, 0.01])
-        cbar = fig.colorbar(im, cax=cb_ax, orientation='horizontal', label='point density (-)')
-        cbar.set_ticks([])
+        #cb_ax = fig.add_axes([0.38, 0.04, 0.28, 0.01])
+        #cbar = fig.colorbar(im, cax=cb_ax, orientation='horizontal', label='point density (-)')
+        #cbar.set_ticks([])
 
         # -- Third column
-
-        # -- Text info
-        self.plot_info()
-
-        # -- QC histograms
-        info("QC: histograms of K, Kn & KT")
-
-        gs3b = GridSpec(9, 9)
+        gs3b = GridSpec(8, 9)
         gs3b.update(
             left=0.075,
             right=0.98,
@@ -179,14 +152,19 @@ class Graphs(BaseGraphs):
             hspace=0.025,
             wspace=0.00)
 
-        plt.subplot(gs3b[1:3, 6])
-        self.histo_qc(self.GHI, self.flags.KT, 'GHI/TOA', y_label=True)
+        # Plot text & satelite images
+        self.plot_info(gs3b[0:2, 6:9])
 
-        plt.subplot(gs3b[1:3, 7])
-        self.histo_qc(self.DNI, self.flags.Kn, 'DNI/TOANI')
+        # -- QC histograms
+        info("QC: histograms of K, Kn & KT")
+        #plt.subplot(gs3b[1:3, 6])
+        #self.histo_qc(self.GHI, self.flags.KT, 'GHI/TOA', y_label=True)
 
-        plt.subplot(gs3b[1:3, 8])
-        self.histo_qc(self.DIF, self.flags.K, 'DIF/GHI',legend_pos='upper left')
+        #plt.subplot(gs3b[1:3, 7])
+        #self.histo_qc(self.DNI, self.flags.Kn, 'DNI/TOANI')
+
+        #plt.subplot(gs3b[1:3, 8])
+        #self.histo_qc(self.DIF, self.flags.K, 'DIF/GHI',legend_pos='upper left')
 
         if self.cams_df is None :
             gs3 = GridSpec(7, 3)
@@ -264,6 +242,29 @@ class Graphs(BaseGraphs):
             texts=[
                 Text("DIF_PPL_UL_TOANI_SZA", 750, 700, 33),
                 Text("DIF_ERL_UL_TOANI_SZA", 700, 490, 27)])
+
+    @individual_graph(GraphId.HEATMAP_GHI)
+    def plot_heatmap_ghi(self):
+        self.plot_heatmap_timeseries("GHI", self.GHI, 700)
+
+    @individual_graph(GraphId.HEATMAP_DNI)
+    def plot_heatmap_dni(self):
+        self.plot_heatmap_timeseries("DNI", self.DNI, 700)
+
+    @individual_graph(GraphId.HEATMAP_DIF)
+    def plot_heatmap_dif(self):
+        self.plot_heatmap_timeseries("DIF", self.DIF, 700)
+
+    def plot_heatmaps_ts(self, grid):
+
+        plt.subplot(grid[3, 0])
+        self.plot_heatmap_ghi()
+
+        plt.subplot(grid[4, 0])
+        self.plot_heatmap_dni()
+
+        plt.subplot(grid[5, 0])
+        self.plot_heatmap_dif()
 
 
 

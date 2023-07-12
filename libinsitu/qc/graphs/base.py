@@ -9,7 +9,7 @@ from strenum import StrEnum
 from typing import List
 
 from matplotlib import dates as mdates, pyplot as plt
-from matplotlib.gridspec import GridSpec
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.pyplot import gca
 from pandas import DataFrame
 from pvlib.clearsky import detect_clearsky
@@ -35,10 +35,17 @@ KEY_PATTERN="&key={api_key}"
 CACHE_FOLDER = path.expanduser("~/.cache/libinsitu/google_images/")
 
 class GraphId(StrEnum) :
+
     INFO = enum.auto()
+
     UL_1C_GHI = enum.auto()
     UL_1C_DNI = enum.auto()
     UL_1C_DIF = enum.auto()
+
+    HEATMAP_GHI = enum.auto()
+    HEATMAP_DNI = enum.auto()
+    HEATMAP_DIF = enum.auto()
+
 
 # Filled automatically by the individual_graph decorator
 INDIVIDUAL_PLOTS = dict()
@@ -49,6 +56,7 @@ def individual_graph(graph_id) :
         INDIVIDUAL_PLOTS[graph_id] = method
         def wrapper(*args, **kwargs) :
             return method(*args, **kwargs)
+        return wrapper
     return decorator
 
 def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
@@ -491,11 +499,9 @@ class BaseGraphs:
             clim_ratio=0.5)
 
     @individual_graph(GraphId.INFO)
-    def plot_info(self) :
+    def plot_info(self, parent_gs = None) :
 
-        plt.figure(figsize=[12, 5])
-        plt.tight_layout()
-        ax = gca()
+        #ax = gca()
 
         posTOA = self.TOA > 0
         nPosTOA = sum(posTOA)
@@ -512,8 +518,12 @@ class BaseGraphs:
         DateStrStart = "" if NbDays == 0 else timePosGHI[0].strftime("%Y-%m-%d")
         DateStrEnd = "" if NbDays == 0 else timePosGHI[-1].strftime("%Y-%m-%d")
 
-        gs = GridSpec(2, 4, wspace=0)
-        gs.update(left=0.02, right=0.92, bottom=0.02, top=0.98, hspace=0.05, wspace=0.05)
+        # Nested grid ?
+        if parent_gs is None  :
+            gs = GridSpec(2, 4, wspace=0)
+            gs.update(left=0.02, right=0.92, bottom=0.02, top=0.98, hspace=0.05)
+        else:
+            gs = GridSpecFromSubplotSpec(2, 4, subplot_spec=parent_gs, wspace=0)
 
         ax_table1 = plt.subplot(gs[1, 0:2])
         draw_table(ax_table1, {
@@ -523,7 +533,7 @@ class BaseGraphs:
             "Longitude": "%.5f°" % self.longitude,
             "Elevation": "%.2fm" % self.elevation,
             "Country": self.country,
-            "KG climate": self.climate})
+            "KG climate": self.climate}, width=0.4)
 
         ax_table2 = plt.subplot(gs[1, 2:4])
 
@@ -696,6 +706,7 @@ def _get_meta(df, keys) :
 
 
 def draw_satelite_image(ax, lat, lon, zoom, maptype='satellite', width=400, height=400, marker=False) :
+    ax.axis(False)
 
     url = GOOGLE_URL_PATTERN.format(
         lat=lat,
@@ -731,7 +742,7 @@ def draw_satelite_image(ax, lat, lon, zoom, maptype='satellite', width=400, heig
 
     if marker :
         ax.scatter(width/2, height/2, marker="+", s=150, linewidths=2, color="red")
-    ax.axis(False)
+
 
 def draw_table(ax, keys_values, x=0.01, y=0.95, height=0.15, width=0.3) :
 
