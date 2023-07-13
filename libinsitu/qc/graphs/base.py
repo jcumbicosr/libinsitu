@@ -27,6 +27,7 @@ from libinsitu.log import error
 NB_MIN_IN_DAY = 24 * 60
 FONT_SIZE = "medium"
 TEXT_ANNOTATION_SIZE="small"
+LEGEND_FONT_SIZE=8
 
 MC_CLEAR_COLOR = 'mediumseagreen'
 
@@ -36,15 +37,37 @@ CACHE_FOLDER = path.expanduser("~/.cache/libinsitu/google_images/")
 
 class GraphId(StrEnum) :
 
+    # Info panel
+
+
     INFO = enum.auto()
 
+    # Timeseries heatmaps
+    HEATMAP_GHI = enum.auto()
+    HEATMAP_DNI = enum.auto()
+    HEATMAP_DIF = enum.auto()
+
+    # Ratio graphs
+    DIF_GHI_RATIO = enum.auto()
+    GHI_GHI_EST_RATIO = enum.auto()
+    GHI_CLEAR_SKY_RATIO = enum.auto()
+
+    # T1C tests
     UL_1C_GHI = enum.auto()
     UL_1C_DNI = enum.auto()
     UL_1C_DIF = enum.auto()
 
-    HEATMAP_GHI = enum.auto()
-    HEATMAP_DNI = enum.auto()
-    HEATMAP_DIF = enum.auto()
+    # T2C tests
+    T2C_K_SZA = enum.auto()
+    T2C_KN_KT_ENVELOPE = enum.auto()
+    T2C_KD_KT_ENVELOPE = enum.auto()
+
+    # T3C graphs
+    T3C_CLOSURE_RATIO = enum.auto()
+    T3C_CLOSURE_DELTA = enum.auto()
+
+    # Histograms
+    CLOSURE_RESIDUAL_HIST = enum.auto()
 
 
 # Filled automatically by the individual_graph decorator
@@ -77,8 +100,25 @@ def conv2(v1, v2, m, mode='same'):
     return np.apply_along_axis(np.convolve, 1, tmp, v2, mode)
 
 
+class Limit :
+    """Define lines as limits to be displayed, possibly with associated QC flag"""
+
+    def __init__(self, xs, ys, reference=None, color="black", flag=None, flag_name=None, text_x=None, text_y=None, text_rotation=0):
+        self.text_rotation = text_rotation
+        self.text_y = text_y
+        self.text_x = text_x
+        self.flag = flag
+        self.flag_name = flag_name
+        self.color = color
+        self.reference = reference
+        self.ys = ys
+        self.xs = xs
+
+
+
+
 class Text :
-    def __init__(self, text, x, y, rotation, size=TEXT_ANNOTATION_SIZE):
+    def __init__(self, text, x, y, rotation=0, size=TEXT_ANNOTATION_SIZE):
         self.text = text
         self.x = x
         self.y = y
@@ -126,7 +166,7 @@ class BaseGraphs:
         self.SZA = None
         self.QCfinal = None
 
-        self.show_flag=show_flag
+        self.show_flag = show_flag
         self.cams_df = cams_df
         self.stat_test = stat_test
         self.horizons = horizons
@@ -171,7 +211,14 @@ class BaseGraphs:
         self.SR_h = sp_df.SR_h
         self.QCfinal = flag_df.QCfinal
 
+        # Computed
         self.GHI_est = self.DIF + self.DNI * np.cos(self.THETA_Z)
+        self.Kt = self.GHI / self.TOA
+        self.Kn = self.DNI / self.TOANI
+        self.K = self.DIF / self.GHI
+
+
+        self.within_main_layout = False
 
     def plot_timeseries(self, label, data, ymax) :
 
@@ -221,9 +268,12 @@ class BaseGraphs:
 
         axe.xaxis_date()
 
-        plt.setp(axe.get_xticklabels(), visible=False)
+        # In main layout xaxis in grouped
+        if self.within_main_layout :
+            plt.setp(axe.get_xticklabels(), visible=False)
+
         axe.set_yticks(np.arange(0, 23, 6))
-        axe.set_ylabel('Time of the day', fontsize=FONT_SIZE)
+        axe.set_ylabel('Time', fontsize=FONT_SIZE)
 
         # Plot sunrise and sunset
         def plot_limit(limit) :
@@ -236,7 +286,7 @@ class BaseGraphs:
         plot_limit(self.SS_h) # Sunset
 
         im00.set_clim(0, cmax)
-        axe.text(mdates.date2num(index)[0] + 5, 21, label)
+        axe.text(mdates.date2num(index)[0] + 5, 21, label, weight="bold")
 
         plt.xlim((index.values[0], index.values[-1]))
         plt.ylim((0, 24))
@@ -319,15 +369,15 @@ class BaseGraphs:
             xlabel, ylabel,
             xrange, yrange,
             legend,
-            lines,
+            limits=List[Limit],
             clim_ratio=0.25,
-            texts : List[Text] =[]):
+            legend_pos="center right"):
+
         """ Generic function to display QC heat map with limits """
 
         info("Plotting QC test: %s" % legend)
 
-        ax = plt.gca()
-        plt.text(0.01, 0.9, legend, transform=ax.transAxes)
+        draw_title(legend)
 
         hist, xedges, yedges = np.histogram2d(
             x=x,
@@ -347,36 +397,59 @@ class BaseGraphs:
 
         im.set_clim(0, clim_ratio * max(hist.flatten()))
 
-        for x, y in lines :
-            plt.plot(x, y, 'k--', alpha=0.4, linewidth=0.8)
+        # Plot lines and text
+        seen_ref= set()
+        for limit in limits :
+
+            # In main layout, only show limit for flags, and show text with pct
+            if self.within_main_layout :
+
+                if limit.flag :
+                    flag_name = limit.flag_name or limit.flag
+
+                    # Show name of flag and percentage
+                    label = "%s (%.2f %%)" % (flag_name, self.stat_test[limit.flag])
+
+                    plt.text(
+                        limit.text_x,
+                        limit.text_y,
+                        label,
+                        size=TEXT_ANNOTATION_SIZE,
+                        rotation=limit.text_rotation,
+                        horizontalalignment='left',
+                        verticalalignment='bottom',
+                        rotation_mode='anchor')
+                else:
+                    # skip this limit
+                    continue
+
+            if limit.reference is None and not self.within_main_layout :
+                continue
+
+            color = "black" if self.within_main_layout else limit.color
+
+            plt.plot(limit.xs, limit.ys, color=color, alpha=0.4, linewidth=3)
+
+            # Prevent duplicate legends
+            label = limit.reference if limit.reference and not limit.reference in seen_ref else None
+            plt.plot(limit.xs, limit.ys, linestyle='dashed', color=color, alpha=0.6, linewidth=1, label=label)
+
+            # Avoid double legend
+            seen_ref.add(limit.reference)
+
+
+        if not self.within_main_layout :
+            plt.legend(loc=legend_pos, fontsize=LEGEND_FONT_SIZE)
 
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
 
         plt.xlim(xrange)
-        plt.ylim([
-            yrange[0],
-            yrange[1] * 1.2])
-
-        for text in texts :
-            plt.text(
-                text.x,
-                text.y,
-                text.text,
-                size=text.size,
-                rotation=text.rotation,
-                horizontalalignment='left',
-                verticalalignment='bottom',
-                rotation_mode='anchor')
+        plt.ylim(yrange)
 
         return im
 
-    def plot_ul_1c(self, component, component_name, limits, texts) :
-
-        # Texts contain the name of the flag : go fetch it and adds percentage
-        for text in texts :
-            flag_name = text.text
-            text.text = "%s (%.2f%%)" % (flag_name, self.stat_test[flag_name])
+    def plot_ul_1c(self, component, component_name, abcs, texts, ymax=1500) :
 
         legend = component_name + " range test"
 
@@ -389,29 +462,39 @@ class BaseGraphs:
         TOANI = self.TOANI[filter]
         GAMMA_S0 = self.GAMMA_S0[filter]
 
-        # Draw limits as lines
-        limits_xy = []
+        # Transform text and
+        limits = []
 
-        if len(x) > 0 :
-            for a, b, c in limits:
-                yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
+        for text, (a, b, c) in zip(texts, abcs):
 
-                # Poly appromimation
-                tx = np.arange(min(x), max(x), 100)
-                fpoly = np.poly1d(np.polyfit(x, yy, 5))
+            yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
 
-                limits_xy.append([tx, fpoly(tx)])
+            # Poly approximation
+            tx = np.arange(min(x), max(x), 100)
+            fpoly = np.poly1d(np.polyfit(x, yy, 5))
+
+            flag_key = text.text
+            # Shorter flag name
+            flag_name = flag_key[4:7]
+
+            limits.append(Limit(
+                xs=tx,
+                ys=fpoly(tx),
+                flag=flag_key,
+                flag_name=flag_name,
+                text_x=text.x,
+                text_y=text.y,
+                text_rotation=text.rotation))
 
         self.generic_qc_graph(
             x=x, y=y,
             xlabel='Top of atmosphere (TOAHI) (W/m2)',
             ylabel=component_name + " (W/m2)",
             xrange=[1, 1300],
-            yrange=[0, 1400],
+            yrange=[0, ymax],
             legend=legend,
-            lines=limits_xy,
-            clim_ratio=0.25,
-            texts=texts)
+            limits=limits,
+            clim_ratio=0.25)
 
         #if ShowFlag == 1:
         #    plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
@@ -420,83 +503,206 @@ class BaseGraphs:
         #             markersize=1, alpha=0.5, label='erl')
         #    plt.legend(loc='lower right')
 
-    def bsrn_2c(self):
+    @individual_graph(GraphId.T2C_K_SZA)
+    def plot_2c_k_sza(self):
 
         filter = (self.GHI > 50) & (self.SZA < 90)
 
-        line = [
-            [0, 75, 75, 100],
-            [1.05, 1.05, 1.1, 1.1]]
+        limit = Limit(
+            xs = [0, 75, 75, 100],
+            ys= [1.05, 1.05, 1.1, 1.1],
+            flag="K_UL_SZA",
+            reference="Long and Dutton (2002)",
+            text_x=40, text_y=1.1)
 
         return self.generic_qc_graph(
-            legend="BSRN-2C : {:.2f}% ".format(self.stat_test['T2C_bsrn_kt']),
-            x=self.SZA[filter], xlabel='Solar zenith angle (°)', xrange=[10, 95],
-            y=self.flags.K[filter], ylabel='DIF/GHI (-)', yrange = [0, 1.25],
-            lines=[line],
+            legend="K/SZA upper limit",
+            x=self.SZA[filter], xlabel='Solar Zenith Angle (°)', xrange=[10, 95],
+            y=self.K[filter], ylabel='K=DIF/GHI (-)', yrange = [0, 1.4],
+            limits=[limit],
             clim_ratio=0.8)
 
-    def seri_kn(self) :
+    @individual_graph(GraphId.T2C_KN_KT_ENVELOPE)
+    def plot_2c_kn_kt_envelope(self) :
 
         filter = (self.DNI > 0) & (self.GHI > 0) & (self.SZA < 90)
 
-        line = [
-            [0, 0.8, 1.35, 1.35],
-            [0, 0.8, 0.8, 0]]
+        forstinger_ll= Limit(
+            xs=[0.533,0.533,1.5],
+            ys=[0,0.0171,0.0171],
+            flag="Kn_LL_KT",
+            text_x=0.75, text_y=0.03,
+            reference="Forstinger et al. (2022)", color="red")
+
+        forstinger_ul = Limit(
+            xs=[0,1.5],
+            ys=[0.8,0.8],
+            reference="Forstinger et al. (2022)", color="red")
+
+        maxwell = Limit(
+            xs=[0, 1.5],
+            ys=[0, 1.5],
+            reference="Maxwell at al. (1993)", color="blue",
+            flag="Kn_UL_KT",
+            text_x=0.3, text_y=0.35, text_rotation=55)
 
         return self.generic_qc_graph(
-            legend = "SERI-kn : {:.2f}% ".format(self.stat_test['T2C_seri_knkt']),
-            x=self.flags.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
-            y=self.flags.Kn[filter], ylabel='DNI/TOANI (-)', yrange=(0, 0.8),
-            lines=[line], clim_ratio=0.1)
+            legend = "Kn/Kt envelope",
+            x=self.Kt[filter], xlabel='Kt=GHI/TOA (-)', xrange=(0, 1.5),
+            y=self.Kn[filter], ylabel='Kn=DNI/TOANI (-)', yrange=(0, 0.8),
+            limits=[forstinger_ll, forstinger_ul, maxwell],
+            clim_ratio=0.1)
 
-    def seri_k(self) :
+
+    @individual_graph(GraphId.T2C_KD_KT_ENVELOPE)
+    def plot_2c_kd_kt_envelope(self) :
 
         filter = (self.DIF > 0) & (self.GHI > 0) & (self.SZA < 90)
 
-        line = (
-            [0, 0.6, 0.6, 1.35, 1.35],
-            [1.1, 1.1, 0.95, 0.95, 0])
+        long_dutton1 = Limit(
+            xs=[0,1.5],
+            ys=[1.05,1.05],
+            reference="Long and Dutton (2002)", color="red")
+
+        # XXX FIXME @ym : Why there are two parellel limits for Long and Dutton ?
+        long_dutton2 = Limit(
+            xs=[0, 1.5],
+            ys=[1.1, 1.1],
+            reference="Long and Dutton (2002)", color="red")
+
+        perez = Limit(
+            xs=[0,0.2,0.2],
+            ys=[0.9,0.9,0],
+            reference="Perez-Astudillos et al. (2018)", color="green")
+
+        perez2 = Limit(
+            xs=[0.5,0.5,1.5],
+            ys=[1.2,0.8,0.8],
+            reference="Perez-Astudillos et al. (2018)", color="green")
+
+        geuder = Limit(
+            xs=[0.6,0.6,1.5],
+            ys=[1.2,0.96,0.96],
+            flag="K_UL_KT",
+            text_x=0.8, text_y=0.97,
+            reference="Geuder et al. (2015)", color="lightblue")
+
+        long_shi = Limit(
+            xs=[0.85, 0.85, 1.5],
+            ys=[1.2, 0.85, 0.85],
+            reference="Long and Shi (2008)", color="blue")
+
+        nollas = Limit(
+            xs=[1.4,1.4],
+            ys=[0.0,1.2],
+            reference="Nollas et al. (2023)")
 
         return self.generic_qc_graph(
-            legend="SERI-K : {:.2f}% ".format(self.stat_test['T2C_seri_kkt']),
-            x=self.flags.KT[filter], xlabel='GHI/TOA (-)', xrange=(0, 1.5),
-            y=self.flags.K[filter], ylabel='DIF/GHI (-)', yrange=(0, 1.4),
-            lines=[line],
-            clim_ratio=0.1)
+            legend="K/Kt envelope",
+            x=self.Kt[filter], xlabel='Kt=GHI/TOAHI (-)', xrange=(0, 1.5),
+            y=self.K[filter], ylabel='K=DIF/GHI (-)', yrange=(0, 1.4),
+            limits=[long_dutton1, long_dutton2, perez, perez2, geuder, long_shi, nollas],
+            clim_ratio=0.1,
+            legend_pos="lower right")
 
-    def bsrn_closure(self) :
+    @individual_graph(GraphId.CLOSURE_RESIDUAL_HIST)
+    def plot_closure_residual_hist(self):
+
+        draw_title("Closure equation residual")
+
+        xref = np.arange(-50, 50, 0.5)
+        filt_ghi = (self.GHI > 50) & (self.DIF > 0)
+        filt_ghi_dni = filt_ghi & (self.DNI < 5)
+        diff = self.GHI - (self.DIF+self.DNI * np.sin(np.pi/180*self.GAMMA_S0))
+
+        plt.hist(
+            diff[filt_ghi],
+            bins=xref,
+            alpha=0.5, lw=3,
+            color='blue',
+            label='GHI>50 W/m$^2$')
+
+        plt.hist(
+            diff[filt_ghi_dni],
+            bins=xref,
+            alpha=0.5, lw=3,
+            color='red',
+            label='.. and DNI<5W$^2$')
+
+        plt.legend(loc="center right", fontsize=LEGEND_FONT_SIZE)
+        plt.xlabel('GHI-GHI* (W/m$^2$)')
+        plt.ylabel('count (-)')
+        plt.xlim([-25, 25])
+
+
+    @individual_graph(GraphId.T3C_CLOSURE_RATIO)
+    def plot_closure_ratio(self) :
 
         filter = (self.DIF > 0) & (self.GHI > 50) & (self.SZA < 90)
 
-        # 4 diagonal lines
-        lines = []
-        for r in [0.85, 0.92, 1.08, 1.15] :
-            lines.append([
-                [0.0, 1400.0],
-                [0.0, 1400.0 *r]
-            ])
+        limit = Limit(
+            xs=[10, 75, 75, 90, 90, 75, 75, 10],
+            ys=[1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92],
+            flag="ClosureRatio_tol_SZA",
+            reference="Long and Dutton 2002",
+            color="red",
+            text_x= 2,
+            text_y= 1.1)
 
         return self.generic_qc_graph(
-            legend="BSRN closure : {:.2f}% ".format(self.stat_test['T3C_bsrn']),
-            x=self.GHI[filter], xlabel='GHI (W/m2)', xrange=(0, 1400),
-            y=self.GHI_est[filter], ylabel='DIF+DNI*CSZA (W/m2)', yrange=(0, 1300),
-            lines=lines,
-            clim_ratio=0.1)
-
-    def bsrn_closure_ratio(self) :
-
-        filter = (self.DIF > 0) & (self.GHI > 50) & (self.SZA < 90)
-
-        line = [
-            [10, 75, 75, 90, 90, 75, 75, 10],
-            [1.08, 1.08, 1.15, 1.15, 0.85, 0.85, 0.92, 0.92]]
-
-        return self.generic_qc_graph(
-            legend="BSRN closure: {:.2f}% ".format(self.stat_test['T3C_bsrn']),
+            legend="Closure ratio",
             x=self.SZA[filter], xlabel='Solar zenith angle (°)', xrange=(0, 100),
-            y=self.GHI[filter] / self.GHI_est[filter], ylabel='GHI/(DIF+DNI*CSZA) (-)', yrange=(0.6, 1.2),
-            lines=[line],
-            clim_ratio=0.5)
+            y=self.GHI[filter] / self.GHI_est[filter], ylabel='GHI/GHI* (-)', yrange=(0.6, 1.4),
+            limits=[limit],
+            clim_ratio=0.5, legend_pos="lower left")
+
+    @individual_graph(GraphId.T3C_CLOSURE_DELTA)
+    def plot_closure_diff(self):
+
+        filter = (self.DIF > 0) & (self.GHI > 50) & (self.SZA < 90)
+
+        perez_astudillo = Limit(
+            [0,1400],[50,50],
+            reference="Perez-Astudillo (2018)",
+            color="blue")
+
+        perez_astudillo_neg = Limit(
+            [0, 1400], [-50, -50],
+            reference="Perez-Astudillo (2018)",
+            color="blue")
+
+        maxwell = Limit(
+            [0, 1400], [0, 1400 * 0.03],
+            reference='Maxwell et al. (1993)',
+            color="red")
+
+        maxwell_neg = Limit(
+            [0, 1400], [0, -1400 * 0.03],
+            reference='Maxwell et al. (1993)',
+            color="red")
+
+        # FIXME XXX @ym : Why flag limit is not related to any one in litterature ?
+        x_break = 250
+        flag_limit = Limit(
+            [0, x_break, 1400], [x_break * 0.03, x_break * 0.03, 1400 * 0.03],
+            flag="ClosureDelta_tol_TOAHI",
+            text_x=350,
+            text_y=15,
+            text_rotation=10)
+
+        flag_limit_neg = Limit(
+            [0, x_break, 1400], [-x_break * 0.03, -x_break * 0.03, -1400 * 0.03],
+            flag="ClosureDelta_tol_TOAHI",
+            text_x=350,
+            text_y=15,
+            text_rotation=10)
+
+        return self.generic_qc_graph(
+            legend="Closure difference",
+            x=self.TOA[filter], xlabel='TOAHI (W/m2)', xrange=(0, 1450),
+            y=(self.GHI - self.GHI_est)[filter], ylabel='GHI - GHI* (W/m2)', yrange=(-90, 90),
+            limits=[perez_astudillo, perez_astudillo_neg, maxwell, maxwell_neg, flag_limit, flag_limit_neg],
+            clim_ratio=0.5, legend_pos="lower left")
 
     @individual_graph(GraphId.INFO)
     def plot_info(self, parent_gs = None) :
@@ -588,68 +794,10 @@ class BaseGraphs:
         axe.set_xlabel(x_label)
         axe.set_yticks([])
 
-    def horizontality_graph(self):
-
-        axe = gca()
-
-        # Aliases
-        CLEAR_SKY_GHI = self.cams_df.CLEAR_SKY_GHI
-        CLEAR_SKY_DNI = self.cams_df.CLEAR_SKY_DNI
-
-        isClearSky = detect_clearsky(self.GHI, CLEAR_SKY_GHI)
-
-        YYL = [0.8, 1.2]
-
-        idxPlot = isClearSky & (self.DIF > 0) & (self.GHI > 100) & (self.SZA < 90) & \
-                      (CLEAR_SKY_GHI.values > 50) & (self.GHI.values > 50) & (CLEAR_SKY_DNI.values > 0)
-
-        vSAA = self.ALPHA_S.values
-        if self.latitude < 0:
-            vSAA[vSAA * 180 / np.pi > 180] = vSAA[vSAA * 180 / np.pi > 180] - 2 * np.pi
-
-        if (self.latitude < 0):
-            angle_filter = np.abs(vSAA * 180 / np.pi) < 60
-        else:
-            angle_filter = np.abs(vSAA * 180 / np.pi - 180) < 60
-
-        kc = self.GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)] / \
-             CLEAR_SKY_GHI[idxPlot & angle_filter & (CLEAR_SKY_DNI.values > 0)]
-
-        S = kc.resample('1D', label='left').sum()
-        C = kc.resample('1D', label='left').count()
-
-        Dailydata = DataFrame({'Avgkc': S[C > 30] / C[C > 30]}, index=C.index)
-
-        data4plot = DataFrame(
-            {'kc': self.GHI[idxPlot] / CLEAR_SKY_GHI[idxPlot], \
-             'SAA': vSAA[idxPlot] * 180 / np.pi, \
-             'day': self.time[idxPlot].index.floor(freq='D')}, \
-            index=self.time[idxPlot].index)
-        data4plot = data4plot.join(Dailydata, on='day', how='left')
-        ix = data4plot.Avgkc > 0
-        xPlot = data4plot.SAA[ix].values
-        yPlot = data4plot.kc[ix].values / data4plot.Avgkc[ix].values
-
-        dxx = 0 if self.latitude >= 0 else 180
-
-        hist, xedges, yedges = np.histogram2d(x=xPlot, y=yPlot, bins=[180, 100], range=[[0 - dxx, 360 - dxx], YYL])
-        plt.plot([0 - dxx, 360 - dxx], [1, 1], 'r--', alpha=0.4, linewidth=0.8)
-        plt.xlim((0 - dxx, 360 - dxx))
-        axe.text(5 - dxx, 0.97 * YYL[1], 'Test of the horizontality of the GHI sensor')
-
-        yedges, xedges = np.meshgrid(0.5 * (yedges[:-1] + yedges[1:]), 0.5 * (xedges[:-1] + xedges[1:]))
-
-        im00 = plt.scatter(xedges[hist > 0], yedges[hist > 0], s=3, c=hist[hist > 0], cmap=COLORMAP_DENSITY)
-        im00.set_clim(0, 0.7 * max(hist.flatten()))
-
-        plt.ylabel('kc/kc_daily (-)', fontsize=FONT_SIZE)
-        plt.xlabel('Solar azimuth angle (°)', fontsize=FONT_SIZE)
-
-        axe.set_ylim(YYL)
-
-        plt.colorbar(im00, label='point density (-)')
 
     def shadow_analysis(self, label, comp, ref, cmax) :
+
+        info("Shadow analysis")
 
         axe = gca()
 
@@ -691,7 +839,7 @@ class BaseGraphs:
             dxx = 0
 
         plt.xlim((45 - dxx, 315 - dxx))
-        axe.text(50 - dxx, 0.92 * SELMax, 'shadow analysis')
+        axe.text(50 - dxx, 0.92 * SELMax, 'shadow analysis', weight="bold")
         im.set_clim(0, cmax)
         plt.ylim((0, SELMax))
         plt.colorbar(im, label=label)
@@ -742,6 +890,14 @@ def draw_satelite_image(ax, lat, lon, zoom, maptype='satellite', width=400, heig
 
     if marker :
         ax.scatter(width/2, height/2, marker="+", s=150, linewidths=2, color="red")
+
+def draw_title(title, x=0.01, y=0.94, ax=None):
+
+    if ax is None:
+        ax = plt.gca()
+
+    title = plt.text(x, y, title, transform=ax.transAxes, weight="bold")
+    title.set_bbox(dict(facecolor='white', alpha=0.7, edgecolor='white'))
 
 
 def draw_table(ax, keys_values, x=0.01, y=0.95, height=0.15, width=0.3) :

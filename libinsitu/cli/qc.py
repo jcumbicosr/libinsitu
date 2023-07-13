@@ -22,7 +22,7 @@ def parser() :
     parser.add_argument('--update', '-u', action="store_true", help='Update QC flags on input file', default=False)
     parser.add_argument('--from-date', '-f', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='Start date on analysis (last 5 years of data by default for graph output)', default=None)
     parser.add_argument('--to-date', '-t', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='End date of analysis', default=None)
-    parser.add_argument('--graph-id', '-g', metavar='graph_id', choices=GraphId.__dict__.keys(),
+    parser.add_argument('--graph-id', '-g', metavar='graph_id', choices=list(GraphId.__members__.keys()),
                         help='Graph Id to output a single graph. None by default = all graphs in a a layout', default=None)
     parser.add_argument('--with-mc-clear', '-wmc', action="store_true", help='Enable display of mcClear', default=False)
     parser.add_argument('--with-horizons', '-wh', action="store_true", help='Enable display of horizons', default=False)
