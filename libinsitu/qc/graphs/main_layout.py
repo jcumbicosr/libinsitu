@@ -44,24 +44,26 @@ class Graphs(BaseGraphs):
             hspace=0.02, wspace=0.02)
 
         # Plot all heatmaps time series
-        plt.subplot(col1[3, 0])
+        plt.subplot(col1[0, 0])
         self.plot_heatmap_ghi()
 
-        plt.subplot(col1[4, 0])
+        plt.subplot(col1[1, 0])
         self.plot_heatmap_dni()
 
-        plt.subplot(col1[5, 0])
+        plt.subplot(col1[2, 0])
         self.plot_heatmap_dif()
 
         # -- Plot ratios
 
         # DIF / GHI
-        plt.subplot(col1[6, 0])
+        plt.subplot(col1[3, 0])
         self.plot_dif_ghi_ratio()
 
         # GHI / estimated GHI
-        plt.subplot(col1[7, 0])
+        plt.subplot(col1[4, 0])
         self.plot_ghi_ghi_est_ratio()
+
+        self.plot_qc_level(parent_grid=col1[5:8, 0])
 
 
         # GHI / Clear sky

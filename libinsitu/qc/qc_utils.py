@@ -27,7 +27,7 @@ from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_
     getTimeVar, QC_FLAGS_VAR, seconds_to_idx, datetime64_to_sec, STATION_NAME_VAR, STATION_ID_ATTRS, QC_RUN_VAR, netcdf_to_dataframe
 from libinsitu.log import warning, info
 from libinsitu.qc.graphs import Graphs
-from libinsitu.qc.graphs.base import _get_meta
+from libinsitu.qc.graphs.base import _get_meta, FlagLevel
 from libinsitu.qc.graphs.main_layout import GraphId
 
 cachedir = user_cache_dir("libinsitu")
@@ -43,10 +43,6 @@ QC_TESTS_FILE = "qc-tests.csv"
 # Cache to description of flags
 _FLAGS = None
 
-class FlagLevel(IntEnum) :
-    NIGHT = -5
-    MISSING = -1
-    OUT_2C_DOMAIN = 15
 
 class QCFlag :
     def __init__(self, name, components, bit=-1, condition=None, domain=None, source=None, level=None, group_level=None):
@@ -229,11 +225,11 @@ def _compute_grouped_flag_values(flag_groups, flags_df) :
 def _compute_levels_per_nb_comp(
         flag_values,
         out_domain_value,
-        fallback_values) :
+        fallback_values,
+        mask=None) :
     """
     Compute flag values for a given number of components (1C, 2C, 3C) :
     returns either the hightest matching level, or (10*nb_comp -5) if one out of domain (-1) value is found.
-
     """
 
     # Sort flag values by descending levels
@@ -244,6 +240,9 @@ def _compute_levels_per_nb_comp(
 
     # Loop on flags by descending order
     for level, flags in flag_values.items():
+
+        if mask is not None:
+            flags = flags[mask]
 
         # Out of domain => out of domain value
         condlist.append(flags == -1)
@@ -276,15 +275,27 @@ def _compute_levels_per_comp(
     #for nb_comp, flags in comp_flags_values.items()
 
     # Process 1C - Only process samples having level >= 0
-    levels[levels == 0] = _compute_levels_per_nb_comp(flags_1C, 5, 0)
+    levels[levels == 0] = _compute_levels_per_nb_comp(
+        flags_1C,
+        out_domain_value=5,
+        fallback_values=0,
+        mask=(levels==0))
 
     # Process 2C - Only process samples having level >= highest_1c (10 usually)
     highest_1c = _highest_level(flags_1C)
-    levels[levels == highest_1c] = _compute_levels_per_nb_comp(flags_2C, 15, highest_1c)
+    levels[levels == highest_1c] = _compute_levels_per_nb_comp(
+        flags_2C,
+        out_domain_value=15,
+        fallback_values=highest_1c,
+        mask=(levels==highest_1c))
 
     # Process 2C - Only process samples having level >= highest_2c (24 usually)
     highest_2c = _highest_level(flags_2C)
-    levels[levels == highest_2c] = _compute_levels_per_nb_comp(flags_3C, 25, highest_2c)
+    levels[levels == highest_2c] = _compute_levels_per_nb_comp(
+        flags_3C,
+        out_domain_value=25,
+        fallback_values=highest_2c,
+        mask=(levels == highest_2c))
 
     return levels
 
@@ -614,17 +625,25 @@ def visual_qc(
         ShowFlag.FLAG : 1
     }[show_flag]
 
+    # XXX remove and replace by QCLevels ?
     _compute_qc_final(flags_df)
 
 
     # Statistics on QC flags
     stat_test = qc_stats(flags_df)
 
+    # Compute QC level
+    qc_level = compute_qc_level(
+        flags_df=flags_df,
+        meas_df=df,
+        sp_df=sp_df)
+
     # Draw figures
     graph = Graphs(
         meas_df=df,
         sp_df=sp_df,
         flag_df=flags_df,
+        qc_level = qc_level,
         cams_df=cams_df,
         horizons=horizons,
         stat_test=stat_test,

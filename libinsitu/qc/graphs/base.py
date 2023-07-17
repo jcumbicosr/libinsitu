@@ -1,20 +1,18 @@
 import enum
 import os.path
 import urllib
+from enum import IntEnum
 from logging import info
 from urllib.request import urlopen
 
-from six import BytesIO
 from strenum import StrEnum
 from typing import List
 
 from matplotlib import dates as mdates, pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.pyplot import gca
-from pandas import DataFrame
-from pvlib.clearsky import detect_clearsky
 import copy
-from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_NAME_ATTRS, NETWORK_ID_ATTRS
+from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_ID_ATTRS
 from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap
@@ -35,6 +33,12 @@ GOOGLE_URL_PATTERN = "https://maps.googleapis.com/maps/api/staticmap?center={lat
 KEY_PATTERN="&key={api_key}"
 CACHE_FOLDER = path.expanduser("~/.cache/libinsitu/google_images/")
 
+class FlagLevel(IntEnum) :
+    NIGHT = -5
+    MISSING = -1
+    OUT_2C_DOMAIN = 15
+
+
 class GraphId(StrEnum) :
 
     # Info panel
@@ -51,6 +55,9 @@ class GraphId(StrEnum) :
     DIF_GHI_RATIO = enum.auto()
     GHI_GHI_EST_RATIO = enum.auto()
     GHI_CLEAR_SKY_RATIO = enum.auto()
+
+    # QC levels
+    QC_LEVELS = enum.auto()
 
     # T1C tests
     UL_1C_GHI = enum.auto()
@@ -94,6 +101,7 @@ def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NCo
 COLORMAP_PLOTS = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
 COLORMAP_DENSITY = makeCustomColormap(NWhite=1, ColorGrey=0.8, NGrey=50, cmColor='viridis', NColor=200)
 COLORMAP_SHADING = makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='cividis', NColor=100)
+QC_LEVEL_COLORS = plt.cm.RdYlGn(np.linspace(0, 1, 31))
 
 def conv2(v1, v2, m, mode='same'):
     tmp = np.apply_along_axis(np.convolve, 0, m, v1, mode)
@@ -134,6 +142,7 @@ class BaseGraphs:
             sp_df = None,
             flag_df = None,
             cams_df = None,
+            qc_level = None,
             stat_test = None,
             horizons = None,
             latitude = None,
@@ -180,6 +189,8 @@ class BaseGraphs:
         self.climate = None
         self.country = None
         self.source = None
+
+        self.qc_level = qc_level
 
         if meas_df is None:
             return
@@ -769,6 +780,64 @@ class BaseGraphs:
         ax_close_zoom = plt.subplot(gs[0, 3])
         draw_satelite_image(
             ax_close_zoom, self.latitude, self.longitude, zoom=20)
+
+    @individual_graph(GraphId.QC_LEVELS)
+    def plot_qc_level(self, parent_grid=None):
+
+        fig = plt.gcf()
+
+        if parent_grid is None  :
+            gs = GridSpec(3, 1, wspace=0, hspace=0)
+        else:
+            gs = GridSpecFromSubplotSpec(3, 1, subplot_spec=parent_grid, wspace=0, hspace=0)
+
+        # Rolling sum
+        nb_days = 10
+
+        ghi_ax = fig.add_subplot(gs[0, 0])
+        dhi_ax = fig.add_subplot(gs[1, 0], sharex=ghi_ax)
+        bni_ax = fig.add_subplot(gs[2, 0], sharex=ghi_ax)
+
+        start = self.qc_level.index[0]
+
+
+        def plot_component(comp, ax):
+
+            # Group by value and resample
+            grouped = self.qc_level[comp].groupby(self.qc_level[comp]).resample("%dD" % nb_days, origin=start).count().unstack(level=0) / nb_days
+
+            colors = {
+                "night": "black",
+                "missing": "grey"
+            }
+            for i in grouped.columns :
+                if i >= 0 :
+                    colors[i] = QC_LEVEL_COLORS[i, :3]
+
+            # Rename flags
+            grouped= grouped.rename(columns={
+                FlagLevel.NIGHT:'night',
+                FlagLevel.MISSING:'missing'})
+
+            #labels=list()
+            #for col in grouped.columns :
+            #    labels.append("%s (%.2f%%)" % (col, grouped[col].sum() / (len(grouped.index) * 1140 / nb_days) * 100))
+
+
+            #print(colors, labels)
+
+            grouped.plot.area(color=colors, ax=ax)
+            ax.set_ylabel('samples per day (-)')
+            ax.set_ylim([0, 1440])
+
+            ax.legend(ncol=len(grouped.columns), loc="lower right", fontsize=LEGEND_FONT_SIZE)
+
+
+
+        for ax, cmp in zip([ghi_ax, dhi_ax, bni_ax], ["GHI", "DHI", "BNI"]) :
+            plot_component(cmp, ax)
+
+
 
     def histo_qc(self, comp, x, x_label, legend_pos=None, y_label=False) :
 
