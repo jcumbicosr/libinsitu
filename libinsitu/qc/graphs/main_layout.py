@@ -41,7 +41,7 @@ class Graphs(BaseGraphs):
         col1 = GridSpecFromSubplotSpec(
             8 if self.cams_df is None else 9, 1,
             main_grid[0, 0],
-            hspace=0.02, wspace=0.02)
+            wspace=0.02)
 
         # Plot all heatmaps time series
         plt.subplot(col1[0, 0])

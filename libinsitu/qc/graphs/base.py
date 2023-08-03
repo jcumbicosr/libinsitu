@@ -798,9 +798,9 @@ class BaseGraphs:
         fig = plt.gcf()
 
         if parent_grid is None  :
-            gs = GridSpec(3, 1, wspace=0, hspace=0)
+            gs = GridSpec(3, 1)
         else:
-            gs = GridSpecFromSubplotSpec(3, 1, subplot_spec=parent_grid, wspace=0, hspace=0)
+            gs = GridSpecFromSubplotSpec(3, 1, subplot_spec=parent_grid)
 
         # Rolling sum
         nb_days = 10
