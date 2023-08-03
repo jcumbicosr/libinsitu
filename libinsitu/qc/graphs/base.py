@@ -19,6 +19,7 @@ from matplotlib.colors import ListedColormap
 from hashlib import md5
 from libinsitu._version import __version__ as libinsitu_version
 from os import path
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from libinsitu.log import error
 
@@ -297,10 +298,17 @@ class BaseGraphs:
         plot_limit(self.SS_h) # Sunset
 
         im00.set_clim(0, cmax)
-        axe.text(mdates.date2num(index)[0] + 5, 21, label, weight="bold")
+        axe.text(mdates.date2num(index)[0] + 5, 21, label + "(W/m²)", weight="bold")
 
         plt.xlim((index.values[0], index.values[-1]))
         plt.ylim((0, 24))
+
+        # Add color bar
+        cbaxes = inset_axes(plt.gca(), width="30%", height="3%", loc=1, bbox_to_anchor=(0, 0.01, 1, 1),
+                            bbox_transform=plt.gca().transAxes)
+        cbar = plt.colorbar(im00, cax=cbaxes, orientation='horizontal')
+        cbar.ax.tick_params(labelsize=4 if self.within_main_layout else 7)
+
 
         if self.show_flag == 1:
 
@@ -808,7 +816,7 @@ class BaseGraphs:
 
             colors = {
                 "night": "black",
-                "missing": "grey"
+                "n/a": "grey"
             }
             for i in grouped.columns :
                 if i >= 0 :
@@ -817,7 +825,7 @@ class BaseGraphs:
             # Rename flags
             grouped= grouped.rename(columns={
                 FlagLevel.NIGHT:'night',
-                FlagLevel.MISSING:'missing'})
+                FlagLevel.MISSING:'n/a'})
 
             #labels=list()
             #for col in grouped.columns :
@@ -827,10 +835,16 @@ class BaseGraphs:
             #print(colors, labels)
 
             grouped.plot.area(color=colors, ax=ax)
-            ax.set_ylabel('samples per day (-)')
+            ax.set_ylabel('samples/day')
             ax.set_ylim([0, 1440])
 
-            ax.legend(ncol=len(grouped.columns), loc="lower right", fontsize=LEGEND_FONT_SIZE)
+            ax.legend(
+                ncol=len(grouped.columns),
+                loc="lower right",
+                fontsize=LEGEND_FONT_SIZE-1,
+                columnspacing=0.3,
+                handlelength=1,
+                markerscale=0.5)
 
 
 
