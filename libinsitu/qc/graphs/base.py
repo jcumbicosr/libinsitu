@@ -5,6 +5,7 @@ from enum import IntEnum
 from logging import info
 from urllib.request import urlopen
 
+from pandas import DataFrame
 from strenum import StrEnum
 from typing import List
 
@@ -76,6 +77,8 @@ class GraphId(StrEnum) :
 
     # Histograms
     CLOSURE_RESIDUAL_HIST = enum.auto()
+
+    LEVEL_TEST = enum.auto()
 
 
 # Filled automatically by the individual_graph decorator
@@ -632,7 +635,7 @@ class BaseGraphs:
         xref = np.arange(-50, 50, 0.5)
         filt_ghi = (self.GHI > 50) & (self.DIF > 0)
         filt_ghi_dni = filt_ghi & (self.DNI < 5)
-        diff = self.GHI - (self.DIF+self.DNI * np.sin(np.pi/180*self.GAMMA_S0))
+        diff = self.GHI - self.GHI_est
 
         plt.hist(
             diff[filt_ghi],
@@ -852,6 +855,46 @@ class BaseGraphs:
             plot_component(cmp, ax)
 
 
+    @individual_graph(GraphId.LEVEL_TEST)
+    def plot_level_test(self):
+
+        diff = self.GHI - self.GHI_est
+
+        SolElev = np.maximum(0, self.GAMMA_S0 * 180 / np.pi)
+        SolAzim = self.ALPHA_S * 180 / np.pi
+
+        resAzim, resElev = 1, 0.1
+
+        ixSunPos = np.round(SolAzim / resAzim) * 1000000 + np.round(SolElev / resElev)
+
+        ixAnalysis = np.where((self.GHI > 0) & (SolElev > 0))[0]
+
+        dfSunPos = DataFrame({'ixSunPos': ixSunPos[ixAnalysis],
+                                 'SolElev': SolElev[ixAnalysis],
+                                 'SolAzim': SolAzim[ixAnalysis],
+                                 'deltaG_Closure': diff[ixAnalysis],
+                                 'count': np.ones(ixAnalysis.shape)})
+
+        dfSunPosAvg = dfSunPos.groupby(['ixSunPos']).mean()
+        dfSunPosAvg2 = dfSunPos.groupby(['ixSunPos']).sum()
+        dfSunPosAvg['count'] = dfSunPosAvg2['count']
+
+        idx = (dfSunPosAvg['count'] > 10)
+
+        ax = plt.gca()
+
+        scat = ax.scatter(dfSunPosAvg.SolElev.values[idx], dfSunPosAvg.deltaG_Closure[idx],
+                        c=dfSunPosAvg.SolAzim.values[idx],
+                        alpha=0.1, s=2, vmin=180 - 90, vmax=180 + 90)
+        plt.colorbar(scat, label='Solar azimuth angle (deg)', ax=ax, location='top')
+        ax.set_ylim([-50, 50])
+        ax.grid()
+        ax.set_xlabel('Solar elevation angle (deg)')
+        ax.set_ylabel('Average value of G-G* for \n different sun position  (W/m2)')
+
+        plt.text(-2, 41, "Leveling-induced error test",
+                 horizontalalignment='left', verticalalignment='bottom',
+                 rotation_mode='anchor', weight='bold')
 
     def histo_qc(self, comp, x, x_label, legend_pos=None, y_label=False) :
 

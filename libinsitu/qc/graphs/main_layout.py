@@ -157,15 +157,15 @@ class Graphs(BaseGraphs):
         # Split row in two
         col3_row3 = GridSpecFromSubplotSpec(
             1, 2,
-            col3[2, 0],
-            hspace=0, wspace=0)
+            col3[2, 0])
 
         # Histogram of GHI diff residual
         plt.subplot(col3_row3[0, 0])
         self.plot_closure_residual_hist()
 
-
-
+        # Level test
+        plt.subplot(col3_row3[0, 1])
+        self.plot_level_test()
 
         # -- Shadow analysis
         plt.subplot(col3[3, 0])
