@@ -120,41 +120,16 @@ class Graphs(BaseGraphs):
             main_grid[0, 2],
             hspace=0.25, wspace=0.01)
 
-        # Plot text & satelite images
+        # Row 1: Plot text & satelite images
         self.plot_info(col3[0, 0])
 
-        # -- QC histograms
-        info("QC: histograms of K, Kn & KT")
-        #plt.subplot(gs3b[1:3, 6])
-        #self.histo_qc(self.GHI, self.flags.KT, 'GHI/TOA', y_label=True)
+        # -- Row 2 : QC histograms
+        self.plot_ks_distrib(col3[1, 0])
 
-        #plt.subplot(gs3b[1:3, 7])
-        #self.histo_qc(self.DNI, self.flags.Kn, 'DNI/TOANI')
-
-        #plt.subplot(gs3b[1:3, 8])
-        #self.histo_qc(self.DIF, self.flags.K, 'DIF/GHI',legend_pos='upper left')
-
-        #if self.cams_df is None :
-        #    gs3 = GridSpec(7, 3)
-        #    shadow_row = 3
-        #else:
-        #    gs3 = GridSpec(9, 3)
-        #    shadow_row = 5
-
-        #gs3.update(left=0.0, right=0.99, bottom=0.05, top=0.875, hspace=0.1, wspace=0.2)
-
-        # -- Horizontality graph
-        #if self.cams_df is not None:
-
-        #    info("Horizontality test")
-        #    plt.subplot(gs3[3:5, 2])#
-
-        # self.horizontality_graph()
-
-
-        # Histogram & elevation angle
+        # -- Row 3 : Histogram & level test
 
         # Split row in two
+
         col3_row3 = GridSpecFromSubplotSpec(
             1, 2,
             col3[2, 0])
@@ -167,7 +142,7 @@ class Graphs(BaseGraphs):
         plt.subplot(col3_row3[0, 1])
         self.plot_level_test()
 
-        # -- Shadow analysis
+        # -- Row 4: Shadow analysis
         plt.subplot(col3[3, 0])
         self.shadow_analysis('DNI/TOANI (-)', self.DNI, self.TOANI, 0.65)
 

@@ -79,6 +79,7 @@ class GraphId(StrEnum) :
     CLOSURE_RESIDUAL_HIST = enum.auto()
 
     LEVEL_TEST = enum.auto()
+    KS_DISTRIB = enum.auto()
 
 
 # Filled automatically by the individual_graph decorator
@@ -818,8 +819,8 @@ class BaseGraphs:
             grouped = self.qc_level[comp].groupby(self.qc_level[comp]).resample("%dD" % nb_days, origin=start).count().unstack(level=0) / nb_days
 
             colors = {
-                "night": "black",
-                "n/a": "grey"
+                "night": "grey",
+                "n/a": "white"
             }
             for i in grouped.columns :
                 if i >= 0 :
@@ -829,13 +830,6 @@ class BaseGraphs:
             grouped= grouped.rename(columns={
                 FlagLevel.NIGHT:'night',
                 FlagLevel.MISSING:'n/a'})
-
-            #labels=list()
-            #for col in grouped.columns :
-            #    labels.append("%s (%.2f%%)" % (col, grouped[col].sum() / (len(grouped.index) * 1140 / nb_days) * 100))
-
-
-            #print(colors, labels)
 
             grouped.plot.area(color=colors, ax=ax)
             ax.set_ylabel('samples/day')
@@ -849,10 +843,81 @@ class BaseGraphs:
                 handlelength=1,
                 markerscale=0.5)
 
-
-
         for ax, cmp in zip([ghi_ax, dhi_ax, bni_ax], ["GHI", "DHI", "BNI"]) :
             plot_component(cmp, ax)
+
+
+    @individual_graph(GraphId.KS_DISTRIB)
+    def plot_ks_distrib(self, parent_grid=None) :
+        info("QC: histograms of K, Kn & KT")
+
+        if parent_grid is None  :
+            gs = GridSpec(1, 3, hspace=0, wspace=0)
+        else:
+            gs = GridSpecFromSubplotSpec(1, 3, subplot_spec=parent_grid, hspace=0, wspace=0)
+
+        fig = plt.gcf()
+
+        def plot_distrib(ax, comp, y, title, show_y_label=False, show_legend=False) :
+
+            qc_level = self.qc_level[comp]
+
+            for level in [0, 10, 15, 21, 22, 25, 30]:
+
+                color = QC_LEVEL_COLORS[level, :3]
+
+                # Filter for this qc level
+                filter = (self.GHI > 0) & (self.SZA < 90) & (qc_level >= level)
+
+
+                hist_cfl, xedges = np.histogram(y[filter], bins=500, range=[0, 1.2])
+                xval = (xedges[1:] + xedges[:-1]) / 2
+
+                # @YM XXX Looks lieka bug : was this intentional ?
+                ax.fill_between(xval, 0, hist_cfl, color=color, label=str(level))
+
+                if level == 0 :
+                    ymax = 1.1 * max(hist_cfl[10:])
+
+            ax.set_xlim([0, 1.1])
+            ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+            ax.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
+            ax.set_xlabel(title)
+            ax.set_yticklabels('')
+            ax.set_ylim([0, ymax])
+            ax.grid()
+            if show_y_label:
+                ax.set_ylabel('count')
+
+            if show_legend:
+                ax.legend(
+                    loc='upper left',
+                    ncol=3,
+                    columnspacing=0.3,
+                    fontsize=LEGEND_FONT_SIZE - 1,
+                    handlelength=1,
+                    markerscale=0.5)
+
+        ax1 = fig.add_subplot(gs[0, 0])
+        plot_distrib(
+            ax=ax1,
+            comp="GHI",
+            y=self.GHI / self.TOA,
+            title="KT=GHI/TOA",
+            show_y_label=True, show_legend=True)
+
+        plot_distrib(
+            ax=fig.add_subplot(gs[0, 1], sharey=ax1),
+            comp="BNI",
+            y=self.DNI / self.TOANI,
+            title="Kn=DNI/TOANI")
+
+        plot_distrib(
+            ax=fig.add_subplot(gs[0, 2], sharey=ax1),
+            comp="DHI",
+            y=self.DIF / self.GHI,
+            title="K=DIF/GHI")
+
 
 
     @individual_graph(GraphId.LEVEL_TEST)
