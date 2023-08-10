@@ -623,7 +623,9 @@ class BaseGraphs:
     @individual_graph(GraphId.CLOSURE_RESIDUAL_HIST)
     def plot_closure_residual_hist(self):
 
-        draw_title("Closure equation residual")
+        draw_title("Closure residual")
+
+        ax = plt.gca()
 
         xref = np.arange(-50, 50, 0.5)
         filt_ghi = (self.GHI > 50) & (self.DIF > 0)
@@ -642,9 +644,11 @@ class BaseGraphs:
             bins=xref,
             alpha=0.5, lw=3,
             color='red',
-            label='.. and DNI<5W$^2$')
+            label='& DNI<5W$^2$')
 
-        plt.legend(loc="center right", fontsize=LEGEND_FONT_SIZE)
+        ax.set_yticklabels('')
+        plt.legend(loc="upper right", fontsize=LEGEND_FONT_SIZE-1)
+
         plt.xlabel('GHI-GHI* (W/m$^2$)')
         plt.ylabel('count (-)')
         plt.xlim([-25, 25])
@@ -893,7 +897,8 @@ class BaseGraphs:
             ax.set_xlabel(title)
             ax.set_yticklabels('')
             ax.set_ylim([0, ymax])
-            ax.grid()
+            ax.grid(axis="x")
+
             if show_y_label:
                 ax.set_ylabel('count')
 
@@ -959,7 +964,17 @@ class BaseGraphs:
         scat = ax.scatter(dfSunPosAvg.SolElev.values[idx], dfSunPosAvg.deltaG_Closure[idx],
                         c=dfSunPosAvg.SolAzim.values[idx],
                         alpha=0.1, s=2, vmin=180 - 90, vmax=180 + 90)
-        plt.colorbar(scat, label='Solar azimuth angle (deg)', ax=ax, location='right')
+
+        # Inner color bar
+        label_font_size = 5 if self.within_main_layout else 7
+        cbaxes = inset_axes(
+            ax, width="50%", height="3%", loc="upper center",
+            bbox_transform=ax.transAxes)
+        cbar = plt.colorbar(scat, cax=cbaxes, orientation='horizontal')
+        cbar.solids.set(alpha=1)
+        cbar.ax.set_xlabel("Azimuth (°)", fontsize=label_font_size)
+        cbar.ax.tick_params(labelsize=label_font_size)
+
 
         ax.set_ylim([-50, 50])
         ax.grid()

@@ -7,12 +7,8 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from libinsitu import info
 from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text, GraphId, INDIVIDUAL_PLOTS, individual_graph, sub_grid
 
-
-
 STANDALONE_FONT_SIZE = 12
 LAYOUT_FONT_SIZE = 8
-
-
 
 class Graphs(BaseGraphs):
 
@@ -29,7 +25,7 @@ class Graphs(BaseGraphs):
         # Main grid : 3 columns
         main_grid = GridSpec(
             1, 3,
-            left=0.03, right=1, bottom=0.05, top=0.99,
+            left=0.04, right=0.99, bottom=0.05, top=0.99,
             wspace=0.13)
 
         #main_grid.tight_layout(fig)
