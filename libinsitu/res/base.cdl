@@ -167,17 +167,21 @@ variables:
      int QC_level_GHI(time) ;
 	    *:long_name = "QC level for GHI";
 	    *:standard_name = "aggregate_quality_flag";
-        *:coordinates = "time latitude longitude elevation"
+        *:coordinates = "time latitude longitude elevation";
+        *:flags_values =
+        *:ancillary_variables = "GHI";
 
      int QC_level_DHI(time) ;
 	    *:long_name = "QC level for DHI";
 	    *:standard_name = "aggregate_quality_flag";
         *:coordinates = "time latitude longitude elevation"
+        *:ancillary_variables = "DHI";
 
      int QC_level_BNI(time) ;
 	    *:long_name = "QC level for BNI";
 	    *:standard_name = "aggregate_quality_flag";
-        *:coordinates = "time latitude longitude elevation"
+        *:coordinates = "time latitude longitude elevation";
+        *:ancillary_variables = "BNI";
 
 # Global attributes
 

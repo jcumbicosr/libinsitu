@@ -34,8 +34,10 @@ HUMIDITY_VAR = "RH"
 PRESSURE_VAR = "P"
 WIND_SPEED_VAR = "WS"
 WIND_DIRECTION_VAR = "WD"
+
 QC_FLAGS_VAR = "QC"
 QC_RUN_VAR = "QC_run"
+QC_LEVEL_VAR = "QC_level_%s"
 
 # Columns for station info, in order of apparition
 VALID_COLS = [

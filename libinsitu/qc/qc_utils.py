@@ -20,7 +20,7 @@ from appdirs import user_cache_dir
 from diskcache import Cache
 from pandas import DataFrame
 
-from libinsitu import STATION_LONG_NAME_VAR
+from libinsitu import STATION_LONG_NAME_VAR, QC_LEVEL_VAR
 from libinsitu.cdl import initVar, get_cdl
 from libinsitu.common import LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR, GLOBAL_VAR, \
     DIFFUSE_VAR, DIRECT_VAR, parseCSV, ALTERNATE_COMP_NAMES_INV, get_df_resolution, \
@@ -461,6 +461,20 @@ def wps_Horizon_SRTM(lat, lon, altitude):
 
     return HZ
 
+def write_qc_levels(ncfile, qc_levels_df) :
+
+    cdl = get_cdl(init=True)
+
+    for comp in [GLOBAL_VAR, DIFFUSE_VAR, DIRECT_VAR] :
+
+        qc_varname = QC_LEVEL_VAR % comp
+        levels = qc_levels_df[comp]
+
+        if qc_varname in ncfile.variables :
+            warning("%s was already present, updating it :" % qc_varname)
+        initVar(ncfile, cdl.variables[qc_varname])
+
+        write_values(ncfile, qc_varname, levels.index.values, levels.values)
 
 
 def write_flags(ncfile, flags_df):
@@ -487,11 +501,12 @@ def write_flags(ncfile, flags_df):
     flag_masks = {flag.name: flag.mask() for flag in flags.values()}
 
     # Output
-    def write_values(var, values_df) :
+    def write_flags(varname, values_df) :
 
         values_df = values_df.astype(int)
         out_masks = np.zeros(len(values_df), dtype=int)
 
+        # Build mask from all flag columns
         for colname in values_df.columns :
             if not colname in flag_masks :
                 warning("Flag %s not found in QC flags DSL. Skipping" % colname)
@@ -499,36 +514,48 @@ def write_flags(ncfile, flags_df):
 
             out_masks += values_df[colname].values * flag_masks[colname]
 
-        # Compute IDX
-        dates = values_df.index.values
-        times_sec = datetime64_to_sec(ncfile, dates)
-        time_idx = seconds_to_idx(ncfile, times_sec)
+        # Write final mask to file
+        write_values(ncfile, varname, values_df.index.values, out_masks)
 
-        # Assign flags
-        time_var = getTimeVar(ncfile)
-        max_time = len(time_var)
-
-        out_idx = time_idx > max_time -1
-        if np.any(out_idx) :
-            warning("Index of of time range. Truncating %d values" % np.sum(out_idx))
-            time_idx = time_idx[~out_idx]
-            out_masks = out_masks[~out_idx]
-
-        var[time_idx] = out_masks
 
     # Flags for failing tests
-    write_values(
-        ncfile.variables[QC_FLAGS_VAR],
+    write_flags(
+        QC_FLAGS_VAR,
         flags_df == 1)
 
     # Flags for run tests
-    write_values(
-        ncfile.variables[QC_RUN_VAR],
+    write_flags(
+        QC_RUN_VAR,
         flags_df != -1)
 
 
-def compute_sun_pos(df, lat, lon, alt) :
+def write_values(ncfile, varname, dates, values) :
+
+    """Write time serie to ncfile taking care of truncating """
+
+    # Compute time idx
+    times_sec = datetime64_to_sec(ncfile, dates)
+    time_idx = seconds_to_idx(ncfile, times_sec)
+
+    time_var = getTimeVar(ncfile)
+
+    max_time = len(time_var)
+
+    out_idx = time_idx > max_time - 1
+    if np.any(out_idx):
+        warning("Index of of time range. Truncating %d values" % np.sum(out_idx))
+        time_idx = time_idx[~out_idx]
+        values = values[~out_idx]
+
+    var = ncfile.variables[varname]
+    var[time_idx] = values
+
+def compute_sun_pos(df, lat=None, lon=None, alt=None) :
     """Call sg2 on data"""
+
+    lat = lat if lat is not None else float(df.attrs[LATITUDE_VAR])
+    lon = lon if lon is not None else  float(df.attrs[LONGITUDE_VAR])
+    alt = alt if alt is not None else  float(df.attrs[ELEVATION_VAR])
 
     # Compute geom & theoretical irradiance
     sp_df = sun_position(
@@ -665,26 +692,32 @@ def update_qc_flags(ncfile, start_time=None, end_time=None) :
 
     """ Compute and update QC flags on NCFile """
 
-    df = netcdf_to_dataframe(ncfile, start_time=start_time, end_time=end_time, rename_cols=True)
-    flags_df = compute_qc_flags(df)
+    meas_df = netcdf_to_dataframe(ncfile, start_time=start_time, end_time=end_time, rename_cols=True)
+
+    # Compute sun pos with sg2
+    sp_df = compute_sun_pos(meas_df)
+
+    # Update QC flags
+    flags_df = compute_qc_flags(meas_df=meas_df, sp_df=sp_df)
     write_flags(ncfile, flags_df)
 
+    # Update QC levels
+    qc_levels = compute_qc_level(flags_df=flags_df, meas_df=meas_df, sp_df=sp_df)
+    write_qc_levels(ncfile, qc_levels)
 
-def compute_qc_flags(df, lat=None, lon=None, alt=None):
+
+def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None):
     """
-
-    :param df: Dataframe of irradiance
+    :param meas_df: Dataframe of irradiance
     :param lat: Latitude (or passed in df.attrs)
     :param lon: Longitude (or passed in df.attrs)
     :param alt: Altitude (or passed in df.attrs)
     :return: New dataframe of QC flags. This dataframe may contain additional timestamps to fill complete days.
     """
 
-    lat = lat if lat is not None else float(df.attrs[LATITUDE_VAR])
-    lon = lon if lon is not None else  float(df.attrs[LONGITUDE_VAR])
-    alt = alt if alt is not None else  float(df.attrs[ELEVATION_VAR])
-
     # Update NetCDF file with QC
-    df = cleanup_data(df)
-    sp_df = compute_sun_pos(df, lat, lon, alt)
+    df = cleanup_data(meas_df)
+    if sp_df is None:
+        sp_df = compute_sun_pos(df, lat=lat, lon=lon, alt=alt)
+
     return flagData(df, sp_df)
