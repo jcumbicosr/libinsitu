@@ -52,11 +52,13 @@ class GraphId(StrEnum) :
     HEATMAP_GHI = enum.auto()
     HEATMAP_DNI = enum.auto()
     HEATMAP_DIF = enum.auto()
+    ALL_HEATMAPS = enum.auto()
 
     # Ratio graphs
     DIF_GHI_RATIO = enum.auto()
     GHI_GHI_EST_RATIO = enum.auto()
     GHI_CLEAR_SKY_RATIO = enum.auto()
+    ALL_RATIOS = enum.auto()
 
     # QC levels
     QC_LEVELS = enum.auto()
@@ -261,7 +263,7 @@ class BaseGraphs:
         axe.set_ylabel(label + " (W/m2)")
         plt.setp(axe.get_xticklabels(), visible=False)
 
-    def plot_heatmap_timeseries(self, label, data, cmax):
+    def plot_heatmap_timeseries(self, label, data, cmax, show_x=True):
 
         info("plotting heatmap timeseries for %s " % label)
 
@@ -284,9 +286,8 @@ class BaseGraphs:
 
         axe.xaxis_date()
 
-        # In main layout xaxis in grouped
-        if self.within_main_layout :
-            plt.setp(axe.get_xticklabels(), visible=False)
+        # Show / hide dx date axis
+        set_date_axis(axe, show_x)
 
         axe.set_yticks(np.arange(0, 23, 6))
         axe.set_ylabel('Time', fontsize=FONT_SIZE)
@@ -311,7 +312,7 @@ class BaseGraphs:
         cbaxes = inset_axes(plt.gca(), width="30%", height="3%", loc=1, bbox_to_anchor=(0, 0.01, 1, 1),
                             bbox_transform=plt.gca().transAxes)
         cbar = plt.colorbar(im00, cax=cbaxes, orientation='horizontal')
-        cbar.ax.tick_params(labelsize=4 if self.within_main_layout else 7)
+        cbar.ax.tick_params(labelsize=5 if self.within_main_layout else 7)
 
 
         if self.show_flag == 1:
@@ -325,10 +326,11 @@ class BaseGraphs:
             axe.legend(loc='lower right')
 
 
-    def plot_ratio_heatmap(self, ratios, filter, h1, h2, ylimit, title, y_label, Ratio4C=0.5, bg_color=None, hlines=[]) :
+    def plot_ratio_heatmap(self, ratios, filter, h1, h2, ylimit, title, y_label, Ratio4C=0.5, bg_color=None, hlines=[], show_x_labels=True) :
 
         axe = gca()
         axe.set_yticks(np.arange(0.2, 2, 0.1))
+        set_date_axis(axe, show_x_labels)
 
         index = ratios.index
 
@@ -348,15 +350,12 @@ class BaseGraphs:
         im00 = plt.scatter(xedges.flatten(), yedges.flatten(), s=3, c=hist.flatten(), cmap=COLORMAP_DENSITY)
         im00.set_clim(0, Ratio4C * max(hist.flatten()))
 
-
         plt.plot(ratios.index, np.ones(len(ratios)), 'r--', alpha=0.5)
 
         plt.ylim((1 - ylimit, 1 + ylimit))
 
         axe.set_ylabel(y_label, fontsize=FONT_SIZE)
         plt.xlim((index.values[0], index.values[-1]))
-        axe.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        axe.xaxis_date()
 
         for (delta_y, width) in hlines :
             plt.plot([ratios.index[0], ratios.index[-1]], [1-delta_y, 1-delta_y], 'k-.', alpha=0.4, linewidth=width)
@@ -509,7 +508,7 @@ class BaseGraphs:
                 text_y=text.y,
                 text_rotation=text.rotation))
 
-        self.generic_qc_graph(
+        return self.generic_qc_graph(
             x=x, y=y,
             xlabel='Top of atmosphere (TOAHI) (W/m2)',
             ylabel=component_name + " (W/m2)",
@@ -518,13 +517,6 @@ class BaseGraphs:
             legend=legend,
             limits=limits,
             clim_ratio=0.25)
-
-        #if ShowFlag == 1:
-        #    plt.plot(x[flag_df['T1C_erl_' + PrmYi[jj]]], y[flag_df['T1C_erl_' + PrmYi[jj]]], 'rs',
-        #             markersize=1, alpha=0.5)
-        #    plt.plot(x[flag_df['T1C_ppl_' + PrmYi[jj]]], y[flag_df['T1C_ppl_' + PrmYi[jj]]], 'rs',
-        #             markersize=1, alpha=0.5, label='erl')
-        #    plt.legend(loc='lower right')
 
     @individual_graph(GraphId.T2C_K_SZA)
     def plot_2c_k_sza(self):
@@ -747,12 +739,12 @@ class BaseGraphs:
         DateStrStart = "" if NbDays == 0 else timePosGHI[0].strftime("%Y-%m-%d")
         DateStrEnd = "" if NbDays == 0 else timePosGHI[-1].strftime("%Y-%m-%d")
 
-        # Nested grid ?
-        if parent_gs is None  :
-            gs = GridSpec(2, 4, wspace=0)
-            gs.update(left=0.02, right=0.92, bottom=0.02, top=0.98, hspace=0.05)
-        else:
-            gs = GridSpecFromSubplotSpec(2, 4, subplot_spec=parent_gs, wspace=0)
+        # Split the grid
+        gs = sub_grid(parent_gs, 2, 4, wspace=0.1, hspace=0.05)
+
+        # XXX factorize this ?
+        if not parent_gs :
+            gs.update(left=0.02, right=0.92, bottom=0.02, top=0.98)
 
         ax_table1 = plt.subplot(gs[1, 0:2])
         draw_table(ax_table1, {
@@ -763,6 +755,7 @@ class BaseGraphs:
             "Elevation": "%.2fm" % self.elevation,
             "Country": self.country,
             "KG climate": self.climate}, width=0.4)
+
 
         ax_table2 = plt.subplot(gs[1, 2:4])
 
@@ -793,27 +786,35 @@ class BaseGraphs:
         draw_satelite_image(
             ax_close_zoom, self.latitude, self.longitude, zoom=20)
 
+
+        # Manually update positions
+        update_pos(ax_table1, diff_bottom=-0.05)
+        update_pos(ax_table2, diff_bottom=-0.05)
+        update_pos(ax_close_zoom, diff_bottom=-0.05)
+        update_pos(ax_medium_zoom, diff_bottom=-0.05)
+        update_pos(ax_world_map, diff_bottom=-0.05)
+
+        update_pos(ax_close_zoom, diff_height=0.05)
+        update_pos(ax_medium_zoom, diff_height=0.05)
+        update_pos(ax_world_map, diff_height=0.05)
+
     @individual_graph(GraphId.QC_LEVELS)
     def plot_qc_level(self, parent_grid=None):
 
         fig = plt.gcf()
 
-        if parent_grid is None  :
-            gs = GridSpec(3, 1)
-        else:
-            gs = GridSpecFromSubplotSpec(3, 1, subplot_spec=parent_grid)
+        # Split into a sub grid
+        gs = sub_grid(parent_grid, nrows=3, ncols=1, hspace=0)
 
         # Rolling sum
         nb_days = 10
 
-        ghi_ax = fig.add_subplot(gs[0, 0])
-        dhi_ax = fig.add_subplot(gs[1, 0], sharex=ghi_ax)
-        bni_ax = fig.add_subplot(gs[2, 0], sharex=ghi_ax)
+
 
         start = self.qc_level.index[0]
 
 
-        def plot_component(comp, ax):
+        def plot_component(ax, comp, show_x_labels=True):
 
             # Group by value and resample
             grouped = self.qc_level[comp].groupby(self.qc_level[comp]).resample("%dD" % nb_days, origin=start).count().unstack(level=0) / nb_days
@@ -835,6 +836,8 @@ class BaseGraphs:
             ax.set_ylabel('samples/day')
             ax.set_ylim([0, 1440])
 
+            set_date_axis(ax, show_x_labels)
+
             ax.legend(
                 ncol=len(grouped.columns),
                 loc="lower right",
@@ -843,20 +846,25 @@ class BaseGraphs:
                 handlelength=1,
                 markerscale=0.5)
 
-        for ax, cmp in zip([ghi_ax, dhi_ax, bni_ax], ["GHI", "DHI", "BNI"]) :
-            plot_component(cmp, ax)
+
+        ghi_ax = fig.add_subplot(gs[0, 0])
+        plot_component(ghi_ax, "GHI", False)
+
+        dhi_ax = fig.add_subplot(gs[1, 0], sharex=ghi_ax)
+        plot_component(dhi_ax, "DHI", False)
+
+        bni_ax = fig.add_subplot(gs[2, 0], sharex=ghi_ax)
+        plot_component(bni_ax, "BNI", True)
+
 
 
     @individual_graph(GraphId.KS_DISTRIB)
     def plot_ks_distrib(self, parent_grid=None) :
         info("QC: histograms of K, Kn & KT")
 
-        if parent_grid is None  :
-            gs = GridSpec(1, 3, hspace=0, wspace=0)
-        else:
-            gs = GridSpecFromSubplotSpec(1, 3, subplot_spec=parent_grid, hspace=0, wspace=0)
-
         fig = plt.gcf()
+
+        gs = sub_grid(parent_grid, nrows=1, ncols=3, hspace=0, wspace=0)
 
         def plot_distrib(ax, comp, y, title, show_y_label=False, show_legend=False) :
 
@@ -951,11 +959,12 @@ class BaseGraphs:
         scat = ax.scatter(dfSunPosAvg.SolElev.values[idx], dfSunPosAvg.deltaG_Closure[idx],
                         c=dfSunPosAvg.SolAzim.values[idx],
                         alpha=0.1, s=2, vmin=180 - 90, vmax=180 + 90)
-        plt.colorbar(scat, label='Solar azimuth angle (deg)', ax=ax, location='top')
+        plt.colorbar(scat, label='Solar azimuth angle (deg)', ax=ax, location='right')
+
         ax.set_ylim([-50, 50])
         ax.grid()
         ax.set_xlabel('Solar elevation angle (deg)')
-        ax.set_ylabel('Average value of G-G* for \n different sun position  (W/m2)')
+        ax.set_ylabel('AG-G* (W/m2)')
 
         plt.text(-2, 41, "Leveling-induced error test",
                  horizontalalignment='left', verticalalignment='bottom',
@@ -1103,3 +1112,55 @@ def draw_table(ax, keys_values, x=0.01, y=0.95, height=0.15, width=0.3) :
     # Display values
     for i, text in enumerate(keys_values.values()) :
         ax.text(x + width, y-i*height, text)
+
+def set_date_axis(ax=None, show=True) :
+    if ax is None :
+        ax = plt.gca()
+
+    ax.xaxis_date()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+
+    if show:
+        plt.setp(ax.get_xticklabels(), visible=True)
+    else:
+        plt.setp(ax.get_xticklabels(), visible=False)
+
+
+def sub_grid(parent_grid, nrows=1, ncols=1, wspace=None, hspace=None, return_cells=False) :
+
+    extra_args = dict()
+    if wspace is not None :
+        extra_args["wspace"] = wspace
+    if hspace is not None :
+        extra_args["hspace"] = hspace
+
+    if parent_grid is None :
+        gs = GridSpec(nrows, ncols, **extra_args)
+    else:
+        gs = GridSpecFromSubplotSpec(nrows, ncols, subplot_spec=parent_grid, **extra_args)
+
+    if not return_cells :
+        return gs
+    else:
+        if nrows == 1 :
+            return list(gs[0, col] for col in range(ncols))
+        elif ncols == 1:
+            return list(gs[row, 0] for row in range(nrows))
+        else:
+            raise Exception("Can only split cells for grid spec of single column or single line")
+
+
+def update_pos(ax, diff_bottom=None, diff_left=None, diff_width=None, diff_height=None) :
+    fig = plt.gcf()
+    left, bottom, width, height = ax.get_position(fig).bounds
+
+    if diff_bottom is not None:
+        bottom += diff_bottom
+    if diff_left is not None:
+        left += diff_left
+    if diff_width is not None:
+        width += diff_width
+    if diff_height is not None:
+        height += diff_height
+
+    ax.set_position([left, bottom, width, height])

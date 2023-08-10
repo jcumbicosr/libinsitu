@@ -5,8 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 
 from libinsitu import info
-from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text, GraphId, INDIVIDUAL_PLOTS, individual_graph
-import enum
+from libinsitu.qc.graphs.base import BaseGraphs, MC_CLEAR_COLOR, Text, GraphId, INDIVIDUAL_PLOTS, individual_graph, sub_grid
 
 
 
@@ -26,12 +25,14 @@ class Graphs(BaseGraphs):
 
         info("QC: visual plot preparation")
         fig = plt.figure(figsize=(19.2, 9.93))
-        plt.tight_layout()
 
         # Main grid : 3 columns
         main_grid = GridSpec(
             1, 3,
-            left=0.03, right=1, bottom=0.05, top=0.99)
+            left=0.03, right=1, bottom=0.05, top=0.99,
+            wspace=0.13)
+
+        #main_grid.tight_layout(fig)
 
         # =====================================================================
         # First column : time series + heatmaps + ratios
@@ -41,30 +42,16 @@ class Graphs(BaseGraphs):
         col1 = GridSpecFromSubplotSpec(
             8 if self.cams_df is None else 9, 1,
             main_grid[0, 0],
-            wspace=0.02)
+            hspace=0.3)
 
         # Plot all heatmaps time series
-        plt.subplot(col1[0, 0])
-        self.plot_heatmap_ghi()
+        self.plot_all_daily_heatmaps(col1[0:3, 0])
 
-        plt.subplot(col1[1, 0])
-        self.plot_heatmap_dni()
+        # Plot ratios
+        self.plot_all_ratios(col1[3:5, 0])
 
-        plt.subplot(col1[2, 0])
-        self.plot_heatmap_dif()
-
-        # -- Plot ratios
-
-        # DIF / GHI
-        plt.subplot(col1[3, 0])
-        self.plot_dif_ghi_ratio()
-
-        # GHI / estimated GHI
-        plt.subplot(col1[4, 0])
-        self.plot_ghi_ghi_est_ratio()
-
-        self.plot_qc_level(parent_grid=col1[5:8, 0])
-
+        # Qc levels
+        self.plot_qc_level(col1[5:8, 0])
 
         # GHI / Clear sky
         if self.cams_df is not None:
@@ -79,7 +66,7 @@ class Graphs(BaseGraphs):
         col2 = GridSpecFromSubplotSpec(
             4, 2,
             main_grid[0, 1],
-            hspace=0.25, wspace=0.15)
+            hspace=0.25, wspace=0.25)
 
         plt.subplot(col2[0, 0])
         self.plot_ul_1c_ghi()
@@ -118,7 +105,7 @@ class Graphs(BaseGraphs):
         col3 = GridSpecFromSubplotSpec(
             4, 1,
             main_grid[0, 2],
-            hspace=0.25, wspace=0.01)
+            hspace=0.28, wspace=0.01)
 
         # Row 1: Plot text & satelite images
         self.plot_info(col3[0, 0])
@@ -132,7 +119,7 @@ class Graphs(BaseGraphs):
 
         col3_row3 = GridSpecFromSubplotSpec(
             1, 2,
-            col3[2, 0])
+            col3[2, 0], wspace=0.25)
 
         # Histogram of GHI diff residual
         plt.subplot(col3_row3[0, 0])
@@ -145,6 +132,39 @@ class Graphs(BaseGraphs):
         # -- Row 4: Shadow analysis
         plt.subplot(col3[3, 0])
         self.shadow_analysis('DNI/TOANI (-)', self.DNI, self.TOANI, 0.65)
+
+
+    @individual_graph(GraphId.ALL_HEATMAPS)
+    def plot_all_daily_heatmaps(self, parent_grid=None):
+        """Plot 3 components on a single graph with shared axis"""
+
+        # 3 rows
+        ghi_gs, dni_gs, dif_gs = sub_grid(parent_grid, nrows=3, hspace=0, wspace=0)
+
+        ghi_ax = plt.subplot(ghi_gs)
+        self.plot_heatmap_ghi(show_x=False)
+
+        plt.subplot(dni_gs, sharex=ghi_ax)
+        self.plot_heatmap_dni(show_x=False)
+
+        plt.subplot(dif_gs, sharex=ghi_ax)
+        self.plot_heatmap_dif()
+
+    @individual_graph(GraphId.ALL_RATIOS)
+    def plot_all_ratios(self, parent_grid=None):
+        """Plot 3 components on a single graph with shared axis"""
+
+        # 3 rows
+        dif_ghi_cell, ghi_ghi_est_cell = sub_grid(parent_grid, nrows=2, hspace=0, wspace=0)
+
+        # DIF / GHI
+        dif_ghi_ax= plt.subplot(dif_ghi_cell)
+        self.plot_dif_ghi_ratio(show_x=False)
+
+        # GHI / estimated GHI
+        plt.subplot(ghi_ghi_est_cell, sharex=dif_ghi_ax)
+        self.plot_ghi_ghi_est_ratio()
+
 
 
 
@@ -171,7 +191,7 @@ class Graphs(BaseGraphs):
     #
 
     @individual_graph(GraphId.DIF_GHI_RATIO)
-    def plot_dif_ghi_ratio(self):
+    def plot_dif_ghi_ratio(self, show_x=True):
 
         h1, h2 = self.compute_h1_h2()
 
@@ -179,21 +199,21 @@ class Graphs(BaseGraphs):
             ratios=self.DIF / self.GHI,
             filter=(self.DIF > 0) & (self.DNI > 0) & (self.GHI > 0),
             y_label='DIF/GHI (-)', title='Comparison of DIF and GHI for DNI<10W/m2. Should be close to 1.',
-            ylimit=0.25, h1=h1, h2=h2)
+            ylimit=0.25, h1=h1, h2=h2, show_x_labels=show_x)
 
 
     @individual_graph(GraphId.GHI_GHI_EST_RATIO)
-    def plot_ghi_ghi_est_ratio(self):
+    def plot_ghi_ghi_est_ratio(self, show_x=True):
 
         h1, h2 = self.compute_h1_h2()
 
         self.plot_ratio_heatmap(
             ratios=self.GHI / self.GHI_est,
             filter=(self.DNI > 0) & (self.GHI > 0) & (self.DNI < 5),
-            y_label='GHI/(DNI*cSZA+DIF) (-)',
+            y_label='GHI/GHI* (-)',
             title='Ratio of global to the sum of its components. Should be close to 1.',
             hlines=[(0.08, 0.8), (0.15, 1.0)],  # (position relative to 1, linewidth)
-            ylimit=0.25, h1=h1, h2=h2)
+            ylimit=0.25, h1=h1, h2=h2, show_x_labels=show_x)
 
     @individual_graph(GraphId.GHI_CLEAR_SKY_RATIO)
     def plot_ghi_clear_sky_ratio(self):
@@ -215,7 +235,7 @@ class Graphs(BaseGraphs):
 
     @individual_graph(GraphId.UL_1C_GHI)
     def plot_ul_1c_ghi(self):
-        self.plot_ul_1c(
+        return self.plot_ul_1c(
             self.GHI, "GHI",
             abcs=[[1.5, 1.2, 100], [1.2, 1.2, 50]],
             texts=[
@@ -224,7 +244,7 @@ class Graphs(BaseGraphs):
 
     @individual_graph(GraphId.UL_1C_DNI)
     def plot_ul_1c_dni(self):
-        self.plot_ul_1c(
+        return self.plot_ul_1c(
             self.DNI, "DNI", ymax=1700,
             abcs=[[1, 0, 0], [0.95, 0.2, 10]],
             texts=[
@@ -233,7 +253,7 @@ class Graphs(BaseGraphs):
 
     @individual_graph(GraphId.UL_1C_DIF)
     def plot_ul_1c_dif(self):
-        self.plot_ul_1c(
+        return self.plot_ul_1c(
             self.DIF, "DIF", ymax=1200,
             abcs=[[0.95, 1.2, 50], [0.75, 1.2, 30]],
             texts=[
@@ -241,16 +261,16 @@ class Graphs(BaseGraphs):
                 Text("DIF_ERL_UL_TOANI_SZA", 700, 490, 35)])
 
     @individual_graph(GraphId.HEATMAP_GHI)
-    def plot_heatmap_ghi(self):
-        self.plot_heatmap_timeseries("GHI", self.GHI, 700)
+    def plot_heatmap_ghi(self, show_x=True):
+        self.plot_heatmap_timeseries("GHI", self.GHI, 700, show_x=show_x)
 
     @individual_graph(GraphId.HEATMAP_DNI)
-    def plot_heatmap_dni(self):
-        self.plot_heatmap_timeseries("DNI", self.DNI, 700)
+    def plot_heatmap_dni(self, show_x=True):
+        self.plot_heatmap_timeseries("DNI", self.DNI, 700, show_x=show_x)
 
     @individual_graph(GraphId.HEATMAP_DIF)
-    def plot_heatmap_dif(self):
-        self.plot_heatmap_timeseries("DIF", self.DIF, 700)
+    def plot_heatmap_dif(self, show_x=True):
+        self.plot_heatmap_timeseries("DIF", self.DIF, 700, show_x=show_x)
 
 
 
