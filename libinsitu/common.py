@@ -505,17 +505,32 @@ def getTimeVar(nc) :
             return nc.variables[key]
     raise Exception("No time var found")
 
-def find_var_by_std_name(nc, std_name):
-    for varname, var in nc.variables.items():
-        if  getattr(var, "standard_name", None) == std_name :
+def find_var_by_std_name(nc_or_df, std_name):
+    """Find a variable having a specific standard_name """
+
+    var_attrs = __all_attributes(nc_or_df)["variables"]
+
+    for varname, attrs in var_attrs.items():
+        if attrs.get("standard_name", None) == std_name :
             return varname
     return None
+
+
+def find_qc_vars(nc_or_df) :
+    """Find Qc variables from standard names"""
+    qc_varname = find_var_by_std_name(nc_or_df, QC_FLAGS_STANDARD_NAME)
+    qc_run_varname = find_var_by_std_name(nc_or_df, QC_RUN_STANDARD_NAME)
+    return qc_varname, qc_run_varname
 
 
 def __get_attributes(ncfile_or_var) :
     return dict((key, getattr(ncfile_or_var, key)) for key in ncfile_or_var.ncattrs())
 
 def __all_attributes(ncfile) :
+    """Get all attributes from a NcFile or a dataframe (parsed from NcFile). Atributes for vars are in 'variables' """
+
+    if isinstance(ncfile, DataFrame) :
+        return ncfile.attrs
 
     # Global attributes
     attrs = __get_attributes(ncfile)
@@ -573,8 +588,6 @@ def _expand_qc(df, qc_varname, qc_run_varname=None) :
     # Get bitmaps
     bitmaps = df[qc_varname]
     del df[qc_varname]
-
-
 
     # Get masks
     masks = qc_masks(df, qc_varname)
@@ -647,8 +660,7 @@ def __nc2df(
             if vars is None or varname in vars :
                 data_vars.append(varname)
 
-    qc_varname = find_var_by_std_name(ncfile, QC_FLAGS_STANDARD_NAME)
-    qc_run_varname =  find_var_by_std_name(ncfile, QC_RUN_STANDARD_NAME)
+    qc_varname, qc_run_varname = find_qc_vars(ncfile)
 
     def to_df(start_idx, end_idx) :
 
@@ -857,7 +869,7 @@ def getCustomProperties(network_id, station_id, custom_station_file) :
 
 def qc_masks(df, qc_varname=QC_FLAGS_VAR) :
     """Parse metadata of a QC bitmap and returns dict of flag name => mask"""
-    attrs = df.attrs["variables"][QC_FLAGS_VAR]
+    attrs = df.attrs["variables"][qc_varname]
     return {meaning: mask for meaning, mask in zip(
         attrs["flag_meanings"].split(),
         attrs["flag_masks"]

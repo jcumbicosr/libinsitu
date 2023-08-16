@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.table import Table
 from datetime import datetime
 
-from libinsitu import qc_masks
+from libinsitu import qc_masks, find_qc_vars
 from libinsitu.log import debug
 from libinsitu.common import netcdf_to_dataframe, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
 
@@ -167,10 +167,6 @@ def main() :
             skip_qc = args.skip_qc.split(",")
 
 
-    # Add QC to cols ?
-    if cols is not None and args.qc_format is not QC_NONE :
-        cols += [QC_FLAGS_VAR]
-
     expand_qc = (args.qc_format == QC_EXPAND) or args.stats
 
     chunks = netcdf_to_dataframe(
@@ -276,26 +272,52 @@ def show_stats(chunks, out=sys.stdout) :
 
 def format_QC(df, qc_format) :
 
-    if not QC_FLAGS_VAR in df.columns :
+    qc_varname, qc_run_varname = find_qc_vars(df)
+
+    if qc_varname is None or qc_format == QC_EXPAND :
         return df
 
-    qc_col = df[QC_FLAGS_VAR]
+    qc_vals = df[qc_varname]
 
-    masks_dict = qc_masks(df)
+    qc_run_vals = None
+    if qc_run_varname is not None :
+        qc_run_vals = df[qc_run_varname]
+
+    masks_dict = qc_masks(df, qc_varname)
 
     if qc_format == QC_MASK :
         res = Series(data="", index = df.index, dtype=str)
         col_names = []
-        for idx, (flag, mask) in enumerate(masks_dict.items()) :
-            letter = chr(97+idx)
-            col_names.append("%s:%s" % (flag, letter))
-            res += np.where(qc_col.values & mask != 0, letter, ".")
 
-        df[QC_FLAGS_VAR] = res
+        # Loop on flags
+        for idx, (flag, mask) in enumerate(masks_dict.items()) :
+
+            # One letter for each flag
+            flag_letter = chr(97+idx)
+            col_names.append("%s:%s" % (flag, flag_letter))
+
+            # Single letter
+            letters = np.where(qc_vals.values & mask != 0, flag_letter, ".")
+
+            # QC run flag avaialable : output '?' in case it did not run
+            if qc_run_vals is not None :
+                letters = np.where(qc_run_vals & mask == 0, "?", letters)
+
+            # Append it to the column
+            res += letters
+
+
+
+        df[qc_varname] = res
 
         # Rename column to provide details
-        col_name = "%s[%s]" % (QC_FLAGS_VAR, ";".join(col_names))
-        df = df.rename(columns={QC_FLAGS_VAR: col_name})
+        col_name = "%s[%s]" % (qc_varname, ";".join(col_names))
+        df = df.rename(columns={qc_varname: col_name})
+
+        # Delte QC run column
+        if qc_run_varname is not None:
+            del df[qc_run_varname]
+
 
     elif qc_format == QC_EXPAND :
 
@@ -306,16 +328,19 @@ def format_QC(df, qc_format) :
         res = Series(data="", index=df.index, dtype=np.object)
         for flag, mask in masks_dict.items():
             res += np.where(
-                qc_col & mask == 0,
+                qc_vals & mask == 0,
                 "",
                 np.where(
                     res == "",
                     flag ,
                     ";" + flag))
-        df[QC_FLAGS_VAR] = res
+        df[qc_varname] = res
 
     elif qc_format == QC_NONE :
-        del df[QC_FLAGS_VAR]
+        del df[qc_varname]
+
+        if qc_run_varname is not None:
+            del df[qc_run_varname]
 
     else:
         raise Exception("Unkown QC format : %s" % qc_format)
