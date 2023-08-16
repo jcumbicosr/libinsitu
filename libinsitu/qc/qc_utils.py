@@ -716,8 +716,7 @@ def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None):
     """
 
     # Update NetCDF file with QC
-    df = cleanup_data(meas_df)
     if sp_df is None:
-        sp_df = compute_sun_pos(df, lat=lat, lon=lon, alt=alt)
+        sp_df = compute_sun_pos(meas_df, lat=lat, lon=lon, alt=alt)
 
-    return flagData(df, sp_df)
+    return flagData(meas_df, sp_df)
