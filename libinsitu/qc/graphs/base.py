@@ -491,6 +491,9 @@ class BaseGraphs:
 
             yy = a * TOANI * np.sin(GAMMA_S0) ** b + c
 
+            if len(x) == 0:
+                continue
+
             # Poly approximation
             tx = np.arange(min(x), max(x), 100)
             fpoly = np.poly1d(np.polyfit(x, yy, 5))

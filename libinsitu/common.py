@@ -101,8 +101,6 @@ ELEVATION_VAR = "elevation"
 STATION_NAME_VAR= "station_name"
 STATION_LONG_NAME_VAR= "platform"
 
-# Columns no included in Skip_na
-COL_NOSKIP=["QC"]
 
 # Global attrs
 GLOBAL_TIME_RESOLUTION_ATTR = "time_coverage_resolution"
@@ -526,26 +524,26 @@ def find_qc_vars(nc_or_df) :
 def __get_attributes(ncfile_or_var) :
     return dict((key, getattr(ncfile_or_var, key)) for key in ncfile_or_var.ncattrs())
 
-def __all_attributes(ncfile) :
+def __all_attributes(ncfile_or_df) :
     """Get all attributes from a NcFile or a dataframe (parsed from NcFile). Atributes for vars are in 'variables' """
 
-    if isinstance(ncfile, DataFrame) :
-        return ncfile.attrs
+    if isinstance(ncfile_or_df, DataFrame) :
+        return ncfile_or_df.attrs
 
     # Global attributes
-    attrs = __get_attributes(ncfile)
+    attrs = __get_attributes(ncfile_or_df)
 
     # Put single var meta data in global attributes
-    attrs[LATITUDE_VAR] = readSingleVar(ncfile, LATITUDE_VAR)
-    attrs[LONGITUDE_VAR] = readSingleVar(ncfile, LONGITUDE_VAR)
-    attrs[ELEVATION_VAR] = readSingleVar(ncfile, ELEVATION_VAR)
-    attrs[STATION_NAME_VAR] = readShortname(ncfile)
+    attrs[LATITUDE_VAR] = readSingleVar(ncfile_or_df, LATITUDE_VAR)
+    attrs[LONGITUDE_VAR] = readSingleVar(ncfile_or_df, LONGITUDE_VAR)
+    attrs[ELEVATION_VAR] = readSingleVar(ncfile_or_df, ELEVATION_VAR)
+    attrs[STATION_NAME_VAR] = readShortname(ncfile_or_df)
 
     # Add meta data of variables
-    attrs["variables"] = dict((varname, __get_attributes(var)) for varname, var in ncfile.variables.items())
+    attrs["variables"] = dict((varname, __get_attributes(var)) for varname, var in ncfile_or_df.variables.items())
 
     # Put time resolution in seconds in global var
-    attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile) or 60
+    attrs[GLOBAL_TIME_RESOLUTION_ATTR] = getTimeResolution(ncfile_or_df) or 60
 
     return attrs
 
@@ -616,7 +614,10 @@ def _expand_qc(df, qc_varname, qc_run_varname=None) :
     return res
 
 
-
+def _data_cols(df) :
+    """Return only the list of data columns, skipping QC related ones"""
+    var_attrs = __all_attributes(df)["variables"]
+    return [col for col in df.columns if not "quality_flag" in var_attrs[col].get("standard_name", "")]
 
 
 def __nc2df(
@@ -651,7 +652,7 @@ def __nc2df(
         end_time = start_date64(ncfile).astype(datetime) + rel_end_time
 
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
-    end_idx = min(date_to_timeidx(ncfile, end_time), size) if end_time else size
+    end_idx = min(date_to_timeidx(ncfile, end_time)+1, size) if end_time else size
 
     # List of data vars (along time)
     data_vars = []
@@ -689,7 +690,7 @@ def __nc2df(
 
         # Drop NA ?
         if skip_na :
-            subset = list(col for col in df.columns if col not in COL_NOSKIP)
+            subset = _data_cols(df)
             df = df.dropna(axis=0, how='all', subset=subset)
 
         if skip_qc and qc_varname is not None :
