@@ -39,6 +39,9 @@ QC_FLAGS_VAR = "QC"
 QC_RUN_VAR = "QC_run"
 QC_LEVEL_VAR = "QC_level_%s"
 
+QC_FLAGS_STANDARD_NAME="quality_flag"
+QC_RUN_STANDARD_NAME="quality_flag_processed"
+
 # Columns for station info, in order of apparition
 VALID_COLS = [
     "ID",
@@ -502,6 +505,13 @@ def getTimeVar(nc) :
             return nc.variables[key]
     raise Exception("No time var found")
 
+def find_var_by_std_name(nc, std_name):
+    for varname, var in nc.variables.items():
+        if  getattr(var, "standard_name", None) == std_name :
+            return varname
+    return None
+
+
 def __get_attributes(ncfile_or_var) :
     return dict((key, getattr(ncfile_or_var, key)) for key in ncfile_or_var.ncattrs())
 
@@ -558,15 +568,40 @@ def _skip_qc_to_mask(df, flags) :
 
 
 
-def _expand_qc(df) :
+def _expand_qc(df, qc_varname, qc_run_varname=None) :
 
     # Get bitmaps
-    bitmaps = df[QC_FLAGS_VAR]
+    bitmaps = df[qc_varname]
+    del df[qc_varname]
 
-    #  Create column applying mask for each one
-    return {
-        "QC.%s" % col : (bitmaps & mask > 0).astype(int)
-        for col, mask in qc_masks(df).items()}
+
+
+    # Get masks
+    masks = qc_masks(df, qc_varname)
+
+    # Dict of QC flag name => value
+    res = {
+        flagname: (bitmaps & mask > 0).astype(int)
+        for flagname, mask in masks.items()}
+
+    if qc_run_varname is  None:
+        return res
+
+    # Get QC run flags
+    qc_run = df[qc_run_varname]
+    del df[qc_run_varname]
+
+    for flagname, flags in list(res.items()):
+
+        mask = masks[flagname]
+
+        res[flagname] = np.select(
+            [qc_run & mask > 0], # Did this test run ?
+            [flags], # Then take its value
+            -1) # Else take -1
+
+    return res
+
 
 
 
@@ -612,6 +647,8 @@ def __nc2df(
             if vars is None or varname in vars :
                 data_vars.append(varname)
 
+    qc_varname = find_var_by_std_name(ncfile, QC_FLAGS_STANDARD_NAME)
+    qc_run_varname =  find_var_by_std_name(ncfile, QC_RUN_STANDARD_NAME)
 
     def to_df(start_idx, end_idx) :
 
@@ -643,16 +680,16 @@ def __nc2df(
             subset = list(col for col in df.columns if col not in COL_NOSKIP)
             df = df.dropna(axis=0, how='all', subset=subset)
 
-        if skip_qc and QC_FLAGS_VAR in df.columns :
+        if skip_qc and qc_varname is not None :
             qc_mask = _skip_qc_to_mask(df, skip_qc)
-            df = df[(df[QC_FLAGS_VAR] & qc_mask) == 0]
+            df = df[(df[qc_varname] & qc_mask) == 0]
 
-        if expand_qc and QC_FLAGS_VAR in df.columns :
-            flags = _expand_qc(df)
-            del df[QC_FLAGS_VAR]
+        if expand_qc and qc_varname is not None:
+            flags = _expand_qc(df, qc_varname, qc_run_varname)
 
+            # Save flag values in dataframe
             for col, values in flags.items() :
-                df[col] = values
+                df["QC.%s"  % col] = values
 
         # Rename variables
         if rename :
@@ -818,7 +855,7 @@ def getCustomProperties(network_id, station_id, custom_station_file) :
         dict(),
         getStationInfo(network_id, station_id, custom_file=custom_station_file))
 
-def qc_masks(df) :
+def qc_masks(df, qc_varname=QC_FLAGS_VAR) :
     """Parse metadata of a QC bitmap and returns dict of flag name => mask"""
     attrs = df.attrs["variables"][QC_FLAGS_VAR]
     return {meaning: mask for meaning, mask in zip(

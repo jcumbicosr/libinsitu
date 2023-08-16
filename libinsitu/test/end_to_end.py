@@ -154,16 +154,16 @@ def test_qc_filters():
 
     # Data
     df = mk_timeseries({
-        "00:01": dict(GHI=1400.0, BNI=1400.0, DHI=1300.0),
+        "00:00": dict(GHI=1400.0, BNI=1400.0, DHI=1300.0),
+        "00:01": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
         "00:02": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
-        "00:03": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
     })
 
     # QC flags
     flags = mk_timeseries({
-        "00:01": dict(T1C_ppl_GHI=0, tracker_off=-1),
-        "00:02": dict(T1C_ppl_GHI=1, tracker_off=0),
-        "00:03": dict(T1C_ppl_GHI=0, tracker_off=1),
+        "00:00": dict(GHI_PPL_UL_TOANI_SZA=0, GHI_ERL_UL_TOANI_SZA=-1),
+        "00:01": dict(GHI_PPL_UL_TOANI_SZA=1, GHI_ERL_UL_TOANI_SZA=0),
+        "00:02": dict(GHI_PPL_UL_TOANI_SZA=0, GHI_ERL_UL_TOANI_SZA=1),
     })
 
     ncfile = dataframe_to_netcdf(
@@ -182,8 +182,8 @@ def test_qc_filters():
         expand_qc=True)
 
     # Check flags are the same
-    assert_series_equal(out_df["QC.T1C_ppl_GHI"], flags.T1C_ppl_GHI, check_names=False)
-    assert_series_equal(out_df["QC.tracker_off"], flags.tracker_off, check_names=False)
+    assert_series_equal(out_df["QC.GHI_PPL_UL_TOANI_SZA"], flags.GHI_PPL_UL_TOANI_SZA, check_names=False)
+    assert_series_equal(out_df["QC.GHI_ERL_UL_TOANI_SZA"], flags.GHI_ERL_UL_TOANI_SZA, check_names=False)
 
     def check_filtering(skip_qc, expected_times) :
         out_df = netcdf_to_dataframe(
@@ -196,16 +196,16 @@ def test_qc_filters():
         assert_array_equal(out_df.index.values, times)
 
     # Not filtering
-    check_filtering(False, ["00:01", "00:02", "00:03"])
+    check_filtering(False, ["00:00", "00:01", "00:02"])
 
     # Filter any flag
-    check_filtering(True, ["00:01"])
+    check_filtering(True, ["00:00"])
 
     # Filter only one flag
-    check_filtering(["T1C_ppl_GHI"], ["00:01", "00:03"])
+    check_filtering(["GHI_PPL_UL_TOANI_SZA"], ["00:00", "00:02"])
 
     # Filter all but one flag
-    check_filtering(["!T1C_ppl_GHI"], ["00:01", "00:02"])
+    check_filtering(["!GHI_PPL_UL_TOANI_SZA"], ["00:00", "00:01"])
 
     # Should fail for non existing flags
     with pytest.raises(Exception) as e:
