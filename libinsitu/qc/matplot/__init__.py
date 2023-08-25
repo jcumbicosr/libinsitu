@@ -199,3 +199,5 @@ class MaplotLibGraphs(BaseMatplotlibGraphs):
 
         plt.subplot(gs3[shadow_row + 2:shadow_row + 4, 2])
         self.shadow_analysis('DNI/TOANI (-)', self.DNI, self.TOANI, 0.65)
+
+        return fig
