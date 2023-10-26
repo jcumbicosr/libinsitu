@@ -129,6 +129,8 @@ class Graphs(BaseGraphs):
         plt.subplot(col3[3, 0])
         self.shadow_analysis('DNI/TOANI (-)', self.DNI, self.TOANI, 0.65)
 
+        return fig
+
 
     @individual_graph(GraphId.ALL_HEATMAPS)
     def plot_all_daily_heatmaps(self, parent_grid=None):
