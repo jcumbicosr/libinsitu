@@ -60,7 +60,7 @@ def list_files(in_files, handler) :
 
     if len(in_files) == 0:
         warning("No input file found")
-        sys.exit(0)
+        sys.exit(-1)
 
     return in_files
 

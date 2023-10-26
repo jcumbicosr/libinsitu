@@ -1,0 +1,12 @@
+{
+    "mapping" : {
+        "time" : {
+            "col": "TIMESTAMP"
+        },
+        "T2" : {
+            "col" : "AirTC_Avg",
+            "offset" : 273.15
+        }
+    },
+    "skip_lines" : [1, 3, 4, 5]
+}

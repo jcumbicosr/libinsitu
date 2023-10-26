@@ -56,17 +56,29 @@ def init_dirs(network) :
 
 def run_main(main_f, args) :
     with patch("sys.argv", ["command"] + args):
+        print("running '%s' with args [%s]" % (str(main_f), str(args)))
         main_f()
 
-def input_to_nc(network, station) :
-    run_main(transform.main, ["-n",  network, "-s", station, outfile, inputdir])
+def input_to_nc(network, station, station_folder=False, extra_options=None):
 
-def generic_test(network, station, filter=None) :
+    args = []
+    if extra_options is not None :
+        for opt, val in extra_options.items():
+            args += [opt] if val is None else [opt, val]
+
+    # Either pass network dir or station dir
+    dir = path.join(inputdir, station) if station_folder else inputdir
+
+    args += ["-n",  network, "-s", station, outfile, dir]
+
+    run_main(transform.main, args)
+
+def round_trip_test(network, station, filter=None, extra_transform_options=None, station_folder=False) :
 
     init_dirs(network)
 
     # Transform input to NetCDF
-    input_to_nc(network, station)
+    input_to_nc(network, station, extra_options=extra_transform_options, station_folder=station_folder)
 
     # Cat as CSV
     args = ["-s", "-t", "csv", "-o", outcsv, outfile]
@@ -81,6 +93,16 @@ def generic_test(network, station, filter=None) :
 
     assert_frame_equal(expected_df, actual_df)
 
+def generic_round_trip_test(network, station, filter=None):
+    """Round trip test using generic CSV with extra options """
+
+    config_dir = path.join(CURR_DIR, "data", "config", network)
+
+    round_trip_test(network, station, filter, extra_transform_options={
+        "--no-qc": None,
+        "--metadata" : path.join(config_dir, "stations.csv"),
+        "--mapping" : path.join(config_dir, "mapping.json")
+    }, station_folder=True)
 
 def time_str_to_dt64(time_str) :
     return np.datetime64(BASE_DATE + " " + time_str, 'ns')
@@ -96,7 +118,13 @@ def mk_timeseries(rows) :
 #region -- Actual tests
 
 def test_ABOM() :
-    generic_test("ABOM", "ADE")
+    round_trip_test("ABOM", "ADE")
+
+def test_BSRN() :
+    round_trip_test("BSRN", "ILO", filter="1994-06-01T06")
+
+def test_excel_encoding() :
+    generic_round_trip_test("CARNASRDA", "ABJ")
 
 def test_qc_graph() :
     init_dirs("BSRN")
@@ -112,8 +140,6 @@ def test_qc_graph() :
     expected_png = path.join(expected_dir, "BSRN-ILO-qc.png")
     assert filecmp.cmp(out_png, expected_png)
 
-def test_BSRN() :
-    generic_test("BSRN", "ILO", filter="1994-06-01T06")
 
 def test_encoding_decoding_round_trip() :
 
@@ -211,9 +237,6 @@ def test_qc_filters():
     with pytest.raises(Exception) as e:
         check_filtering(["foo"], [])
     assert e.type == KeyError
-
-
-#endregion
 
 
 if __name__ == '__main__':

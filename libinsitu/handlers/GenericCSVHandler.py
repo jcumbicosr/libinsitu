@@ -196,4 +196,4 @@ class GenericCSVHandler(InSituHandler) :
         return list(self.var_mappings.keys())
 
     def pattern(self):
-        return "*"
+        return "*.*"
