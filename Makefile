@@ -3,7 +3,7 @@
 TSTENV=.tstenv
 
 clean:
-	rm -r dist
+	rm -rf dist
 
 package:
 	python setup.py sdist bdist_wheel --universal
@@ -20,7 +20,7 @@ test: clean package
 	. $(TSTENV)/bin/activate
 	$(TSTENV)/bin/pip install dist/*.whl --force-reinstall
 	$(TSTENV)/bin/pip install pytest
-	$(TSTENV)/bin/pytest libinsitu/test/*.py
+	$(TSTENV)/bin/python -m pytest
 
 test-local:
-	PYTHONPATH=. pytest libinsitu/test/*.py
+	python -m pytest

@@ -11,7 +11,7 @@ from libinsitu.common import is_uniform, parse_value, parseTimezone
 import pytest
 import sys
 
-from libinsitu.test.utils import mk_timeseries, tmp_filename, patch_flags
+from tests.utils import mk_timeseries, tmp_filename, patch_flags
 
 
 def test_is_uniform() :
