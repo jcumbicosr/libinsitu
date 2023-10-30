@@ -1,0 +1,10 @@
+{
+    "mapping" : {
+        "time" : {
+            "col": ["Date", "Time"],
+            "format":  "%Y-%m-%d %H:%M"
+        },
+        "T2" : "Temp"
+    },
+    "separator" : ";"
+}

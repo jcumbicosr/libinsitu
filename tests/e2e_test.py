@@ -126,6 +126,9 @@ def test_BSRN() :
 def test_excel_encoding() :
     generic_round_trip_test("CARNASRDA", "ABJ")
 
+def test_csv_encoding() :
+    generic_round_trip_test("CARNASRDA_V2", "ABJ")
+
 def test_qc_graph() :
     init_dirs("BSRN")
 

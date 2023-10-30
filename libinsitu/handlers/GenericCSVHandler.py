@@ -7,19 +7,19 @@ from libinsitu import parseTimezone
 from libinsitu.handlers import InSituHandler
 
 
-class Mapping() :
-    def __init__(self, var_name, col) :
+class Mapping():
+    def __init__(self, var_name, js) :
         # Might be a mapping in case of time var
 
         # If "col" is an index, take the varname as the column name
-        self.col = var_name if isinstance(col, int) else col
-        self.col_idx = (col - 1) if isinstance(col, int) else None
+        self.col = var_name if isinstance(js, int) else js
+        self.col_idx = (js - 1) if isinstance(js, int) else None
 
     def cols(self) :
-        if isinstance(self.col, dict) :
-            return list(self.col.values())
-        else:
+        if not isinstance(self.col, list) :
             return [self.col]
+        else:
+            return self.col.copy()
 
 class TimeMapping(Mapping) :
 
@@ -37,25 +37,28 @@ class TimeMapping(Mapping) :
             self.format = js["format"]
             del js["format"]
 
-        if 'col' in js :
-            super().__init__("time", js["col"])
-        else:
-            # No *name* column ? the rest is mapping of individual fields
-            super().__init__("time", js)
+        super().__init__("time", js["col"])
+
 
     def parse_time(self, df):
 
+        # Several columns
+        if isinstance(self.col, list):
+            time_str = df[self.col].T.agg(' '.join)
         # Single column
-        if isinstance(self.col, str):
-            time = pd.to_datetime(
-                df[self.col],
-                format=self.format,
-                infer_datetime_format=(self.format == None),
-                errors="coerce")
         else:
-            # 'col' is a map of time attribute => columns
-            time = pd.to_datetime(
-                dict((time_attr, df[col]) for time_attr, col in self.col.items()))
+            time_str = df[self.col]
+
+        time = pd.to_datetime(
+            time_str,
+            format=self.format,
+            infer_datetime_format=(self.format == None),
+            errors="coerce")
+
+        # All errors ?
+        if time.isna().sum() == len(time_str) :
+            raise Exception("All time parsing failed. Example time str : '%s'. format:'%s'"% (time_str.values[0], self.format))
+
 
         df = df.drop(columns=self.cols())
         df["time"] = time
