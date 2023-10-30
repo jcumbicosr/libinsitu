@@ -2,8 +2,10 @@ data/*
 tmp*
 __pycache__
 *.nc
-.*
 *.log
+.env*
+.eggs
+.*.*
 out
 test.*
 inter
