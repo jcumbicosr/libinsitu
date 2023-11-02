@@ -1,8 +1,6 @@
 {
     "mapping" : {
-        "time" : {
-            "col": "TIMESTAMP"
-        },
+        "time" : "TIMESTAMP",
         "T2" : {
             "col" : "AirTC_Avg",
             "offset" : 273.15
