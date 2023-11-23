@@ -148,9 +148,10 @@ def test_encoding_decoding_round_trip() :
 
     ncfilename = mktemp()
 
+    # Sub minutes period
     df = mk_timeseries({
-        "00:01" : dict(GHI=1400.0, BNI=1400.0, DHI=1300.0),
-        "00:02": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
+        "00:01:00" : dict(GHI=1400.0, BNI=1400.0, DHI=1300.0),
+        "00:01:10": dict(GHI=1350.0, BNI=1000.0, DHI=np.nan),
     })
 
     # Transform to NetCDF
@@ -174,7 +175,8 @@ def test_encoding_decoding_round_trip() :
     assert float(out_df.attrs[LONGITUDE_VAR]) == longitude
     assert out_df.attrs[STATION_NAME_VAR] == station_id
     assert out_df.attrs["time_coverage_start"] == '2021-01-01T00:00:00'
-    assert out_df.attrs["time_coverage_end"] == '2021-01-01T00:02:00'
+    assert out_df.attrs["time_coverage_end"] == '2021-01-01T00:01:10'
+    assert out_df.attrs["time_coverage_resolution"] == 10
 
 
 def test_qc_filters():

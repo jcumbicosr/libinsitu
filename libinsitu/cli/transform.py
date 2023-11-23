@@ -301,7 +301,10 @@ def dataframe_to_netcdf(
 
     # Guess the resolution from the input
     res_sec = get_df_resolution(data)
-    update_props("Station_TimeResolution", "%dM" % (res_sec // 60))
+
+    # Set global attribute for time resolution
+    res_str = "%dM" % (res_sec // 60) if res_sec >= 60 else "%dS" % res_sec
+    update_props("Station_TimeResolution", res_str)
 
     # Fill time extent
     start_time = data.index[0]
