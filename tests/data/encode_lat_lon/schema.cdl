@@ -56,6 +56,7 @@ variables:
 		*:standard_name = "air_temperature" ;
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "T2" ;
+		*:ancillary_variables = "flag"
 		*:units = "K" ;
 		*:valid_min_=123.0 ;
 		*:valid_max_=372.9 ;
@@ -66,7 +67,7 @@ variables:
 	uint flag(time) ;
 	    *:long_name = "QC flag status";
 	    *:comment = "Flag=1 means QC test failed";
-	    *:standard_name = "status_flag";
+	    *:standard_name = "temperature status_flag";
 	    *:flag_values = 0, 1 ;
         *:flag_meanings = "valid_data invalid_data";
 	    *:coordinates = "time latitude longitude elevation"
