@@ -1,0 +1,11 @@
+{
+    "mapping" : {
+        "time" : "time",
+        "temperature" : "temp",
+        "latitude" : "lat",
+        "longitude" : "lon",
+        "elevation": "elevation",
+        "flag": "flag"
+    },
+    "separator" : ";"
+}

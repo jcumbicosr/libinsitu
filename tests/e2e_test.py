@@ -45,8 +45,8 @@ def init_dirs(network) :
     tmp_dir = mkdtemp()
     outfile = path.join(tmp_dir, "out.nc")
     outcsv = path.join(tmp_dir, "out.csv")
-    inputdir = path.join(CURR_DIR, "data", "in", network)
-    expected_dir = path.join(CURR_DIR, "data", "expected")
+    inputdir = path.join(CURR_DIR, "data", network)
+    expected_dir = inputdir
 
     print("Temp dir : ", tmp_dir)
 
@@ -87,7 +87,7 @@ def round_trip_test(network, station, filter=None, extra_transform_options=None,
     run_main(cat.main, args)
 
     # Read and compare CSV files
-    expected_csv = path.join(expected_dir, "%s.csv" % network)
+    expected_csv = path.join(expected_dir, "expected.csv")
     expected_df = read_csv(expected_csv, parse_dates=["time"])
     actual_df = read_csv(outcsv, parse_dates=["time"])
 
@@ -96,13 +96,20 @@ def round_trip_test(network, station, filter=None, extra_transform_options=None,
 def generic_round_trip_test(network, station, filter=None):
     """Round trip test using generic CSV with extra options """
 
-    config_dir = path.join(CURR_DIR, "data", "config", network)
+    input_dir = path.join(CURR_DIR, "data", network)
 
-    round_trip_test(network, station, filter, extra_transform_options={
+    extra_options ={
         "--no-qc": None,
-        "--metadata" : path.join(config_dir, "stations.csv"),
-        "--mapping" : path.join(config_dir, "mapping.json")
-    }, station_folder=True)
+        "--metadata": path.join(input_dir, "stations.csv"),
+        "--mapping": path.join(input_dir, "mapping.json")
+    }
+
+    schema_file = path.join(input_dir, "schema.cdl")
+    if path.exists(schema_file):
+        extra_options["--cdl"] = schema_file
+
+
+    round_trip_test(network, station, filter, extra_transform_options=extra_options, station_folder=True)
 
 def time_str_to_dt64(time_str) :
     return np.datetime64(BASE_DATE + " " + time_str, 'ns')
@@ -124,10 +131,13 @@ def test_BSRN() :
     round_trip_test("BSRN", "ILO", filter="1994-06-01T06")
 
 def test_excel_encoding() :
-    generic_round_trip_test("CARNASRDA", "ABJ")
+    generic_round_trip_test("encode_excel", "ABJ")
 
 def test_csv_encoding() :
-    generic_round_trip_test("CARNASRDA_V2", "ABJ")
+    generic_round_trip_test("encode_csv", "ABJ")
+
+def test_lat_lon_encoding() :
+    generic_round_trip_test("encode_lat_lon", "ABJ")
 
 def test_qc_graph() :
     init_dirs("BSRN")

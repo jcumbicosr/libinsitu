@@ -1,19 +1,19 @@
 import re
 from copy import deepcopy
-from typing import Dict
-from libinsitu import STATION_NAME_VAR, DefaultDict
+from typing import Dict, List, Any
+from libinsitu import STATION_NAME_VAR, DefaultDict, read_str, readSingleVar
 from libinsitu.common import parse_value, DATA_VARS, read_res, CDL_PATH, LONGITUDE_VAR, LATITUDE_VAR, ELEVATION_VAR, \
     fill_str, TIME_VAR
 from libinsitu.log import info, warning
 import numpy as np
+from enum import Enum
 
-
-SYSTEM_ATTRIBUTES = ["_FillValue"]
-
-
+VALUE_ATTR = "_value"
+FILL_VALUE_ATTR = "_FillValue"
+SYSTEM_ATTRIBUTES = [FILL_VALUE_ATTR, VALUE_ATTR]
 
 class Variable :
-    def __init__(self, name, type, dimensions):
+    def __init__(self, name:str, type:str, dimensions:List[str]):
         self.type = type
         self.dimensions = dimensions
         self.name = name
@@ -24,6 +24,35 @@ class CDL :
         self.dimensions : Dict[str, int] = {}
         self.variables : Dict[str, Variable] = {}
         self.global_attributes = {}
+
+class CDLType:
+    CHAR = "char"
+    STRING = "string"
+    FLOAT = "float"
+    DOUBLE = "double"
+    INT = "int"
+    SHORT = "short"
+    UINT = "uint"
+
+class NetCDFType :
+    CHAR = "c"
+    STRING = str
+    FLOAT = "f4"
+    DOUBLE = "f8"
+    INT = "i4"
+    SHORT = "i2"
+    UINT = "u4"
+
+# CDL to NetCDF types
+CDL_TYPES_MAP = {
+    CDLType.CHAR : NetCDFType.CHAR,
+    CDLType.STRING: NetCDFType.STRING,
+    CDLType.FLOAT: NetCDFType.FLOAT,
+    CDLType.DOUBLE: NetCDFType.DOUBLE,
+    CDLType.INT: NetCDFType.INT,
+    CDLType.SHORT: NetCDFType.SHORT,
+    CDLType.UINT: NetCDFType.UINT}
+
 
 
 # Cache to CDL
@@ -126,18 +155,8 @@ def parse_cdl(lines, attributes=dict()) :
             line = line.strip(";").strip()
             type, var = line.split()
 
-            if type == "char" :
-                type ="c"
-            elif type == "string" :
-                type = str
-            elif type == "float" :
-                type="f4"
-            elif type == "int" :
-                type="i4"
-            elif type == "short":
-                type = "i2"
-            elif type == "uint":
-                type = "u4"
+            # Transform CDL type to NetCDF type
+            type = CDL_TYPES_MAP[type]
 
             dims=[]
             if "(" in var :
@@ -150,23 +169,23 @@ def parse_cdl(lines, attributes=dict()) :
 
     return res
 
-def update_attributes(dest, src, dry_run=False, delete=False) :
+def update_attributes(dest_var, attrs:Dict[str, Any], dry_run=False, delete=False) :
 
     dry_prefix = "would " if dry_run else ""
 
-    existing_attrs = set(dest.ncattrs())
-    new_attrs = set(src.keys())
+    existing_attrs = set(dest_var.ncattrs())
+    new_attrs = set(attrs.keys())
 
     extra_attrs = existing_attrs - new_attrs
 
     if delete :
         for attrname in extra_attrs :
-            info(dry_prefix + "delete attribute %s#%s" % (dest.name, attrname))
+            info(dry_prefix + "delete attribute %s#%s" % (dest_var.name, attrname))
             if not dry_run :
-                dest.delncattr(attrname)
+                dest_var.delncattr(attrname)
 
-    for key, val in src.items() :
-        oldval = None if not key in existing_attrs else dest.getncattr(key)
+    for key, val in attrs.items() :
+        oldval = None if not key in existing_attrs else dest_var.getncattr(key)
 
         if key in SYSTEM_ATTRIBUTES :
             # Do not update system attributes
@@ -177,10 +196,40 @@ def update_attributes(dest, src, dry_run=False, delete=False) :
             if (val is None or val == "") and not delete :
                 continue
 
-            info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest.name, key, oldval, val))
+            info(dry_prefix + "update attribute %s#%s %s -> %s" % (dest_var.name, key, oldval, val))
 
             if not dry_run:
-                dest.setncattr(key, val)
+                dest_var.setncattr(key, val)
+
+def update_value(dest_var, vardef:Variable, dry_run=False):
+    """"Update single value from _value attribute"""
+
+    # No _value attribute ?
+    if not VALUE_ATTR in vardef.attributes :
+        return
+
+    value = vardef.attributes[VALUE_ATTR]
+
+    if len(vardef.dimensions) > 0:
+        raise Exception(f"Variable {vardef.name} : _value attribute only supported on non zero dimention variables")
+
+    if vardef.type == NetCDFType.STRING :
+        old_val = read_str(dest_var)
+    else:
+        old_val = readSingleVar(dest_var)
+
+    prefix = "would " if dry_run else ""
+    info(f'{prefix}replace value {old_val} => {value} in {vardef.name}')
+
+    if dry_run:
+        return
+
+    # Skip empty value
+    if value is None or value == "":
+        return
+
+    dest_var[0] = value
+
 
 
 def cmp_var(var,  vardef:Variable) :
@@ -208,7 +257,7 @@ def create_or_replace_var(ncfile, vardef:Variable, dry_run=False) :
         return
 
     least_significant_digit = vardef.attributes.get("least_significant_digit", None)
-    fill_value = vardef.attributes.get("_FillValue", None)
+    fill_value = vardef.attributes.get(FILL_VALUE_ATTR, None)
 
     info("Adding variable '%s'. Precision:%s" %  (vardef.name, least_significant_digit))
 
@@ -227,6 +276,9 @@ def initVar(ncfile, vardef:Variable, dry_run=False, delete_attrs=False) :
 
     # Update attributes
     update_attributes(var, vardef.attributes, dry_run, delete_attrs)
+
+    # Update single value if any
+    update_value(var, vardef, dry_run=dry_run)
 
 def cdl2netcdf(ncfile, cdl: CDL, dry_run=False, delete_attrs=False) :
     """Init NetCDF file from a CDL"""
@@ -267,15 +319,6 @@ def init_nc(netcdf, properties, data_vars=DATA_VARS, dry_run=False, delete_attrs
         filtered_cdl.variables[key] = var
 
     cdl2netcdf(netcdf, filtered_cdl, dry_run, delete_attrs)
-
-    if not dry_run :
-
-        # Init scalar vars
-        netcdf.variables[LONGITUDE_VAR][0] = properties.get("Station_Longitude", np.nan)
-        netcdf.variables[LATITUDE_VAR][0] = properties.get("Station_Latitude", np.nan)
-        netcdf.variables[ELEVATION_VAR][0] = properties.get("Station_Elevation", np.nan)
-
-        fill_str(netcdf, STATION_NAME_VAR, properties["Station_ID"])
 
     return cdl
 
