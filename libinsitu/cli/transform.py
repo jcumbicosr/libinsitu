@@ -455,10 +455,10 @@ def parser() :
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
     parser.add_argument('--network', '-n', help='Network name', required=True)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --metadata')
-    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network (Station_* properties)')
+    parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --station-metadata and network-metadata')
+    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata (Station_* properties) instead of embedded ones.', default=None)
     parser.add_argument('--network-metadata', '-nm', metavar='<network-meta.csv>',
-                        help='Use custom metadata for the Networks (Network_* properties). Optional')
+                        help='Use custom metadata for the Networks (Network_* properties), instead of mebedded ones', default=None)
 
     parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
     parser.add_argument(
@@ -472,7 +472,7 @@ def parser() :
     parser.add_argument(
         '--status-folder', '-f',
         metavar='<folder>', type=dir_path,
-        help='Separate folder for .done/.err files')
+        help='Folder for status files in incremental mode', default=None)
     return parser
 
 def main():

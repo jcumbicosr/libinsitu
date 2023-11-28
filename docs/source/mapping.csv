@@ -1,0 +1,20 @@
+Attribute,Examples,Documentation,Default value
+skip_lines,"[1, 2]","Lines to skip, starting at 1",[]
+separator,“;”,Separator for CSV files,"“,”"
+mapping {,,Configuration of mapping,
+time,“timestamp”,Short time mapping : name of single column,
+   time {,,Full mapping for time column,
+col  ,"“time”
+[“date”, “time”]","Source column name , or list of columns. Can be integers (col by index starting at one )",
+format  ,“%Y/%m/%d %M:%S”,Date time format,Infered
+timezone  ,"“CET”
+“+0400” 
+“{Station_Timezone}”",Name of timezone. Can be a placeholder to metadata (Station_XXX or Network_XXX),UTC
+},,,
+varname,“source_col”,Short var mapping : name of a single source column,
+varname2 {,,Full mapping for var column,ppi
+col  ,“source_col”,Name of source column,
+scale,100,Scale of apply to source column,1
+offset,12.3,Offset to apply (applied after scale),0
+},,,
+},,,

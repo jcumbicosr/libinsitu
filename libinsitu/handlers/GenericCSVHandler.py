@@ -1,5 +1,6 @@
 import json
 import os.path
+from os import path
 
 import pandas as pd
 
@@ -7,6 +8,7 @@ from libinsitu.cdl import replace_placeholders
 from libinsitu.handlers import InSituHandler
 from dateutil.parser import parse
 import re
+import yaml
 
 
 class Mapping():
@@ -126,7 +128,6 @@ def replace_placeholders_rec(js, properties):
         return js
 
 
-
 class GenericCSVHandler(InSituHandler) :
 
     def __init__(self, properties, mapping_file):
@@ -134,7 +135,12 @@ class GenericCSVHandler(InSituHandler) :
         super().__init__(properties, binary=True)
 
         with open(mapping_file, "r") as f:
-            js = json.load(f)
+            _, ext = path.splitext(mapping_file)
+
+            if ext == ".json":
+                js = json.load(f)
+            elif ext in  [".yaml", "yml"] :
+                js = yaml.safe_load(f)
 
         js = replace_placeholders_rec(js, properties)
 

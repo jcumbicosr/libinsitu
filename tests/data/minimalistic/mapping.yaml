@@ -1,0 +1,7 @@
+mapping:
+  time:
+    col: [Date, Time]
+    format: "%Y-%m-%d %H:%M"
+    timezone: "-01:00"
+  temperature: Temp
+separator: ";"

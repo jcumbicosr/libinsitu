@@ -54,24 +54,30 @@ def init_dirs(network) :
     project_dir = path.join(CURR_DIR, "..", "..")
     chdir(project_dir)
 
-def run_main(main_f, args) :
+def run_main(main_f, args, options=None) :
+
+    if options is not None:
+        for opt, val in options.items():
+            args += [opt] if val is None else [opt, val]
+
     with patch("sys.argv", ["command"] + args):
-        print("running '%s' with args [%s]" % (str(main_f), str(args)))
+        print(f"running {str(main_f)} with args {' '.join(args)}]")
         main_f()
 
 def input_to_nc(network, station, station_folder=False, extra_options=None):
 
-    args = []
-    if extra_options is not None :
-        for opt, val in extra_options.items():
-            args += [opt] if val is None else [opt, val]
+    if extra_options is None:
+        extra_options = dict()
 
     # Either pass network dir or station dir
     dir = path.join(inputdir, station) if station_folder else inputdir
 
-    args += ["-n",  network, "-s", station, outfile, dir]
+    extra_options["--network"] =  network
+    extra_options["--station-id"] = station
 
-    run_main(transform.main, args)
+    args = [outfile, dir]
+
+    run_main(transform.main, args, options=extra_options)
 
 def round_trip_test(network, station, filter=None, extra_transform_options=None, station_folder=False) :
 
@@ -80,11 +86,21 @@ def round_trip_test(network, station, filter=None, extra_transform_options=None,
     # Transform input to NetCDF
     input_to_nc(network, station, extra_options=extra_transform_options, station_folder=station_folder)
 
+    check_output(filter=filter)
+
+def check_output(filter=None) :
     # Cat as CSV
-    args = ["-s", "-t", "csv", "-o", outcsv, outfile]
+    args = [outfile]
+    options = {
+        "-s": None,
+        "-t": "csv",
+        "-o": outcsv,
+    }
+
     if filter :
-        args += ["-f", filter]
-    run_main(cat.main, args)
+        options["-f"] = filter
+
+    run_main(cat.main, args, options)
 
     # Read and compare CSV files
     expected_csv = path.join(expected_dir, "expected.csv")
@@ -138,6 +154,28 @@ def test_csv_encoding() :
 
 def test_lat_lon_encoding() :
     generic_round_trip_test("encode_lat_lon", "ABJ")
+
+def test_minimalistic() :
+
+    init_dirs("minimalistic")
+
+    extra_options = {
+        "--no-qc": None,
+        "--station-metadata": path.join(inputdir, "stations.csv"),
+        "--station-id" : "AAA",
+        "--mapping": path.join(inputdir, "mapping.yaml"),
+        "--network" : "NetworkName",
+        "--cdl" : path.join(inputdir, "schema.cdl")
+    }
+
+
+    run_main(
+        transform.main,
+        [outfile, path.join(inputdir, "input.csv")],
+        extra_options)
+
+    check_output()
+
 
 def test_qc_graph() :
     init_dirs("BSRN")
