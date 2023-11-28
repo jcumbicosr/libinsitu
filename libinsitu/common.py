@@ -203,10 +203,18 @@ def getStationInfo(network, station_id, custom_file=None) :
         raise Exception("Station %s not found in Station Info of %s" % (station_id, network))
     return stations[station_id]
 
-def getNetworkInfo(network) :
-    networks = getNetworksInfo()
+def getNetworkInfo(network, custom_file=None, check=True) :
+
+    if custom_file :
+        networks = parseCSV(custom_file, resource=False)
+    else:
+        networks = getNetworksInfo()
+
     if not network in networks :
-        raise Exception("Network %s not found in Network info" % network)
+        if check:
+            raise Exception("Network %s not found in Network info" % network)
+        else:
+            return dict()
     return networks[network]
 
 def is_uniform(vector) :
@@ -859,17 +867,13 @@ def _prepare_properties(
     return res
 
 
-def getProperties(network_id, station_id) :
+def getProperties(network_id, station_id, custom_station_file=None, custom_network_file=None, check_network=True) :
     """Gather Network_ and Station_ properties """
 
     return _prepare_properties(
-        getNetworkInfo(network_id),
-        getStationInfo(network_id, station_id))
-
-def getCustomProperties(network_id, station_id, custom_station_file) :
-    return _prepare_properties(
-        dict(),
+        getNetworkInfo(network_id, custom_file=custom_network_file, check=check_network),
         getStationInfo(network_id, station_id, custom_file=custom_station_file))
+
 
 def qc_masks(df, qc_varname=QC_FLAGS_VAR) :
     """Parse metadata of a QC bitmap and returns dict of flag name => mask"""

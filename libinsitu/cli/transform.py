@@ -67,15 +67,19 @@ def list_files(in_files, handler) :
 
 def process_network(network, station_id, args) :
 
+    # Get all properties
+    properties = getProperties(
+        network,
+        station_id,
+        custom_station_file=args.station_metadata,
+        custom_network_file=args.network_metadata,
+        check_network=(args.mapping is not None))
+
+    # Generic handler ?
     if args.mapping :
 
-        if not args.metadata :
+        if not args.station_metadata :
             raise Exception("Missing file path for custom station metadata")
-
-        properties = getCustomProperties(
-            network,
-            station_id,
-            args.metadata)
 
         handler = GenericCSVHandler(properties, args.mapping)
     else:
@@ -84,11 +88,6 @@ def process_network(network, station_id, args) :
         all_networks = listNetworks()
         if not network in all_networks:
             raise Exception("Bad Network %s. Should be one of %s" % (network, str(all_networks)))
-
-        # Get all properties
-        properties = getProperties(
-            network,
-            station_id)
 
         handler : InSituHandler = HANDLERS[network](properties)
 
@@ -457,7 +456,10 @@ def parser() :
     parser.add_argument('--network', '-n', help='Network name', required=True)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --metadata')
-    parser.add_argument('--metadata', '-md', metavar='<station-meta.csv>', help='Use custom station metadata for this network')
+    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata for this network (Station_* properties)')
+    parser.add_argument('--network-metadata', '-nm', metavar='<network-meta.csv>',
+                        help='Use custom metadata for the Networks (Network_* properties). Optional')
+
     parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
     parser.add_argument(
         '--incremental', '-i', default=False, action='store_true',
