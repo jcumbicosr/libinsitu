@@ -22,7 +22,17 @@ def run(args) :
 branches = run(["git", "branch"])
 curr_branch = next(line for line in branches if "*" in line)
 curr_branch = curr_branch.replace(" ", "").replace("*", "")
+
+
 name = "libinsitu"
+
+if curr_branch not in  ["master", "main"] :
+
+    if curr_branch != "dev" :
+        raise Exception("Only main, master and dev branch supported")
+
+    name += "_dev"
+
 
 extra_urls= []
 

@@ -12,7 +12,7 @@ tst-upload:
 	twine upload --repository-url https://test.pypi.org/legacy/ dist/libinsitu*
 
 upload:
-	twine upload -u oie-minesparistech dist/libinsitu*
+	twine upload dist/libinsitu*
 
 test: clean package
 	rm -rf $(TSTENV)
