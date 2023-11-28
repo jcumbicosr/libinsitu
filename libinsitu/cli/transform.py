@@ -73,7 +73,7 @@ def process_network(network, station_id, args) :
         station_id,
         custom_station_file=args.station_metadata,
         custom_network_file=args.network_metadata,
-        check_network=(args.mapping is not None))
+        check_network=(args.mapping is None))
 
     # Generic handler ?
     if args.mapping :

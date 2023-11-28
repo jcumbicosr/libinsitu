@@ -3,8 +3,10 @@ import os.path
 
 import pandas as pd
 
-from libinsitu import parseTimezone
+from libinsitu.cdl import replace_placeholders
 from libinsitu.handlers import InSituHandler
+from dateutil.parser import parse
+import re
 
 
 class Mapping():
@@ -26,6 +28,8 @@ class TimeMapping(Mapping) :
     def __init__(self, js):
 
         self.format = None
+        self.timezone = None
+
         if not isinstance(js, dict):
             # Only name of target column
             super().__init__("time", js)
@@ -36,6 +40,10 @@ class TimeMapping(Mapping) :
         if "format" in js :
             self.format = js["format"]
             del js["format"]
+
+        if "timezone" in js :
+            self.timezone = js["timezone"]
+            del js["timezone"]
 
         super().__init__("time", js["col"])
 
@@ -54,6 +62,11 @@ class TimeMapping(Mapping) :
             format=self.format,
             infer_datetime_format=(self.format == None),
             errors="coerce")
+
+        # Add timzone as suffix
+        if self.timezone:
+            tz = parse_tz(self.timezone)
+            time = time.dt.tz_localize(tz).dt.tz_convert("UTC")
 
         # All errors ?
         if time.isna().sum() == len(time_str) :
@@ -101,13 +114,29 @@ class VarMapping(Mapping) :
         return df
 
 
+def replace_placeholders_rec(js, properties):
+    """Recursively replaces {placeholders} in js"""
+    if isinstance(js, dict):
+        return {key : replace_placeholders_rec(val, properties) for key, val in js.items()}
+    elif isinstance(js, list):
+        return [replace_placeholders_rec(val, properties) for val in js]
+    elif isinstance(js, str) :
+        return replace_placeholders(js, properties)
+    else:
+        return js
+
+
+
 class GenericCSVHandler(InSituHandler) :
 
     def __init__(self, properties, mapping_file):
+
+        super().__init__(properties, binary=True)
+
         with open(mapping_file, "r") as f:
             js = json.load(f)
 
-        super().__init__(properties, binary=True)
+        js = replace_placeholders_rec(js, properties)
 
         mapping = js["mapping"]
 
@@ -184,10 +213,7 @@ class GenericCSVHandler(InSituHandler) :
         # Parse time and remove source columns
         df = self.time_mapping.parse_time(df)
 
-        # Parse timezone
-        tz = self.properties.get("Station_Timezone", None)
-        if tz :
-            df.index -= parseTimezone(tz)
+
 
         # Parse data
         for var_name, mapping in self.var_mappings.items() :
@@ -200,3 +226,11 @@ class GenericCSVHandler(InSituHandler) :
 
     def pattern(self):
         return "*.*"
+
+
+def parse_tz(tz) :
+
+    # See https://github.com/dateutil/dateutil/issues/70
+    date_str = re.sub(r'(?:GMT|UTC)([+\-]\d+)', r'\1', f'2000-01-01 00:00 {tz}')
+    date = parse(date_str)
+    return date.tzinfo

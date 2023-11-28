@@ -100,7 +100,7 @@ def generic_round_trip_test(network, station, filter=None):
 
     extra_options ={
         "--no-qc": None,
-        "--metadata": path.join(input_dir, "stations.csv"),
+        "--station-metadata": path.join(input_dir, "stations.csv"),
         "--mapping": path.join(input_dir, "mapping.json")
     }
 
