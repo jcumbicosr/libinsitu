@@ -534,10 +534,13 @@ def __all_attributes(ncfile_or_df) :
     attrs = __get_attributes(ncfile_or_df)
 
     # Put single var meta data in global attributes
-    attrs[LATITUDE_VAR] = readSingleVar(ncfile_or_df, LATITUDE_VAR)
-    attrs[LONGITUDE_VAR] = readSingleVar(ncfile_or_df, LONGITUDE_VAR)
-    attrs[ELEVATION_VAR] = readSingleVar(ncfile_or_df, ELEVATION_VAR)
-    attrs[STATION_NAME_VAR] = readShortname(ncfile_or_df)
+    # XXX Obsolete ? new CDL files integrate it already ?
+    for varname in [LATITUDE_VAR, LONGITUDE_VAR, ELEVATION_VAR] :
+        if varname in ncfile_or_df.variables :
+            attrs[varname] = readSingleVar(ncfile_or_df.variables[varname])
+
+    if STATION_NAME_VAR in ncfile_or_df.variables:
+        attrs[STATION_NAME_VAR] = readShortname(ncfile_or_df)
 
     # Add meta data of variables
     attrs["variables"] = dict((varname, __get_attributes(var)) for varname, var in ncfile_or_df.variables.items())
@@ -617,7 +620,7 @@ def _expand_qc(df, qc_varname, qc_run_varname=None) :
 def _data_cols(df) :
     """Return only the list of data columns, skipping QC related ones"""
     var_attrs = __all_attributes(df)["variables"]
-    return [col for col in df.columns if not "quality_flag" in var_attrs[col].get("standard_name", "")]
+    return [col for col in df.columns if not "flag_meanings" in var_attrs[col]]
 
 
 def __nc2df(
@@ -778,22 +781,22 @@ def with_auth(url, user, password) :
     return "%s://%s:%s@%s/%s" % (parts.scheme, quote_plus(user), quote_plus(password), parts.netloc, parts.path)
 
 
-def fill_str(nc, varname, shortname) :
+def fill_str(nc, varname, value) :
 
     var = nc.variables[varname]
 
     if var.dtype == str :
 
         # Variable length string
-        var[0] = shortname
+        var[0] = value
     else:
 
         dim = var.dimensions[0]
         size = nc.dimensions[dim].size
 
         # Transform to null terminated fixed length array of chars
-        shortname_ = stringtochar(np.array(shortname, 'S%d' % size))
-        var[:] = shortname_
+        value_ = stringtochar(np.array(value, 'S%d' % size))
+        var[:] = value_
 
 def read_str(var) :
 
@@ -809,9 +812,9 @@ def read_str(var) :
 
     return string_array[()]
 
-def readSingleVar(nc, var) :
+def readSingleVar(var) :
     """Read a meta variable encoded as a single value variable """
-    arr = nc.variables[var][:].flatten()
+    arr = var[:].flatten()
     if len(arr) == 0 :
         return None
     else:

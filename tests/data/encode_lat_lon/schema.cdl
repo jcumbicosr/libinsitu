@@ -5,36 +5,6 @@ dimensions:
 
 variables:
 
-	string station_name;
-	    *:standard_name = "platform_name" ;
-		*:long_name = "station_name" ;
-		*:cf_role = "timeseries_id" ;
-		*:_value = {Station_ID};
-
-    float latitude;
-		*:long_name = "station latitude" ;
-		*:standard_name = "latitude" ;
-		*:units = "degrees_north" ;
-		*:_CoordinateAxisType = "Lat" ;
-		*:_value = {Station_Latitude};
-		*:axis = "Y" ;
-
-	float longitude;
-		*:long_name = "station longitude" ;
-		*:standard_name = "longitude" ;
-		*:units = "degrees_east" ;
-		*:_CoordinateAxisType = "Lon" ;
-		*:_value = {Station_Longitude};
-		*:axis = "X" ;
-
-	float elevation;
-		*:long_name = "Elevation above mean seal level" ;
-		*:standard_name = "height_above_mean_sea_level" ;
-		*:_CoordinateAxisType = "Z" ;
-		*:_value = {Station_Elevation};
-		*:units = "m" ;
-		*:axis = "Z" ;
-
 	double crs;
 		*:grid_mapping_name = "latitude_longitude" ;
 		*:longitude_of_prime_meridian = 0.0 ;
@@ -42,6 +12,33 @@ variables:
 		*:inverse_flattening = 298.257223563 ;
 		*:epsg_code = "EPSG:4326";
 		*:_FillValue = -999.0;
+
+	string station_name;
+	    *:standard_name = "platform_name" ;
+		*:long_name = "station_name" ;
+		*:cf_role = "timeseries_id" ;
+		*:_value = {Station_ID};
+
+    float latitude(time);
+		*:long_name = "station latitude" ;
+		*:standard_name = "latitude" ;
+		*:units = "degrees_north" ;
+		*:_CoordinateAxisType = "Lat" ;
+		*:axis = "Y" ;
+
+	float longitude(time);
+		*:long_name = "station longitude" ;
+		*:standard_name = "longitude" ;
+		*:units = "degrees_east" ;
+		*:_CoordinateAxisType = "Lon" ;
+		*:axis = "X" ;
+
+	float elevation(time);
+		*:long_name = "Elevation above mean seal level" ;
+		*:standard_name = "height_above_mean_sea_level" ;
+		*:_CoordinateAxisType = "Z" ;
+		*:units = "m" ;
+		*:axis = "Z" ;
 
 	uint time(time) ;
 		*:long_name = "Time of measurement" ;
@@ -54,47 +51,12 @@ variables:
 		*:axis = "T" ;
 		*:calendar = "gregorian" ;
 
-    float GHI(time) ;
-		*:long_name = "Global Horizontal Irradiance" ;
-		*:standard_name = "surface_downwelling_shortwave_flux_in_air" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:abbreviation = "SWD" ;
-		*:units = "W m-2" ;
-		*:valid_min_=0.0 ;
-		*:valid_max_=3000 ;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=1;
-		*:_FillValue = -999.0;
-
-	float DHI(time) ;
-		*:long_name = "Diffuse horizontal radiation" ;
-		*:standard_name = "surface_diffuse_downwelling_shortwave_flux_in_air" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:abbreviation = "DHI" ;
-		*:units = "W m-2" ;
-		*:valid_min_=0.0 ;
-		*:valid_max_=3000 ;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=1;
-		*:_FillValue = -999.0;
-
-	float BNI(time) ;
-		*:long_name = "Beam (or direct) normal radiation" ;
-		*:standard_name = "direct_downwelling_shortwave_flux_in_air" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:abbreviation = "BNI" ;
-		*:units = "W m-2" ;
-		*:valid_min_=0.0 ;
-		*:valid_max_=3000 ;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=1;
-		*:_FillValue = -999.0;
-
-	float T2(time) ;
+	float temperature(time) ;
 		*:long_name = "Air temperature at 2 m height" ;
 		*:standard_name = "air_temperature" ;
 		*:coordinates = "time latitude longitude elevation "
 		*:abbreviation = "T2" ;
+		*:ancillary_variables = "flag"
 		*:units = "K" ;
 		*:valid_min_=123.0 ;
 		*:valid_max_=372.9 ;
@@ -102,106 +64,20 @@ variables:
 		*:least_significant_digit=1;
 		*:_FillValue = -999.0;
 
-	float RH(time) ;
-
-		*:long_name = "Relative humidity" ;
-		*:standard_name = "relative_humidity" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:abbreviation = "RH" ;
-		*:units = "1" ;
-		*:valid_min_=0.0 ;
-		*:valid_max_=1.0 ;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=3;
-		*:_FillValue = -999.0;
-
-	float WS(time) ;
-
-		*:long_name = "Wind speed" ;
-		*:standard_name = "wind_speed" ;
-		*:abbreviation = "windspd" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:units = "m s-1" ;
-		*:valid_min_=0.0;
-		*:valid_max_=100.0;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=2;
-		*:_FillValue = -999.0;
-
-	float WD(time) ;
-
-		*:long_name = "Wind direction, clockwise from north" ;
-		*:standard_name = "wind_direction" ;
-		*:abbreviation = "winddir" ;
-		*:coordinates = "time latitude longitude elevation "
-		*:units = "degrees";
-		*:valid_min_=0.0;
-		*:valid_max_=360.0;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=1;
-		*:_FillValue = -999.0;
-
-	float P(time) ;
-		*:parameter = "Station pressure" ;
-		*:long_name = "Air pressure at station height" ;
-		*:standard_name = "air_pressure" ;
-		*:coordinates = "time latitude longitude elevation "
-
-		*:units = "Pa" ;
-		*:valid_min_=0.0 ;
-		*:valid_max_=120000.0;
-		*:grid_mapping = "crs" ;
-		*:least_significant_digit=0;
-		*:_FillValue = -999.0;
-
-	uint QC(time) ;
+	uint flag(time) ;
 	    *:long_name = "QC flag status";
 	    *:comment = "Flag=1 means QC test failed";
-	    *:standard_name = "quality_flag";
+	    *:standard_name = "temperature status_flag";
+	    *:flag_values = 0, 1 ;
+        *:flag_meanings = "valid_data invalid_data";
 	    *:coordinates = "time latitude longitude elevation"
-
-
-    uint QC_run(time) ;
-	    *:long_name = "QC flag run";
-	    *:standard_name = "quality_flag_processed";
-	    *:comment = "Flag=1 means QC test has run. 0 means it was outside of flag domain";
-	    *:coordinates = "time latitude longitude elevation"
-
-
-     int QC_level_GHI(time) ;
-	    *:long_name = "QC level for GHI";
-	    *:standard_name = "aggregate_quality_flag";
-        *:coordinates = "time latitude longitude elevation";
-        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
-        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
-        *:ancillary_variables = "GHI";
-        *:_FillValue = -1;
-
-     int QC_level_DHI(time) ;
-	    *:long_name = "QC level for DHI";
-	    *:standard_name = "aggregate_quality_flag";
-        *:coordinates = "time latitude longitude elevation"
-        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
-        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
-        *:ancillary_variables = "DHI";
-        *:_FillValue = -1;
-
-     int QC_level_BNI(time) ;
-	    *:long_name = "QC level for BNI";
-	    *:standard_name = "aggregate_quality_flag";
-        *:coordinates = "time latitude longitude elevation";
-        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
-        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
-        *:ancillary_variables = "BNI";
-        *:_FillValue = -1;
+	    *:_FillValue = 0;
 
 # Global attributes
 
     # Main info
     :id = "{Network_ID}-{Station_ID}";
     :title = "Timeseries of {Network_LongName} ({Network_ID}). Station : {Station_Name}" ;
-    :summary = "Archive of solar radiation networks worldwide provided by the Webservice-Energy initiative supported by MINES Paris PSL. Files are provided as NetCDF file format with the support of a Thredds Data Server." ;
-    :keywords = "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure"
     :keywords_vocabulary = "GCMD Science Keywords" ;
     :keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
     :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
