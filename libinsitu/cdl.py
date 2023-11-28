@@ -83,14 +83,23 @@ def replace_placeholders(strval, attributes) :
     def repl(m) :
         key = m.group().strip("{").strip("}")
 
+        mandatory = False
+
+        if "!" in key :
+            mandatory = True
+            key = key.replace("!", "")
+
         if not key in attributes :
-            warning("Key : '%s' not found in attributes, using empty string instead" % key)
-            return ""
+            if mandatory:
+                raise Exception(f"Missing  mandatory attribute '{key}'")
+            else:
+                warning("Key : '%s' not found in attributes, using empty string instead" % key)
+                return ""
 
         res = attributes[key]
         return "" if res is None else str(res)
 
-    return re.sub(r'{\w+}', repl, strval)
+    return re.sub(r'{\!?\w+}', repl, strval)
 
 def parse_cdl(lines, attributes=dict()) :
     """ Parse CDL file """

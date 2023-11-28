@@ -53,18 +53,23 @@ def date_placeholders(date) :
 def prepare_properties(network, properties) :
     """ Adds prefix Station_ adds env variables (more user/passord)"""
 
+    # Add statio prefix
     properties = dict((STATION_PREFIX + key, parse_value(val)) for key, val in properties.items())
     for key, val in list(properties.items()) :
         if val is not None and isinstance(val, str) :
             properties[key.lower()] = val.lower()
 
-    # Add environment variable prefixed by the network
+    # Remove network prefix from env vars
     for key, val in os.environ.items() :
         if key.startswith(network) :
             key = key.replace(network + "_", "")
             properties[key] = val
 
-    return properties
+    # Add all env vars
+    res = os.environ.copy()
+    res.update(properties)
+
+    return res
 
 def get_pattern_period(path_pattern) :
     """Check if pattern is 'monthly' or 'yearly"""

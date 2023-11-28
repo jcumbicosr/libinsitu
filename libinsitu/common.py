@@ -855,6 +855,7 @@ def _prepare_properties(
     """Prefix properties with Network_ and Station_, and add 'live' properties """
 
     res = dict(
+        **os.environ, # Add env vars
         **{STATION_PREFIX + k: v for k, v in station_properties.items()},
         **{NETWORK_PREFIX + k: v for k, v in network_properties.items()})
 
