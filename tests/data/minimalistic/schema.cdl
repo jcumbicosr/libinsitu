@@ -39,7 +39,7 @@ variables:
 		*:axis = "X" ;
 
     # Single scalar value, filled from meta data
-	float elevation(time);
+	float elevation;
 		*:long_name = "Elevation above mean seal level" ;
 		*:standard_name = "height_above_mean_sea_level" ;
 		*:_CoordinateAxisType = "Z" ;
@@ -120,5 +120,4 @@ variables:
     :local_time_zone = "{Station_Timezone}" ;
     :date_created = "{CreationTime}";
     :date_modified = "{UpdateTime}";
-
 }
