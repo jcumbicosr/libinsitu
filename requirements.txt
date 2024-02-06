@@ -19,3 +19,4 @@ sg2
 jmespath
 StrEnum
 timezonefinder
+pyyaml
