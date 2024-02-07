@@ -80,7 +80,7 @@ The timezone should be in UTC. The specific local time zone can optionally be sp
 Here is an example of a CDL of a Time variable :
 
 ```
-int Time(time) ;
+int time(time) ;
     Time:long_name = "Time of measurement" ;
     Time:standard_name = "time" ;
     Time:units = "seconds since 1970-01-01 00:00:00";

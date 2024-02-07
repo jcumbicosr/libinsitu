@@ -29,7 +29,7 @@ To convert your own custom files, you need :
   By default, the {gitref}`embedded CDL <libinsitu/res/base.cdl>` is used.  
 * A *CSV* file containing the metadata for each station, similar to the {gitref}`embedded ones <libinsitu/res/station-info>`.
 * Optionally, a CSV files containing network metadata : to replace the placeholders `{Netowrk_XXX}`
-* A `mapping.json` file, describing the mapping between the columns of the input files, and the variables of the output NetCDF file.
+* A `mapping.json` (or yaml) file, describing the mapping between the columns of the input files, and the variables of the output NetCDF file.
 
 ### Format of the mapping file
 
@@ -53,7 +53,7 @@ It should follow this format :
         "dest_var1" : "source_col1", # Compact format for mapping
         
         # -- OR --
-        "dest_var2" : {
+        "dest_var2" : { # Expanded mapping for var 
             "col" : "source_col", # Name of source column
             "scale" : 100, # [Optional] Scale to apply to source data. 1 by default (no scale)           
             "offset" : 12.1, # [Optional] Offset to apply to source data. 0 by default. Offset is applied after scale. 
@@ -77,7 +77,7 @@ ins-transform \
 AAA.nc input.csv
 ```
 
-This command will create the file `AAA.nc` 
+This command will create the file `AAA.nc`. If the file already exists, it will be updated. 
 
 The input files look like this:
 
