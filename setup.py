@@ -5,13 +5,15 @@ import subprocess
 import pkg_resources
 from setuptools import setup, find_packages
 
+curr_path = os.path.dirname(__file__)
+CLI_PATH = os.path.join(curr_path, "libisitu", "cli")
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
 # README file and 2) it's easier to type in the README file than to put a raw
 # string in below ...
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname))\
+    return open(os.path.join(curr_path, fname))\
         .read().strip()
 
 def run(args) :
@@ -56,9 +58,8 @@ with open("requirements.txt", "r") as f :
 
 
 # List all cli modules
-import libinsitu.cli
 entry_points = []
-for importer, modname, ispkg in pkgutil.iter_modules(libinsitu.cli.__path__):
+for importer, modname, ispkg in pkgutil.iter_modules([CLI_PATH]):
     entry_points.append('ins-%s = libinsitu.cli.%s:main' % (modname, modname))
 print("entry points :", entry_points)
 
