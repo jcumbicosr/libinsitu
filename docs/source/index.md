@@ -1,6 +1,6 @@
 # Introduction
 
-[**libinsitu**](libinsitu.org) is a library to transform in situ data time series) into a standard *NetCDF* format.
+[**libinsitu**](http://libinsitu.org) is a library to transform in situ data time series) into a standard *NetCDF* format.
 
 It was primilary developed for solar in situ data, but is also adapted to other usages. 
 
