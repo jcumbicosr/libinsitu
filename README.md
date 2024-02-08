@@ -11,7 +11,7 @@ This code is available as a PIP package :
 
 # Website 
 
-Libinsitu as a dedicated website : [libinsitu.org](http://libinsitu.org)
+Libinsitu has a dedicated website : [libinsitu.org](http://libinsitu.org)
 
 # Documentation
 
