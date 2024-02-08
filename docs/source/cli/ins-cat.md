@@ -52,7 +52,7 @@ The following command exports only GHI, BNI and DHI columns (-c) in CSV format (
 ```
 
 Result file :
-```csv
+```
 time,BNI,GHI,DHI
 2020-01-01 07:00:00,1.0625,-0.9375,-0.8125
 2020-01-01 07:01:00,1.1875,-0.9375,-0.8125

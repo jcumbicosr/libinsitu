@@ -453,7 +453,7 @@ def parser() :
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
-    parser.add_argument('--network', '-n', help='Network name', required=True)
+    parser.add_argument('--network', '-n', help='Network name', required=False)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
     parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --station-metadata and network-metadata')
     parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata (Station_* properties) instead of embedded ones.', default=None)
@@ -480,6 +480,10 @@ def main():
     args = parser().parse_args()
 
     network = args.network
+
+    if network is None and args.mapping is None :
+        raise Exception("--network is mandatory if custom mapping / generic parser is not used")
+
     station_id  = args.station_id
 
     with LogContext(network=network, station_id=station_id):

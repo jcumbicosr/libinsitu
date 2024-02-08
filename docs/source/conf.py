@@ -11,7 +11,7 @@ import sys, os
 project = 'libinsitu'
 copyright = '2022, Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 author = 'Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
-release = '1.2'
+release = '1.6'
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '_deps'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))

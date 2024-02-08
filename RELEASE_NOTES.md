@@ -1,4 +1,5 @@
 1.6:
+* Improved generic encoding (yaml config file, extra options)
 * Scalar variables (such as latitude,longitude,elevation) 
   are now explicitely filled from metadata with the custom '_value' attribute in CDL file.
   This enables to define custom CDL with varying lat,lon from CSV files.

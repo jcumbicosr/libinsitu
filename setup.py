@@ -6,7 +6,7 @@ import pkg_resources
 from setuptools import setup, find_packages
 
 curr_path = os.path.dirname(__file__)
-CLI_PATH = os.path.join(curr_path, "libisitu", "cli")
+CLI_PATH = os.path.join(curr_path, "libinsitu", "cli")
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
@@ -61,7 +61,7 @@ with open("requirements.txt", "r") as f :
 entry_points = []
 for importer, modname, ispkg in pkgutil.iter_modules([CLI_PATH]):
     entry_points.append('ins-%s = libinsitu.cli.%s:main' % (modname, modname))
-print("entry points :", entry_points)
+print(f" Cli path {CLI_PATH} entry points : {entry_points}")
 
 packages = find_packages()
 
@@ -77,7 +77,7 @@ setup(
                    "It also provides tools to request and manipulate those NetCDF files"),
     license = "BSD",
     keywords = "in-situ, solar, pv, irradiation, NetCDF, FAIR, meta-data",
-    url = "https://git.sophia.mines-paristech.fr/oie/libinsitu",
+    url = "http://libinsitu.org/",
     packages=packages,
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
