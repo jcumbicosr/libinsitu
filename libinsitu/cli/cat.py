@@ -15,6 +15,7 @@ from libinsitu.log import debug
 from libinsitu.common import netcdf_to_dataframe, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
 
 QC_NONE = "none"
+QC_VALUE = "value"
 QC_MASK = "masks"
 QC_NAMES = "names"
 QC_EXPAND = "expand"
@@ -122,8 +123,8 @@ def parser() :
         '--qc-format', '-qf',
         metavar="<format>",
         choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND],
-        help="Format for QC flags [none (default), mask, names or expand]",
-        default=QC_NONE)
+        help="Format for QC flags [none (=hidden), value(default), mask, names or expand]",
+        default=QC_VALUE)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
     parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Use with --header to print meta data only")
@@ -272,6 +273,12 @@ def show_stats(chunks, out=sys.stdout) :
 
 def format_QC(df, qc_format) :
 
+    if qc_format == QC_VALUE:
+        # Do noting
+        return df
+
+
+
     qc_varname, qc_run_varname = find_qc_vars(df)
 
     if qc_varname is None or qc_format == QC_EXPAND :
@@ -322,7 +329,7 @@ def format_QC(df, qc_format) :
     elif qc_format == QC_EXPAND :
 
         # Done before via the "expand" param of netcdf_to_dataframe
-        pass
+        return
 
     elif qc_format == QC_NAMES :
         res = Series(data="", index=df.index, dtype=np.object)
@@ -344,6 +351,8 @@ def format_QC(df, qc_format) :
 
     else:
         raise Exception("Unkown QC format : %s" % qc_format)
+
+
 
     return df
 

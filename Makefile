@@ -24,3 +24,4 @@ test: clean package
 
 test-local:
 	python -m pytest
+

@@ -1,5 +1,6 @@
 import json
 import os.path
+from logging import warn, warning
 from os import path
 
 import pandas as pd
@@ -207,14 +208,20 @@ class GenericCSVHandler(InSituHandler) :
             args["names"] = list(headers.values())
             args["usecols"] = list(headers.keys())
 
-        if extension == ".csv":
-            df = pd.read_csv(stream, **args)
-        elif extension == ".xlsx":
+
+        if extension == ".xlsx":
             df = pd.read_excel(stream, **args, engine='openpyxl')
         elif extension == ".xls" :
             df = pd.read_excel(stream, **args, engine="xlrd")
+        elif extension == ".csv":
+            df = pd.read_csv(stream, **args)
+        elif extension == ".tsv":
+            if not "sep" in args:
+                args["sep"] = "\t"
+            df = pd.read_csv(stream, **args)
         else:
-            raise Exception("Format not supported : %s" % extension)
+            warning(f"Unkown extension {extension}. Assuming CSV like")
+            df = pd.read_csv(stream, **args)
 
         # Parse time and remove source columns
         df = self.time_mapping.parse_time(df)
