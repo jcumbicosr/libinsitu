@@ -108,9 +108,12 @@ class InSituHandler :
         The pattern is used to sort file by year and month.
         If not provided, the year and month of the modification of the file are used.
 
+        Pattern supports browsing inside Zip files, spearated with '!' :
+
         Example patterns :
         - "{Station_ID}-{YY}-{MM}*.zip"
-        - "???{ID}*.txt"
+        - "???{station_id}*.txt"
+        - network.zip!*{Station_ID}-*.txt
         """
 
         # Take this from the RawDataPath property of the network

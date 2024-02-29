@@ -30,9 +30,8 @@ name = "libinsitu"
 
 if curr_branch not in  ["master", "main"] :
 
-    if curr_branch != "dev" :
-        raise Exception("Only main, master and dev branch supported")
-
+    #if curr_branch != "dev" :
+    #    raise Exception("Only main, master and dev branch supported")
     name += "_dev"
 
 

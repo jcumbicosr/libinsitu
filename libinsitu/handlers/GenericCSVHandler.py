@@ -147,6 +147,9 @@ class GenericCSVHandler(InSituHandler) :
 
         mapping = js["mapping"]
 
+        # Read file pattern form config file
+        self.file_pattern = js.get("file_pattern", "*.*")
+
         self.time_mapping = TimeMapping(mapping["time"])
         self.separator = js.get("separator", ",")
         self.skip_lines = js.get("skip_lines", None)
@@ -238,7 +241,7 @@ class GenericCSVHandler(InSituHandler) :
         return list(self.var_mappings.keys())
 
     def pattern(self):
-        return "*.*"
+        return self.file_pattern
 
 
 def parse_tz(tz) :

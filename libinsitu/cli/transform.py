@@ -112,9 +112,12 @@ def process_network(network, station_id, args) :
     max_date = None
 
     # Loop on input files
-    for infile in in_files :
+    for in_entry in in_files :
 
-        info("processing chunk : %s", infile)
+        info("processing chunk : %s", in_entry)
+
+        # in_entry might be within a Zip file
+        infile = in_entry if not "!" in in_entry else in_entry.split("!")[0]
 
         with LogContext(file=os.path.basename(infile)):
 
@@ -137,7 +140,7 @@ def process_network(network, station_id, args) :
                     ncfile = Dataset(args.out, mode="a")
                     mode = "a"
 
-                data = handler.read_chunk(infile)
+                data = handler.read_chunk(in_entry)
 
                 chunk_start, chunk_end = process_chunck(
                     data, ncfile, properties,

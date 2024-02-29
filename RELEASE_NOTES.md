@@ -1,5 +1,6 @@
 *:
 * Added support for *.tsv files. Default to TSV for unknown extension
+* Added the possiblity to specific input file pattern in mapping.json/yaml
 * ins-cat : By default output values of flags
 
 1.6:
