@@ -19,6 +19,7 @@ from numpy import timedelta64, datetime64
 from numpy.typing import NDArray
 from pandas import DataFrame
 from six import StringIO
+from timedelta_isoformat import timedelta
 
 from libinsitu._version import __version__
 from libinsitu.log import warning
@@ -255,13 +256,18 @@ def str_to_date64(datestr) :
     raise Exception("Unable to parse : " + datestr)
 
 
-def start_date64(ncfile) :
+def start_date64(ncfile:Dataset) :
     if  hasattr(ncfile, STATION_START_DATA_ATTR) :
-        return str_to_date64(getattr(ncfile, STATION_START_DATA_ATTR))
-    else:
-        res = sec_to_datetime64(ncfile, getTimeVar(ncfile)[0])[()]
-        warning("No start date set in meta data : taking the first value of ncfile : %s" % res)
-        return res
+        start_date_value = getattr(ncfile, STATION_START_DATA_ATTR)
+        try:
+            return str_to_date64(start_date_value)
+        except:
+            warning(f"Can't read start date value metadata : {start_date_value}")
+
+
+    res = sec_to_datetime64(ncfile, getTimeVar(ncfile)[0])[()]
+    warning("No start date set in meta data : taking the first value of ncfile : %s" % res)
+    return res
 
 def end_date64(ncfile):
     return sec_to_datetime64(ncfile, getTimeVar(ncfile)[-1])[()]
@@ -313,12 +319,17 @@ def parse_value(val, split=False) :
 def getTimeResolution(ncfile) :
     """Returns time resolution, in seconds, as saved in meta data"""
 
-    time_var = getTimeVar(ncfile)
-
     # Formatted as ISO8601 : P10M, P30S, ...
     if hasattr(ncfile, GLOBAL_TIME_RESOLUTION_ATTR) :
-        dt = pd.Timedelta(getattr(ncfile, GLOBAL_TIME_RESOLUTION_ATTR))
-        return dt.seconds
+        resolution_attr = getattr(ncfile, GLOBAL_TIME_RESOLUTION_ATTR)
+        try:
+            dt = timedelta.fromisoformat(resolution_attr)
+            return dt.total_seconds()
+        except:
+            warning(f"Resolution attribute was incorect : {resolution_attr}")
+
+
+    time_var = getTimeVar(ncfile)
 
     if hasattr(time_var, "resolution") :
         # XXX - Support for old versions of NetCDF

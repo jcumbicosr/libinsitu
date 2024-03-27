@@ -2,6 +2,8 @@
 * Added support for *.tsv files. Default to TSV for unknown extension
 * Added the possiblity to specific input file pattern in mapping.json/yaml
 * ins-cat : By default output values of flags
+* Added support for NetCDF files / TDS Catalog in input
+* Added better inference & filling of time resolution and start time from first chunk when not provided in attributes
 
 1.6:
 * Improved generic encoding (yaml config file, extra options)

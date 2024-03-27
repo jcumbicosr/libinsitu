@@ -20,3 +20,6 @@ jmespath
 StrEnum
 timezonefinder
 pyyaml
+timedelta-isoformat
+siphon
+xarray

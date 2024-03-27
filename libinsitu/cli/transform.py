@@ -1,5 +1,6 @@
 import argparse
 import os.path
+from datetime import timedelta
 from os.path import basename, dirname
 
 from libinsitu import update_qc_flags
@@ -8,7 +9,10 @@ from libinsitu.common import *
 from libinsitu.common import _prepare_properties
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
 from libinsitu.handlers.GenericCSVHandler import GenericCSVHandler
+from libinsitu.handlers.NetCDFHandler import NetCDFHandler
 from libinsitu.log import debug, info, warning, logger, LogContext
+
+from timedelta_isoformat import timedelta as timedelta_iso
 
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
@@ -50,7 +54,9 @@ def list_files(in_files, handler) :
     # Gather and sort files with pattern
     files = []
     for file_or_dir in in_files:
-        if os.path.isdir(file_or_dir):
+
+        # HTTP url are Thredds catalogs, threated as folders
+        if os.path.isdir(file_or_dir) or file_or_dir.startswith("http"):
             files += handler.list_files(file_or_dir)
         else:
             files.append(file_or_dir)
@@ -63,6 +69,12 @@ def list_files(in_files, handler) :
         sys.exit(-1)
 
     return in_files
+
+def is_tds(in_files) :
+    for file in in_files:
+        if file.startswith("http") :
+            return True
+    return False
 
 
 def process_network(network, station_id, args) :
@@ -81,7 +93,10 @@ def process_network(network, station_id, args) :
         if not args.station_metadata :
             raise Exception("Missing file path for custom station metadata")
 
-        handler = GenericCSVHandler(properties, args.mapping)
+        if is_tds(args.in_files) :
+            handler = NetCDFHandler(properties, args.mapping)
+        else:
+            handler = GenericCSVHandler(properties, args.mapping)
     else:
 
         # Check network
@@ -335,29 +350,55 @@ def dataframe_to_netcdf(
     return ncfile
 
 
+def _freq(df) :
+    """Guess the frequerncy of a Timeseries and returns timedelta from it"""
+    freq_str = df.index.inferred_freq
 
+    # Overcome bug https://github.com/pandas-dev/pandas/issues/36769
+    if not freq_str[0].isdigit():
+        freq_str = f"1{freq_str}"
 
-def process_chunck(data, ncfile, properties, strict_resolution=False, check=False, custom_cdl=None):
+    return pd.to_timedelta(freq_str)
 
-    if data is None or len(data) == 0 :
-        warning("Chunk is empty")
+def _infer_time_attributes(ncfile:Dataset, df) :
+    """No start time provided ? Or no frequency provided ? Guess them from first chunk and init"""
+    try:
+        start_time = start_date64(ncfile)
+    except:
+        start_time = df.index[0]
+        warning(f"No start time found in meta data. Infering it from first chunk : {start_time}")
+        ncfile.setncattr(STATION_START_DATA_ATTR, datetime.strftime(start_time, TIME_FORMAT_MIN))
+
+    try:
+        resolution_s = getTimeResolution(ncfile)
+    except:
+        freq = _freq(df)
+        ncfile.setncattr(GLOBAL_TIME_RESOLUTION_ATTR, timedelta_iso.isoformat(freq))
+
+def process_chunck(df, ncfile, properties, strict_resolution=False, check=False, custom_cdl=None):
+
+    if df is None or len(df) == 0 :
+        warning("Chunk is empty, skipping")
         return
+
+    # Init start time / resolution with first chunk in case of missing metadata
+    _infer_time_attributes(ncfile, df)
 
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
     # Drop duplicates
-    data = data[~data.index.duplicated(keep="last")]
+    df = df[~df.index.duplicated(keep="last")]
 
     # Reshape : regular time is faster to write in NetCDF (as slice)
-    data = data.asfreq("%dS" % resolution_s)
+    df = df.asfreq("%dS" % resolution_s)
 
     # Transform time to seconds since start date and time idx
-    chunk_dates : NDArray[datetime64] = data.index.values
+    chunk_dates : NDArray[datetime64] = df.index.values
 
     times_sec = datetime64_to_sec(ncfile, chunk_dates)
 
-    columns = list(data.columns)
+    columns = list(df.columns)
 
     # Create vars if not present yet
     missing_vars = list(col for col in columns if not col in ncfile.variables)
@@ -371,10 +412,11 @@ def process_chunck(data, ncfile, properties, strict_resolution=False, check=Fals
     if nb_not_exact_times > 0:
 
         # Remove lines with wrong times
-        data = data[exact_idx]
+        df = df[exact_idx]
         times_sec = times_sec[exact_idx]
 
         warning("%d rows had timings not fitting the time resolution : skipping them" % nb_not_exact_times)
+
 
 
     # Seconds to time index, as per start date and resolution
@@ -384,7 +426,7 @@ def process_chunck(data, ncfile, properties, strict_resolution=False, check=Fals
     chunk_end = max(chunk_dates)
     chunk_end_int = datetime64_to_sec(ncfile, chunk_end)
 
-    info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(data.index))
+    info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(df.index))
 
     # Error if chunk starts before start time
     if sum(time_idx < 0) > 0 :
@@ -423,7 +465,7 @@ def process_chunck(data, ncfile, properties, strict_resolution=False, check=Fals
     timeVar[next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values
-    check_and_assign(ncfile, data, time_idx, size_before, check)
+    check_and_assign(ncfile, df, time_idx, size_before, check)
 
     info("Chunk processed successfully")
 

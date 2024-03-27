@@ -13,7 +13,8 @@ from matplotlib import dates as mdates, pyplot as plt
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.pyplot import gca
 import copy
-from libinsitu import info, CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_ID_ATTRS
+from libinsitu.common import CLIMATE_ATTRS, STATION_COUNTRY_ATTRS, NETWORK_ID_ATTRS
+from libinsitu.log import info
 from matplotlib import cm
 import numpy as np
 from matplotlib.colors import ListedColormap

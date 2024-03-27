@@ -1,155 +1,72 @@
-# Handling fetch and parsing of Thredds server
-
-import xml.etree.ElementTree as ET
-
-from typing import Dict
-from urllib.parse import urljoin, urlsplit
-import pprint
-
-from requests import HTTPError, Session
-
-from libinsitu import parallel_map
+from siphon.catalog import TDSCatalog
+from concurrent.futures import ThreadPoolExecutor
 from libinsitu.log import info
+from itertools import zip_longest
+import re
 
-NS={
-    "thredds" : "http://www.unidata.ucar.edu/namespaces/thredds/InvCatalog/v1.0",
-    "xlink" : "http://www.w3.org/1999/xlink"}
+def match_part(pattern, value) :
+    if not "*" in pattern :
+        return pattern == value
 
-XLINK = "{http://www.w3.org/1999/xlink}"
+    pattern = pattern.replace("*", ".*")
+    return re.match(pattern, value) is not None
 
 
-class AutoRepr :
-    def __repr__(self):
-        return pprint.pformat(self.__dict__)
+def pattern_matches(url, base_url, pattern):
 
-class Dataset(AutoRepr) :
-    def __init__(self, id, name, size) :
-        self.id = id
-        self.name = name
-        self.size = size
-        self.services = dict() # Dict of service type => URL
+    if pattern is None :
+        return True
 
-class Catalog(AutoRepr) :
-    def __init__(self, id, name, description, url, link) :
-        self.id = id
-        self.name = name
-        self.description = description
-        self.url = url
-        self.link = link
-        self.authorized = None
-        self.datasets : Dict[str, Dataset]= dict()
-        self.catalogs : Dict[str, Catalog] = dict() # Dict of sub catalogs
-        self.services = dict() # Dict of service type => URL
+    relative_url = url.replace(base_url, "").replace("catalog.xml", "").strip("/")
+    pattern = pattern.strip("/")
 
-def parse_services(catalog, base):
+    info("Matching pattern:{} rel_url:{}".format(pattern, relative_url))
 
-    res = dict()
-    for service in catalog.findall('.//thredds:service', NS):
-        name = service.get("name")
-        url = service.get("base")
-        if url != "":
-            res[name] = base + url
-    return res
+    for pattern_part, path_part in zip_longest(pattern.split("/"), relative_url.split("/")) :
+        if path_part is None :
+            continue
+        if pattern_part is None: # Path longer than pattern ?
+            return False
 
-def parse_catalog(el, url, id=None, name=None) :
-    """Parse catalog from 'Dataset' element of root catalog or datasetREf/metadata element """
+        if not match_part(pattern_part, path_part):
+            return False
 
-    if id is None :
-        name = el.attrib['name']
-        id = el.attrib['ID']
+    return True
 
-    # find doc
-    metadata = el.find('thredds:metadata', NS)  # Optionnal nested node "metadata"
-    if metadata is None:
-        metadata = el
-    docs = metadata.findall('thredds:documentation', NS)
-    description = None
-    link = None
-    for doc in docs:
-        if doc.get("type") == "summary":
-            description = doc.text
-        else:
-            link_ = doc.get('{%s}href' % NS["xlink"])
-            if link_ is not None:
-                link = link_
-    return Catalog(id, name, description, url, link)
 
-def extract_sub(url, subCatEl) :
-    id = subCatEl.attrib[XLINK + "title"]
-    href = subCatEl.attrib[XLINK + "href"]
-    sub_url = urljoin(url, href)
-    return (id, sub_url)
+def _list_dataset_urls_rec(current_url, base_url, pattern=None, service="OpenDAP"):
+    """Recursive / parallel fetch of OpenDap dataset URLs from Thredds catalog.xml"""
 
-def fetch_catalog(url, session=None, recursive=True, parallel=True) :
+    info(f"Loading catalog {current_url}")
 
-    info("Fetching : %s" % url)
+    catalog = TDSCatalog(current_url)
 
-    if session is None :
-        session = Session()
 
-    base = base_url(url)
-    xml = http_get(url, session)
+    # List datasets of requested service
+    ds_urls = list(url for dataset in catalog.datasets.values() for serv, url in dataset.access_urls.items() if serv == service)
 
-    catalogEl = ET.fromstring(xml)
-    datasetEl = catalogEl.find('thredds:dataset', NS)
+    if len(ds_urls) > 0 :
+        info(f"Found datasets : \n {ds_urls}")
 
-    catalog = parse_catalog(datasetEl, url)
-    catalog.services = parse_services(catalogEl, base)
+    # Catalog ref
+    catalog_ref_urls = list(ref.href for ref in catalog.catalog_refs.values() if pattern_matches(ref.href, base_url, pattern))
 
-    # Parse or fetch sub catalogs
+    def rec_func(url) :
+        return _list_dataset_urls_rec(url, base_url=base_url, pattern=pattern, service=service)
 
-    sub_elements = list(datasetEl.findall("thredds:catalogRef", NS))
+    # Recursive call on catalog refs
+    with ThreadPoolExecutor() as executor:
+        for other_urls in executor.map(rec_func, catalog_ref_urls) :
+            ds_urls += other_urls
 
-    def fetch_rec(subCatEl) :
-        id, sub_url = extract_sub(url, subCatEl)
+    return ds_urls
 
-        try:
-            sub_catalog = fetch_catalog(sub_url, session, parallel=parallel)
-            return (id, sub_catalog)
-        except HTTPError as e:
-            if e.response.status_code == 401:
-                print("URL %s not authorized." % e.request.url)
-            else:
-                raise e
 
-    if recursive :
-        # Common loop for sequential of parallel fetch
-        for id, sub_catalog in parallel_map(fetch_rec, sub_elements, parallel):
-            catalog.catalogs[id] = sub_catalog
-    else :
-        for subCatEl in sub_elements :
-            id, sub_url = extract_sub(url, subCatEl)
-            catalog.catalogs[id] = parse_catalog(subCatEl, sub_url, id, id)
-
-    # Datasets
-    datasets = datasetEl.findall("thredds:dataset", NS)
-
-    for dataset_el in datasets :
-
-        uri = dataset_el.attrib["urlPath"]
-        id = dataset_el.attrib["ID"]
-        name = dataset_el.attrib["name"]
-        size = float(dataset_el.find("thredds:dataSize", NS).text)
-
-        dataset = Dataset(id, name, size)
-        dataset.services = {key: base + uri for key, base in catalog.services.items()}
-
-        catalog.datasets[dataset.name] = dataset
-
-    return catalog
-
-def base_url(url) :
-    parts = urlsplit(url)
-    return  "%s://%s" % (parts.scheme, parts.netloc)
+def list_dataset_urls(base_url, pattern=None, service="OpenDAP"):
+    return _list_dataset_urls_rec(current_url=base_url, base_url=base_url, pattern=pattern, service=service)
 
 
 
-def http_get(url, session) :
 
-    #print("fetching : %s" % url)
 
-    res = session.get(url)
-    res.raise_for_status()
 
-    res.encoding = res.apparent_encoding
-    return res.text
