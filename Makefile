@@ -25,3 +25,6 @@ test: clean package
 test-local:
 	python -m pytest
 
+deploy:
+	./tmp/deploy.sh
+
