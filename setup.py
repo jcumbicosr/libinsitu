@@ -50,7 +50,6 @@ with open("requirements.txt", "r") as f :
                 yield line
 
     requirements = [
-            #str(requirement).replace("==", ">=")
             str(requirement)
             for requirement
             in pkg_resources.parse_requirements(extract_extra_index(f))]
