@@ -6,7 +6,7 @@ from libinsitu.handlers.base_handler import map_cols, InSituHandler, ZERO_DEG_K
 from pvlib.iotools import surfrad
 
 
-class RADHandler(InSituHandler) :
+class SURFRADHandler(InSituHandler) :
 
     def read_chunk(self, filename:str, encoding='latin1'):
         """ @override """
