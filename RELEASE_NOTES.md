@@ -1,6 +1,7 @@
 *:
 * Added support for *.tsv files. Default to TSV for unknown extension
 * ins-cat : By default output values of flags
+* Fixed Python Handler for SOLRAD 
 
 1.6:
 * Improved generic encoding (yaml config file, extra options)
