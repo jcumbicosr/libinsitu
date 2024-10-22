@@ -66,6 +66,7 @@ packages = find_packages()
 
 print("Packages : %s"%  str(packages))
 print("Extra URLs : %s" % extra_urls)
+print("Requirements", requirements)
 
 setup(
     name = name,
