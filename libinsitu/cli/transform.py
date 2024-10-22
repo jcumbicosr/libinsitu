@@ -1,15 +1,18 @@
-#!/usr/bin/env python
-import datetime
-import os.path
-from os.path import basename, dirname
-from libinsitu import update_qc_flags
-from libinsitu.common import *
-from libinsitu.cdl import *
-from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
-from libinsitu.log import debug, info, warning, logger, LogContext, error
-from libinsitu._version import __version__
 import argparse
+import os.path
+from datetime import timedelta
+from os.path import basename, dirname
 
+from libinsitu import update_qc_flags
+from libinsitu.cdl import *
+from libinsitu.common import *
+from libinsitu.common import _prepare_properties
+from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
+from libinsitu.handlers.GenericCSVHandler import GenericCSVHandler
+from libinsitu.handlers.NetCDFHandler import NetCDFHandler
+from libinsitu.log import debug, info, warning, logger, LogContext
+
+from timedelta_isoformat import timedelta as timedelta_iso
 
 DONE_SUFFIX = '.done'
 ERR_SUFFIX = '.err'
@@ -51,7 +54,9 @@ def list_files(in_files, handler) :
     # Gather and sort files with pattern
     files = []
     for file_or_dir in in_files:
-        if os.path.isdir(file_or_dir):
+
+        # HTTP url are Thredds catalogs, threated as folders
+        if os.path.isdir(file_or_dir) or file_or_dir.startswith("http"):
             files += handler.list_files(file_or_dir)
         else:
             files.append(file_or_dir)
@@ -61,42 +66,74 @@ def list_files(in_files, handler) :
 
     if len(in_files) == 0:
         warning("No input file found")
-        sys.exit(0)
+        sys.exit(-1)
 
     return in_files
 
+def is_tds(in_files) :
+    for file in in_files:
+        if file.startswith("http") :
+            return True
+    return False
 
-def process_network(network, station_id, out_filename, args) :
 
-    # Get properties for this station
-    properties = getProperties(network, station_id)
+def process_network(network, station_id, args) :
 
-    now = datetime.now().isoformat()
+    # Get all properties
+    properties = getProperties(
+        network,
+        station_id,
+        custom_station_file=args.station_metadata,
+        custom_network_file=args.network_metadata,
+        check_network=(args.mapping is None))
 
-    properties["UpdateTime"] = now
-    properties["CreationTime"] = now
-    properties["Version"] = __version__
+    # Generic handler ?
+    if args.mapping :
 
-    handler : InSituHandler = HANDLERS[network](properties)
+        if not args.station_metadata :
+            raise Exception("Missing file path for custom station metadata")
+
+        if is_tds(args.in_files) :
+            handler = NetCDFHandler(properties, args.mapping)
+        else:
+            handler = GenericCSVHandler(properties, args.mapping)
+    else:
+
+        # Check network
+        all_networks = listNetworks()
+        if not network in all_networks:
+            raise Exception("Bad Network %s. Should be one of %s" % (network, str(all_networks)))
+
+        handler : InSituHandler = HANDLERS[network](properties)
 
     in_files = list_files(args.in_files, handler)
 
-    new = not os.path.exists(out_filename)
+    new = not os.path.exists(args.out)
 
     # If file exists, put it in read only until we process an input file, to avoid changing its mtime
     mode = "w" if new else "r"
-    ncfile = Dataset(out_filename, mode=mode)
+    ncfile = Dataset(args.out, mode=mode)
 
     if new :
         # Nc File does not exist ==> create it
-        info("File '%s' was not there. Initializing it.", out_filename)
-        init_nc(ncfile, properties, [])
+        info("File '%s' was not there. Initializing it.", args.out)
+        init_nc(
+            ncfile,
+            properties,
+            data_vars=[],
+            custom_cdl=args.cdl)
 
     min_date = None
     max_date = None
 
     # Loop on input files
-    for infile in in_files :
+    for in_entry in in_files :
+
+        info("processing chunk : %s", in_entry)
+
+        # in_entry might be within a Zip file
+        infile = in_entry if not "!" in in_entry else in_entry.split("!")[0]
+
         with LogContext(file=os.path.basename(infile)):
 
             # Safe execution : do not stop on error
@@ -115,10 +152,16 @@ def process_network(network, station_id, out_filename, args) :
                 # First processed file ? reopen the file in write mode => this will update its mtime
                 if mode == "r" :
                     ncfile.close()
-                    ncfile = Dataset(out_filename, mode="a")
+                    ncfile = Dataset(args.out, mode="a")
                     mode = "a"
 
-                chunk_start, chunk_end = process_chunck(handler, infile, ncfile, args, properties)
+                data = handler.read_chunk(in_entry)
+
+                chunk_start, chunk_end = process_chunck(
+                    data, ncfile, properties,
+                    check=args.check,
+                    strict_resolution=args.strict_resolution,
+                    custom_cdl=args.cdl)
 
                 # Store extent of update
                 min_date = nmin(chunk_start, min_date)
@@ -170,7 +213,7 @@ def idx2slice(idx) :
 
     return idx
 
-def check_and_assign(ncfile, data, times_idx, size_before, args) :
+def check_and_assign(ncfile, data, times_idx, size_before, check=False) :
 
     # Check once for all if new chunk overlaps
     overlapping_mask = times_idx < size_before
@@ -188,7 +231,7 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
             fill_value = getattr(var, FILL_VALUE_ATTR, DEFAULT_FILL_VALUE)
             new_values[np.isnan(new_values)] = fill_value
 
-        if not np.any(overlapping_mask) or not args.check:
+        if not np.any(overlapping_mask) or not check:
             # No overlap with previous data ? no need for check
             var[idx2slice(times_idx)] = new_values
 
@@ -227,40 +270,141 @@ def check_and_assign(ncfile, data, times_idx, size_before, args) :
 
             var[idx2slice(times_idx[write_mask])] = new_values[write_mask]
 
+def dataframe_to_netcdf(
+        data,
+        out_filename,
+        station_name,
+        network_name=None,
+        latitude=None,
+        longitude=None,
+        elevation=None,
+        process_qc=True,
+        close=True,
+        network_props = dict(),
+        station_props = dict(),
+        custom_cdl=None) :
+    """
+    Transforms a Dataframe of solar irradiance to a well encoded NetCDF file.
+
+    :param data: The dataframe. It should contain GHI, DHI, BNI columns in W.m-2 and be indexed by UTC time (Datetime index)
+    :param out_filename: Name of output file
+    :param station_name: Station name. Can also be passed as 'Name' in station properties
+    :param network_name: Network name. Can also be passed as 'Name' in network properties
+    :param latitude: Station latitude. Can also be passed as 'Latitude' in station properties
+    :param longitude: Station longitude. Can also be passed as 'Longitude' in station properties
+    :param elevation: Station elevation.  Can also be passed as 'Elevation' in station properties
+    :param process_qc: Process and embed QC flags (true be default)
+    :param close: Close netcdf file at the end of process
+    :param network_props: Dict of additional network properties (without `Network_` prefix), as used in base.cdl
+    :param station_props: Dict of additional station properties (without `Station_` prefix) as used in base.cdl
+    :param custom_cdl: File path to custom schema.cdl file
+    """
+
+    properties = _prepare_properties(
+        network_props,
+        station_props)
+
+    def update_props(key, value) :
+        if value is not None and not key in properties :
+            properties[key] = value
+
+    update_props("Station_ID", station_name)
+    update_props("Station_Name", station_name)
+    update_props("Network_ID", network_name)
+    update_props("Network_LongName", network_name)
+    update_props("Station_Latitude", latitude)
+    update_props("Station_Longitude", longitude)
+    update_props("Station_Elevation", elevation)
+
+    # Guess the resolution from the input
+    res_sec = get_df_resolution(data)
+
+    # Set global attribute for time resolution
+    res_str = "%dM" % (res_sec // 60) if res_sec >= 60 else "%dS" % res_sec
+    update_props("Station_TimeResolution", res_str)
+
+    # Fill time extent
+    start_time = data.index[0]
+    end_time = data.index[-1]
+
+    update_props("Station_StartDate", start_time.strftime("%Y-%m-%d"))
+    update_props("LastData", time2str(end_time, seconds=True))
+
+    # Create file
+    ncfile = Dataset(out_filename, mode="w")
+    try :
+        init_nc(ncfile, properties, [])
+
+        # Transform data
+        process_chunck(
+            data, ncfile, properties,
+            custom_cdl=custom_cdl)
+
+        if process_qc :
+            update_qc_flags(ncfile)
+
+    finally:
+        if close :
+            ncfile.close()
+
+    return ncfile
 
 
-def process_chunck(handler, infile, ncfile, args, properties):
+def _freq(df) :
+    """Guess the frequerncy of a Timeseries and returns timedelta from it"""
+    freq_str = df.index.inferred_freq
 
-    info("processing chunk : %s", infile)
+    # Overcome bug https://github.com/pandas-dev/pandas/issues/36769
+    if not freq_str[0].isdigit():
+        freq_str = f"1{freq_str}"
 
-    # Read data
-    data = handler.read_chunk(infile)
+    return pd.to_timedelta(freq_str)
 
-    if data is None or len(data) == 0 :
-        warning("Chunk is empty")
+def _infer_time_attributes(ncfile:Dataset, df) :
+    """No start time provided ? Or no frequency provided ? Guess them from first chunk and init"""
+    try:
+        start_time = start_date64(ncfile)
+    except:
+        start_time = df.index[0]
+        warning(f"No start time found in meta data. Infering it from first chunk : {start_time}")
+        ncfile.setncattr(STATION_START_DATA_ATTR, datetime.strftime(start_time, TIME_FORMAT_MIN))
+
+    try:
+        resolution_s = getTimeResolution(ncfile)
+    except:
+        freq = _freq(df)
+        ncfile.setncattr(GLOBAL_TIME_RESOLUTION_ATTR, timedelta_iso.isoformat(freq))
+
+def process_chunck(df, ncfile, properties, strict_resolution=False, check=False, custom_cdl=None):
+
+    if df is None or len(df) == 0 :
+        warning("Chunk is empty, skipping")
         return
+
+    # Init start time / resolution with first chunk in case of missing metadata
+    _infer_time_attributes(ncfile, df)
 
     # Time resolution, in seconds
     resolution_s = getTimeResolution(ncfile)
 
     # Drop duplicates
-    data = data[~data.index.duplicated(keep="last")]
+    df = df[~df.index.duplicated(keep="last")]
 
     # Reshape : regular time is faster to write in NetCDF (as slice)
-    data = data.asfreq("%dS" % resolution_s)
+    df = df.asfreq("%dS" % resolution_s)
 
     # Transform time to seconds since start date and time idx
-    chunk_dates : NDArray[datetime64] = data.index.values
+    chunk_dates : NDArray[datetime64] = df.index.values
 
     times_sec = datetime64_to_sec(ncfile, chunk_dates)
 
-    columns = list(data.columns)
+    columns = list(df.columns)
 
     # Create vars if not present yet
     missing_vars = list(col for col in columns if not col in ncfile.variables)
     if len(missing_vars) > 0:
         info("Adding missing vars : %s", missing_vars)
-        init_nc(ncfile, properties, missing_vars)
+        init_nc(ncfile, properties, missing_vars, custom_cdl=custom_cdl)
 
     # Ensure all timestamps fall into resolution
     exact_idx = (times_sec % resolution_s) == 0
@@ -268,10 +412,11 @@ def process_chunck(handler, infile, ncfile, args, properties):
     if nb_not_exact_times > 0:
 
         # Remove lines with wrong times
-        data = data[exact_idx]
+        df = df[exact_idx]
         times_sec = times_sec[exact_idx]
 
         warning("%d rows had timings not fitting the time resolution : skipping them" % nb_not_exact_times)
+
 
 
     # Seconds to time index, as per start date and resolution
@@ -281,7 +426,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
     chunk_end = max(chunk_dates)
     chunk_end_int = datetime64_to_sec(ncfile, chunk_end)
 
-    info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(data.index))
+    info("chunck range: %s to %s. samples:%d", time2str(chunk_start), time2str(chunk_end), len(df.index))
 
     # Error if chunk starts before start time
     if sum(time_idx < 0) > 0 :
@@ -298,7 +443,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
 
             if actual_resolution != resolution_s:
                 warning("Resolution of input chunk (%d sec) differs from resolution of output (%d sec)" % (actual_resolution, resolution_s))
-                if args.strict_resolution :
+                if strict_resolution :
                     warning("Strict resolution requested : skipping")
                     return
 
@@ -320,7 +465,7 @@ def process_chunck(handler, infile, ncfile, args, properties):
     timeVar[next_time_idx: end_time_idx] = new_times_sec
 
     # Store data values
-    check_and_assign(ncfile, data, time_idx, size_before, args)
+    check_and_assign(ncfile, df, time_idx, size_before, check)
 
     info("Chunk processed successfully")
 
@@ -353,16 +498,26 @@ def parser() :
     parser = argparse.ArgumentParser(description='Transforms In-Situ data into NetCDF files')
     parser.add_argument('out', metavar='<out.nc>', type=str, help='Output file')
     parser.add_argument('in_files', metavar='<file|dir>', nargs='+', help='Input files or folders')
-    parser.add_argument('--network', '-n', help='Network name', required=True, choices=listNetworks())
+    parser.add_argument('--network', '-n', help='Network name', required=False)
     parser.add_argument('--station-id', '-s', metavar='<SID>', help='Station ID', required=True)
-    parser.add_argument('--incremental', '-i', default=False, action='store_true',
-                        help="Incremental mode, skipping input files having a '.done' status files")
-    parser.add_argument('--strict-resolution', '-sr', default=False, action='store_true',
-                        help="Skip chunks having a different resulution")
+    parser.add_argument('--mapping', '-m', metavar='<mapping.json>', help='Use a generic parser with custom mapping. Tu be used in conjonction with --station-metadata and network-metadata')
+    parser.add_argument('--station-metadata', '-sm', metavar='<station-meta.csv>', help='Use custom station metadata (Station_* properties) instead of embedded ones.', default=None)
+    parser.add_argument('--network-metadata', '-nm', metavar='<network-meta.csv>',
+                        help='Use custom metadata for the Networks (Network_* properties), instead of mebedded ones', default=None)
+
+    parser.add_argument('--cdl', metavar='<schema.cdl>', help="Use a custom CDL (NetCDF schema)")
+    parser.add_argument(
+        '--incremental', '-i', default=False, action='store_true',
+        help="Incremental mode, skipping input files having a '.done' status files")
+    parser.add_argument(
+        '--strict-resolution', '-sr', default=False, action='store_true',
+        help="Skip chunks having a different resulution")
     parser.add_argument('--no-qc', default=False, action='store_true', help="Do not compute QC flags")
     parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")
-    parser.add_argument('--status-folder', '-f', metavar='<folder>', type=dir_path,
-                        help='Separate folder for .done/.err files')
+    parser.add_argument(
+        '--status-folder', '-f',
+        metavar='<folder>', type=dir_path,
+        help='Folder for status files in incremental mode', default=None)
     return parser
 
 def main():
@@ -370,10 +525,14 @@ def main():
     args = parser().parse_args()
 
     network = args.network
+
+    if network is None and args.mapping is None :
+        raise Exception("--network is mandatory if custom mapping / generic parser is not used")
+
     station_id  = args.station_id
 
     with LogContext(network=network, station_id=station_id):
-        process_network(network, station_id, args.out, args)
+        process_network(network, station_id, args)
 
 if __name__ == '__main__':
     main()

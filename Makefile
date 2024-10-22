@@ -1,9 +1,9 @@
-.PHONY: doc test package tst-upload
+.PHONY: doc test test-local package tst-upload 
 
 TSTENV=.tstenv
 
 clean:
-	rm -r dist
+	rm -rf dist
 
 package:
 	python setup.py sdist bdist_wheel --universal
@@ -12,12 +12,16 @@ tst-upload:
 	twine upload --repository-url https://test.pypi.org/legacy/ dist/libinsitu*
 
 upload:
-	twine upload -u oie-minesparistech dist/libinsitu*
+	twine upload dist/libinsitu*
 
-test:
+test: clean package
 	rm -rf $(TSTENV)
 	virtualenv $(TSTENV)
 	. $(TSTENV)/bin/activate
-	$(TSTENV)/bin/pip install dist/*.whl
+	$(TSTENV)/bin/pip install dist/*.whl --force-reinstall
 	$(TSTENV)/bin/pip install pytest
-	$(TSTENV)/bin/pytest libinsitu/test/*.py
+	$(TSTENV)/bin/python -m pytest
+
+test-local:
+	python -m pytest
+

@@ -1,10 +1,11 @@
 
 
+import pandas as pd
 from pvlib.iotools import parse_bsrn
-from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR, DATA_VARS
+
+from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
 from libinsitu.handlers.base_handler import InSituHandler, map_cols, ZERO_DEG_K
 from libinsitu.log import error
-import pandas as pd
 
 MAPPING = dict(
     ghi=GLOBAL_VAR,

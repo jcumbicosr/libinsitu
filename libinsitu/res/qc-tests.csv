@@ -1,0 +1,13 @@
+bit,name,condition,domain,components,source,level,group_level
+1,GHI_PPL_UL_TOANI_SZA,GHI ≤ 1.5 * TOANI * cos(THETA_Z)^1.2 + 100,SZA ≤ 90,GHI,Long and Dutton (2002),,
+2,GHI_ERL_UL_TOANI_SZA,GHI ≤ 1.2 * TOANI * cos(THETA_Z)^1.2 + 50,SZA ≤ 90,GHI,Long and Dutton (2002),10,
+3,DIF_PPL_UL_TOANI_SZA,DIF ≤ 0.95 * TOANI * cos(THETA_Z)^1.2 + 50,SZA ≤ 90,DIF,Long and Dutton (2002),,
+4,DIF_ERL_UL_TOANI_SZA,DIF ≤ 0.75 * TOANI * cos(THETA_Z)^1.2 + 30,SZA ≤ 90,DIF,Long and Dutton (2002),10,
+5,DNI_PPL_UL_TOANI,DNI ≤ TOANI,SZA ≤ 90,DNI,Long and Dutton (2002),,
+6,DNI_ERL_UL_TOANI_SZA,DNI ≤ 0.95 * TOANI * cos(THETA_Z)^0.2 + 10,SZA ≤ 90,DNI,Long and Dutton (2002),10,
+7,K_UL_SZA,(K < 1.05) & (SZA < 75) | (K < 1.1)   ,(GHI > 50) & (SZA ≤ 90),"GHI,DIF",Long and Dutton (2002),21,24
+8,K_UL_KT,(K < 0.96) | (Kt < 0.6),(GHI > 50) & (SZA < 90),"GHI,DIF",Geuder et al. (2015),21,24
+9,Kn_UL_KT,Kn < Kt,(GHI > 50) & (SZA < 90),"GHI,DNI",Geuder et al. (2015),22,24
+10,Kn_LL_KT,(Kn > 0.0171) |  (Kt < 0.533),(GHI > 50) & (SZA < 90),"GHI,DNI",Forstinger et al. (2023),22,24
+11,ClosureRatio_tol_SZA,(SZA ≤ 75) & (abs(GHI/GHI_est - 1) ≤ 0.08) | (SZA > 75) & (abs(GHI/GHI_est - 1) ≤ 0.15),(GHI > 50) & (SZA < 90),"GHI,DNI,DIF",Long and Dutton (2002),30,
+12,ClosureDelta_tol_TOAHI,(TOA > 250) & (abs(GHI - GHI_est) ≤ (0.03 * TOA)) | (TOA ≤ 250) & (abs(GHI - GHI_est) ≤ 7.5),(GHI > 50) & (SZA < 90),"GHI,DNI,DIF",Maxwell et al. (1993,30,

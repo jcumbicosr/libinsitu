@@ -10,11 +10,12 @@ from rich.console import Console
 from rich.table import Table
 from datetime import datetime
 
-from libinsitu import qc_masks
+from libinsitu import qc_masks, find_qc_vars
 from libinsitu.log import debug
 from libinsitu.common import netcdf_to_dataframe, CHUNK_SIZE, df_to_csv, QC_FLAGS_VAR
 
 QC_NONE = "none"
+QC_VALUE = "value"
 QC_MASK = "masks"
 QC_NAMES = "names"
 QC_EXPAND = "expand"
@@ -108,12 +109,25 @@ def parser() :
     parser.add_argument('--type', '-t', choices=["csv", "text"], help='Output type', default="text")
     parser.add_argument('--output', '-o', help='Output file. stdout if no set (default)', default=None)
     parser.add_argument('--skip-na', '-s', action='store_true', help="Skip lines with only NA values", default=False)
-    parser.add_argument('--skip-qc', '-sq', action='store_true', help="Skip lines bad QC", default=False)
-    parser.add_argument('--filter', '-f', metavar="'<time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'", help="Time filter")
-    parser.add_argument('--qc-format', '-qf', metavar="Format for QC flags (none, mask, names or expand)", choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND], help="Format for QC flags", default=QC_NONE)
+    parser.add_argument(
+        '--skip-qc', '-sq', metavar="[True | False | flag1,flag2,flag3 | !flag1]",
+        help="Skip lines with bad QC. Can be True (skip any QC flag), False (no filter, default), "
+             "or comma separated list of QC flag names (skip only those failing test), "
+             "possibly prefixed with '!' (consider all flags but those ones)",
+             default=False)
+    parser.add_argument(
+        '--filter', '-f',
+        metavar="<time-filter>",
+        help="Time filter : <time> or <from_time>~<to-time>, with any sub part of 'YYYY-mm-ddTHH:MM:SS'")
+    parser.add_argument(
+        '--qc-format', '-qf',
+        metavar="<format>",
+        choices=[QC_NONE, QC_MASK, QC_NAMES, QC_EXPAND],
+        help="Format for QC flags [none (=hidden), value(default), mask, names or expand]",
+        default=QC_VALUE)
     parser.add_argument('--stats', '-z', action="store_true", default=False, help="Performs statistics. Don't print data")
     parser.add_argument('--header', '-hd', action="store_true", default=False, help="Dump global and var meta data as header")
-    parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Useless together with --header to print meta data only")
+    parser.add_argument('--no-data', '-n', action="store_true", default=False, help="Don't print data. Use with --header to print meta data only")
     parser.add_argument('--cols', '-c', metavar="<col1>,<col2> ..", help="Selection of columns. All by default")
     parser.add_argument('--user', '-u', help='User login (or TDS_USER env var), for URL',
                         default=os.environ.get("TDS_USER", None))
@@ -145,16 +159,29 @@ def main() :
         else :
             args.qc_format = QC_NAMES
 
+    # Parse skip_qc
+    skip_qc = args.skip_qc
+    if skip_qc != False :
+        if skip_qc.lower() in ["1", "true"] :
+            skip_qc = True
+        else:
+            skip_qc = args.skip_qc.split(",")
+
+
+    expand_qc = (args.qc_format == QC_EXPAND) or args.stats
+
     chunks = netcdf_to_dataframe(
         args.filename,
         fromTime, toTime,
         user=args.user, password=args.password,
         drop_duplicates=True,
         skip_na=args.skip_na,
-        skip_qc=args.skip_qc,
+        skip_qc=skip_qc,
         vars=cols,
         chunked=True,
-        steps=args.steps, chunk_size=args.chunk_size)
+        steps=args.steps,
+        expand_qc=expand_qc,
+        chunk_size=args.chunk_size)
 
     if args.output is not None:
         out = open(args.output, 'w')
@@ -201,9 +228,6 @@ def show_stats(chunks, out=sys.stdout) :
 
     stats = defaultdict(lambda : Stat())
     for chunk in chunks :
-
-        chunk = format_QC(chunk, QC_EXPAND)
-
         for col in chunk.columns :
             series = chunk[col]
             stats[col].accumulate(series)
@@ -249,51 +273,86 @@ def show_stats(chunks, out=sys.stdout) :
 
 def format_QC(df, qc_format) :
 
-    if not QC_FLAGS_VAR in df.columns :
+    if qc_format == QC_VALUE:
+        # Do noting
         return df
 
-    qc_col = df[QC_FLAGS_VAR]
 
-    masks_dict = qc_masks(df)
+
+    qc_varname, qc_run_varname = find_qc_vars(df)
+
+    if qc_varname is None or qc_format == QC_EXPAND :
+        return df
+
+    qc_vals = df[qc_varname]
+
+    qc_run_vals = None
+    if qc_run_varname is not None :
+        qc_run_vals = df[qc_run_varname]
+
+    masks_dict = qc_masks(df, qc_varname)
 
     if qc_format == QC_MASK :
         res = Series(data="", index = df.index, dtype=str)
         col_names = []
-        for idx, (flag, mask) in enumerate(masks_dict.items()) :
-            letter = chr(97+idx)
-            col_names.append("%s:%s" % (flag, letter))
-            res += np.where(qc_col.values & mask != 0, letter, ".")
 
-        df[QC_FLAGS_VAR] = res
+        # Loop on flags
+        for idx, (flag, mask) in enumerate(masks_dict.items()) :
+
+            # One letter for each flag
+            flag_letter = chr(97+idx)
+            col_names.append("%s:%s" % (flag, flag_letter))
+
+            # Single letter
+            letters = np.where(qc_vals.values & mask != 0, flag_letter, ".")
+
+            # QC run flag avaialable : output '?' in case it did not run
+            if qc_run_vals is not None :
+                letters = np.where(qc_run_vals & mask == 0, "?", letters)
+
+            # Append it to the column
+            res += letters
+
+
+
+        df[qc_varname] = res
 
         # Rename column to provide details
-        col_name = "%s[%s]" % (QC_FLAGS_VAR, ";".join(col_names))
-        df = df.rename(columns={QC_FLAGS_VAR: col_name})
+        col_name = "%s[%s]" % (qc_varname, ";".join(col_names))
+        df = df.rename(columns={qc_varname: col_name})
+
+        # Delte QC run column
+        if qc_run_varname is not None:
+            del df[qc_run_varname]
+
 
     elif qc_format == QC_EXPAND :
 
-        for flag, mask in masks_dict.items():
-            colname = "%s.%s" % (QC_FLAGS_VAR, flag)
-            df[colname] = np.where(qc_col & mask == 0, 0, 1)
-        del df[QC_FLAGS_VAR]
+        # Done before via the "expand" param of netcdf_to_dataframe
+        return
 
     elif qc_format == QC_NAMES :
         res = Series(data="", index=df.index, dtype=np.object)
         for flag, mask in masks_dict.items():
             res += np.where(
-                qc_col & mask == 0,
+                qc_vals & mask == 0,
                 "",
                 np.where(
                     res == "",
                     flag ,
                     ";" + flag))
-        df[QC_FLAGS_VAR] = res
+        df[qc_varname] = res
 
     elif qc_format == QC_NONE :
-        del df[QC_FLAGS_VAR]
+        del df[qc_varname]
+
+        if qc_run_varname is not None:
+            del df[qc_run_varname]
 
     else:
         raise Exception("Unkown QC format : %s" % qc_format)
+
+
 
     return df
 

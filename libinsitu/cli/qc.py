@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from dateutil.relativedelta import relativedelta
 from dotenv import load_dotenv
 
-from libinsitu import openNetCDF, getNetworkId, readShortname, info, older_than, update_qc_flags
+from libinsitu import openNetCDF, getNetworkId, readShortname, info, older_than, update_qc_flags, GraphId
 from libinsitu.common import netcdf_to_dataframe
 from libinsitu.log import set_log_context
 from libinsitu.qc.qc_utils import visual_qc
@@ -22,6 +22,8 @@ def parser() :
     parser.add_argument('--update', '-u', action="store_true", help='Update QC flags on input file', default=False)
     parser.add_argument('--from-date', '-f', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='Start date on analysis (last 5 years of data by default for graph output)', default=None)
     parser.add_argument('--to-date', '-t', metavar='<yyyy-mm-dd>', type=datetime.fromisoformat, help='End date of analysis', default=None)
+    parser.add_argument('--graph-id', '-g', metavar='graph_id', choices=list(GraphId.__members__.keys()),
+                        help='Graph Id to output a single graph. None by default = all graphs in a a layout', default=None)
     parser.add_argument('--with-mc-clear', '-wmc', action="store_true", help='Enable display of mcClear', default=False)
     parser.add_argument('--with-horizons', '-wh', action="store_true", help='Enable display of horizons', default=False)
     return parser
@@ -71,7 +73,8 @@ def main() :
         visual_qc(
             df,
             with_horizons=args.with_horizons,
-            with_mc_clear=args.with_mc_clear)
+            with_mc_clear=args.with_mc_clear,
+            graph_id=args.graph_id)
 
         # Save to output file
         plt.savefig(args.output)

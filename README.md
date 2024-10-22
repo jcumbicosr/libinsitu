@@ -9,6 +9,10 @@ This code is available as a PIP package :
 
     pip install libinsitu
 
+# Website 
+
+Libinsitu has a dedicated website : [libinsitu.org](http://libinsitu.org)
+
 # Documentation
 
 The full documentation of Python & CLI API is available here :

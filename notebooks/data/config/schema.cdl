@@ -1,0 +1,141 @@
+netcdf base {
+
+    dimensions:
+        time = UNLIMITED ; # Main dimension
+
+    variables:
+
+        # --------------------------------------
+        # Static scalar values
+        # --------------------------------------
+
+        # Station name, filled from metadata
+        string station_name;
+            *:standard_name = "platform_name" ;
+            *:long_name = "station_name" ;
+            *:cf_role = "timeseries_id" ;
+            *:_value = {!Station_ID};
+
+        # Latitude, static scalar value filled from metadata
+        float latitude;
+            *:long_name = "station latitude" ;
+            *:standard_name = "latitude" ;
+            *:units = "degrees_north" ;
+            *:_value = {!Station_Latitude};
+            *:_CoordinateAxisType = "Lat" ;
+            *:axis = "Y" ;
+
+        # Longitude, static scalar value filled from metadata
+        float longitude;
+            *:long_name = "station longitude" ;
+            *:standard_name = "longitude" ;
+            *:units = "degrees_east" ;
+            *:_CoordinateAxisType = "Lon" ;
+            *:_value = {!Station_Longitude};
+            *:axis = "X" ;
+
+        # Elevation, static scalar value filled from metadata
+        float elevation;
+            *:long_name = "Elevation above mean seal level" ;
+            *:standard_name = "height_above_mean_sea_level" ;
+            *:_CoordinateAxisType = "Z";
+            *:_value = {!Station_Elevation};
+            *:units = "m";
+            *:axis = "Z";
+
+        # Projection : static values.for  WGS 84/EPSG:4326
+        # Required by some GIS software
+        double crs;
+            *:grid_mapping_name = "latitude_longitude" ;
+            *:longitude_of_prime_meridian = 0.0 ;
+            *:semi_major_axis = 6378137.0 ;
+            *:inverse_flattening = 298.257223563 ;
+            *:epsg_code = "EPSG:4326";
+            *:_FillValue = -999.0;
+
+        # --------------------------------------
+        # Time series variables
+        # --------------------------------------
+
+        # Time variable, in seconds since epoch
+        uint time(time) ;
+            *:long_name = "Time of measurement" ;
+            *:standard_name = "time" ;
+            *:units = "seconds since 1970-01-01 00:00:00";
+            *:time_origin = "1970-01-01 00:00:00" ;
+            *:time_zone= "UTC"
+            *:abbreviation = "Date/Time" ;
+            *:_CoordinateAxisType = "Time" ;
+            *:axis = "T" ;
+            *:calendar = "gregorian" ;
+
+        # Temperatures
+        float temperature(time) ;
+            *:long_name = "Air temperature at 2 m height" ;
+            *:standard_name = "air_temperature" ;
+            *:coordinates = "time latitude longitude elevation "
+            *:abbreviation = "temp" ;
+            *:units = "K" ;
+            *:grid_mapping = "crs" ;
+            *:least_significant_digit=1;
+            *:_FillValue = -999.0;
+
+    # -------------------
+    # Global attributes
+    # -------------------
+        # Main info
+        :id = "CARNASRDA-{Station_ID}";
+        :title = "Timeseries of CARNASRDA. Station : {Station_Name}";
+        :summary = "Test dataset for encoding data of carnasrda" ;
+        :keywords = "meteorology, station, time, Earth Science > Atmosphere > Atmospheric Radiation > Incoming Solar Radiation, Earth Science > Atmosphere > Atmospheric Temperature > Surface Temperature > Air Temperature, Earth Science > Atmosphere > Atmospheric Pressure > Sea Level Pressure"
+        :keywords_vocabulary = "GCMD Science Keywords" ;
+        :keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
+        :record = "Basic measurements (air temperature)" ;
+        :featureType = "timeSeries" ;
+        :cdm_data_type = "timeSeries";
+        :product_version = "libinsitu {Version}"
+
+        # Conventions
+        :Conventions = "CF-1.10 ACDD-1.3";
+
+        # Publisher [ACDD1.3]
+        :publisher_name = "Your name";
+        :publisher_email = "publisher@email";
+        :publisher_url = "https://your-website/" ;
+        :publisher_institution = "Name of institution"
+
+        # Creator info [ACDD1.3]
+        :creator_name =  "carnasrda" ;
+        :institution =  "carnasrda" ;
+        :metadata_link =  "{Station_Url}";
+        :creator_email = "carnasrdaa@gmail.com";
+        :creator_url = "https://carnasrda.com" ;
+
+        # Station info & coordinates [ACDD1.3]
+        :platform = "{Station_Name}" ; # Should be a long / full name
+        :geospatial_lat_min = {Station_Latitude} ;
+        :geospatial_lon_min = {Station_Longitude} ;
+        :geospatial_lat_max = {Station_Latitude} ;
+        :geospatial_lon_max = {Station_Longitude} ;
+        :geospatial_vertical_min = {Station_Elevation};
+        :geospatial_vertical_max = {Station_Elevation};
+        :geospatial_bounds = "POINT({Station_Latitude} {Station_Longitude})";
+        :geospatial_bounds_crs = "EPSG:4326";
+
+        # Time information
+        :time_coverage_start = "{!Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
+        :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
+        :time_coverage_resolution = "PT{!Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
+        :date_created = "{CreationTime}";
+        :date_modified = "{UpdateTime}";
+
+        #
+        # -- Additional metadata (custom to insitu)
+        #
+
+        # IDs
+        :network_id = "CARNASRDA"; # Short ID
+        :station_id = "{Station_ID}"; # Short ID
+
+
+}

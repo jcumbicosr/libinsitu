@@ -1,5 +1,31 @@
-1.3.* :
+*:
+* Added support for *.tsv files. Default to TSV for unknown extension
+* Added the possiblity to specific input file pattern in mapping.json/yaml
+* ins-cat : By default output values of flags
+* Added support for NetCDF files / TDS Catalog in input
+* Added better inference & filling of time resolution and start time from first chunk when not provided in attributes
+
+1.6:
+* Improved generic encoding (yaml config file, extra options)
+* Scalar variables (such as latitude,longitude,elevation) 
+  are now explicitely filled from metadata with the custom '_value' attribute in CDL file.
+  This enables to define custom CDL with varying lat,lon from CSV files.
+* Updated QC flags. 
+  They are now controlled by an embedded declarative file (res/qc-tests.csv) 
+
+1.5: 
+* Added generic encoding from Excel and CSV in CLI commands
+
+1.4 :
+* Added function dataframe_to_netcdf() to encode NetCDF from an existing dataframe
+* Updated the Convention to include QC flags in it
+* Added filter on QC in netcdf_to_dataframe() and cat.py CLI command
+
+1.3.2 :
 * Fixed IEA_PVPS after updates of convention : Time -> time
+* Added end to end tests for BSRN data
+* Added end to end tests for QC
+* Added virtualenv to tests, to ensure proper requirements.txt
 
 1.3.1 :
 * Removed support for plotly for now : dependencies were broken

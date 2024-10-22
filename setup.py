@@ -1,16 +1,19 @@
 import os
-from setuptools import setup, find_packages
-import subprocess
-from datetime import datetime
-import pkg_resources
 import pkgutil
+import subprocess
+
+import pkg_resources
+from setuptools import setup, find_packages
+
+curr_path = os.path.dirname(__file__)
+CLI_PATH = os.path.join(curr_path, "libinsitu", "cli")
 
 # Utility function to read the README file.
 # Used for the long_description.  It's nice, because now 1) we have a top level
 # README file and 2) it's easier to type in the README file than to put a raw
 # string in below ...
 def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname))\
+    return open(os.path.join(curr_path, fname))\
         .read().strip()
 
 def run(args) :
@@ -21,7 +24,16 @@ def run(args) :
 branches = run(["git", "branch"])
 curr_branch = next(line for line in branches if "*" in line)
 curr_branch = curr_branch.replace(" ", "").replace("*", "")
+
+
 name = "libinsitu"
+
+if curr_branch not in  ["master", "main"] :
+
+    #if curr_branch != "dev" :
+    #    raise Exception("Only main, master and dev branch supported")
+    name += "_dev"
+
 
 extra_urls= []
 
@@ -37,23 +49,24 @@ with open("requirements.txt", "r") as f :
                 yield line
 
     requirements = [
-            str(requirement).replace("==", ">=")
+            #str(requirement).replace("==", ">=")
+            str(requirement)
             for requirement
             in pkg_resources.parse_requirements(extract_extra_index(f))]
 
 
 
 # List all cli modules
-import libinsitu.cli
 entry_points = []
-for importer, modname, ispkg in pkgutil.iter_modules(libinsitu.cli.__path__):
+for importer, modname, ispkg in pkgutil.iter_modules([CLI_PATH]):
     entry_points.append('ins-%s = libinsitu.cli.%s:main' % (modname, modname))
-print("entry points :", entry_points)
+print(f" Cli path {CLI_PATH} entry points : {entry_points}")
 
 packages = find_packages()
 
 print("Packages : %s"%  str(packages))
 print("Extra URLs : %s" % extra_urls)
+print("Requirements", requirements)
 
 setup(
     name = name,
@@ -64,7 +77,7 @@ setup(
                    "It also provides tools to request and manipulate those NetCDF files"),
     license = "BSD",
     keywords = "in-situ, solar, pv, irradiation, NetCDF, FAIR, meta-data",
-    url = "https://git.sophia.mines-paristech.fr/oie/libinsitu",
+    url = "http://libinsitu.org/",
     packages=packages,
     long_description=read('README.md'),
     long_description_content_type='text/markdown',

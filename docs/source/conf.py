@@ -11,7 +11,7 @@ import sys, os
 project = 'libinsitu'
 copyright = '2022, Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
 author = 'Centre O.I.E - Raphaël Jolivet, Yves Marie Saint-Drenan'
-release = '1.2'
+release = '1.6'
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '_deps'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -25,6 +25,8 @@ extensions = [
     'myst_parser',
     'sphinxarg.ext',
     'gitrep2']
+
+myst_enable_extensions = ['attrs_block', 'attrs_inline']
 
 # These folders are copied to the documentation's HTML output
 html_static_path = ['_static']

@@ -1,0 +1,158 @@
+netcdf base {
+
+dimensions:
+	time = UNLIMITED ; # Main dimension
+
+variables:
+
+	double crs;
+		*:grid_mapping_name = "latitude_longitude" ;
+		*:longitude_of_prime_meridian = 0.0 ;
+		*:semi_major_axis = 6378137.0 ;
+		*:inverse_flattening = 298.257223563 ;
+		*:epsg_code = "EPSG:4326";
+		*:_FillValue = -999.0;
+
+	string station_name;
+	    *:standard_name = "platform_name" ;
+		*:long_name = "station_name" ;
+		*:cf_role = "timeseries_id" ;
+		*:_value = {Station_ID};
+
+    float latitude(time);
+		*:long_name = "station latitude" ;
+		*:standard_name = "latitude" ;
+		*:units = "degrees_north" ;
+		*:_CoordinateAxisType = "Lat" ;
+		*:axis = "Y" ;
+
+	float longitude(time);
+		*:long_name = "station longitude" ;
+		*:standard_name = "longitude" ;
+		*:units = "degrees_east" ;
+		*:_CoordinateAxisType = "Lon" ;
+		*:axis = "X" ;
+
+	float elevation(time);
+		*:long_name = "Elevation above mean seal level" ;
+		*:standard_name = "height_above_mean_sea_level" ;
+		*:_CoordinateAxisType = "Z" ;
+		*:units = "m" ;
+		*:axis = "Z" ;
+
+	uint time(time) ;
+		*:long_name = "Time of measurement" ;
+		*:standard_name = "time" ;
+		*:units = "seconds since 1970-01-01 00:00:00";
+		*:time_origin = "1970-01-01 00:00:00" ;
+		*:time_zone= "UTC"
+		*:abbreviation = "Date/Time" ;
+		*:_CoordinateAxisType = "Time" ;
+		*:axis = "T" ;
+		*:calendar = "gregorian" ;
+
+	float temperature(time) ;
+		*:long_name = "Air temperature at 2 m height" ;
+		*:standard_name = "air_temperature" ;
+		*:coordinates = "time latitude longitude elevation "
+		*:abbreviation = "T2" ;
+		*:ancillary_variables = "flag"
+		*:units = "K" ;
+		*:valid_min_=123.0 ;
+		*:valid_max_=372.9 ;
+		*:grid_mapping = "crs" ;
+		*:least_significant_digit=1;
+		*:_FillValue = -999.0;
+
+	uint flag(time) ;
+	    *:long_name = "QC flag status";
+	    *:comment = "Flag=1 means QC test failed";
+	    *:standard_name = "temperature status_flag";
+	    *:flag_values = 0, 1 ;
+        *:flag_meanings = "valid_data invalid_data";
+	    *:coordinates = "time latitude longitude elevation"
+	    *:_FillValue = 0;
+
+# Global attributes
+
+    # Main info
+    :id = "{Network_ID}-{Station_ID}";
+    :title = "Timeseries of {Network_LongName} ({Network_ID}). Station : {Station_Name}" ;
+    :keywords_vocabulary = "GCMD Science Keywords" ;
+    :keywords_vocabulary_url = "https://gcmd.earthdata.nasa.gov/static/kms/" ;
+    :record = "Basic measurements (global irradiance, direct irradiance, diffuse irradiance, air temperature, relative humidity, pressure)" ;
+    :featureType = "timeSeries" ;
+    :cdm_data_type = "timeSeries";
+    :product_version = "libinsitu {Version}"
+
+    # Conventions
+    :Conventions = "CF-1.10 ACDD-1.3";
+
+    # Publisher [ACDD1.3]
+    :publisher_name = "Lionel MENARD, Raphael JOLIVET, Yves-Marie SAINT-DRENAN, Philippe BLANC";
+    :publisher_email = "lionel.menard@mines-paristech.fr, raphael.jolivet@mines-paristech.fr, saint-drenan@mines-paristech.fr, philippe.blanc@mines-paristech.fr";
+    :publisher_url = "https://www.oie.minesparis.psl.eu/" ;
+    :publisher_institution = "Mines Paristech - PSL"
+
+    # Creator info [ACDD1.3]
+    :creator_name =  "{Station_ContactName}" ;
+    :institution =  "{Station_Institute}" ;
+    :metadata_link =  "{Station_Url}";
+    :creator_email = "{Network_ContactPersonMail}";
+    :creator_url = "{Network_DescriptionURL}" ;
+    :references = "Source data : {Network_References}; Processing : Philippe Blanc, Raphaël Jolivet, Lionel Ménard, Yves-Marie Saint-Drenan. Data sharing of in-situ measurements following GEO and FAIR principles in the solar energy sector: An end-to-end implementation example in the solar energy domain ranging from data encoding up to search and discovery. 2022. hal-03811628" ;
+    :license = "{Network_LicenseInfoURL}" ;
+    :comment = "{Station_Comment}" ;
+
+    # Station info & coordinates [ACDD1.3]
+    :project = "{Network_LongName}"; # Network long name
+    :platform = "{Station_Name}" ; # Should be a long / full name
+    :geospatial_lat_min = {Station_Latitude} ;
+    :geospatial_lon_min = {Station_Longitude} ;
+    :geospatial_lat_max = {Station_Latitude} ;
+    :geospatial_lon_max = {Station_Longitude} ;
+    :geospatial_vertical_min = {Station_Elevation};
+    :geospatial_vertical_max = {Station_Elevation};
+    :geospatial_bounds = "POINT({Station_Latitude} {Station_Longitude})";
+    :geospatial_bounds_crs = "EPSG:4326";
+
+    # Time information
+    :time_coverage_start = "{Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
+    :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
+    :time_coverage_resolution = "P{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
+    :local_time_zone = "{Station_Timezone}" ;
+    :date_created = "{CreationTime}";
+    :date_modified = "{UpdateTime}";
+
+    #
+    # -- Additional metadata (custom to insitu)
+    #
+
+    # IDs
+    :network_id = "{Network_ID}"; # Short ID
+    :station_id = "{Station_ID}"; # Short ID
+    :station_uid = "{Station_UID}" ; # Numeric ID, if any
+    :station_wmo_id =  "{Station_WMOID}"; # WMO ID, if any
+
+    # Surface
+    :surface_type = "{Station_SurfaceType}" ; # rock, gress, concrete, cultivated, ...
+    :topography_type = "{Station_TopographyType}" ; # flat, hilly, moutain valley, mountain top, ...
+    :rural_urban = "{Station_RuralUrban}" ; # "rural" or "urban"
+
+    # Location of station
+    :network_region = "{Network_Region}";
+    :station_address = "{Station_Address}" ;
+    :station_city = "{Station_City}" ;
+    :station_country = "{Station_Country}" ;
+
+    # Commission / decommission dates
+    :station_commision_date  =  "{Station_CommissionDate}";
+    :station_decommision_date =  "{Station_DecommissionDate}";
+
+    # Misc
+    :climate = "{Station_Climate}" ; # KoeppenGeiger climate at location of the station
+    :operation_status =  "{Station_OperationStatus}";
+
+
+
+}

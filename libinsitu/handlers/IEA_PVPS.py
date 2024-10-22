@@ -1,7 +1,8 @@
+import pandas as pd
+
 from libinsitu import NA_VALUES
 from libinsitu.handlers.base_handler import InSituHandler
-import pandas as pd
-from libinsitu.log import info, debug
+from libinsitu.log import debug
 
 DATE_COLS = dict(
     year='Year',

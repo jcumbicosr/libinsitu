@@ -4,16 +4,10 @@ Created on Thu Sep  8 12:59:01 2022
 
 @author: y-m.saint-drenan
 """
-import os
 import pandas as pd
-import copy
-import numpy as np
-from datetime import datetime
 
-from dateutil.relativedelta import relativedelta
-
+from libinsitu.log import debug
 from .base_handler import InSituHandler
-from libinsitu.log import info, debug
 from ..common import GLOBAL_VAR, DIRECT_VAR, parseTimezone
 
 IRRADIANCE_COL="Irradiance(W/m2)"

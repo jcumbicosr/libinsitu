@@ -9,12 +9,14 @@ variables:
 	    *:standard_name = "platform_name" ;
 		*:long_name = "station_name" ;
 		*:cf_role = "timeseries_id" ;
+		*:_value = {Station_ID};
 
     float latitude;
 		*:long_name = "station latitude" ;
 		*:standard_name = "latitude" ;
 		*:units = "degrees_north" ;
 		*:_CoordinateAxisType = "Lat" ;
+		*:_value = {Station_Latitude};
 		*:axis = "Y" ;
 
 	float longitude;
@@ -22,12 +24,14 @@ variables:
 		*:standard_name = "longitude" ;
 		*:units = "degrees_east" ;
 		*:_CoordinateAxisType = "Lon" ;
+		*:_value = {Station_Longitude};
 		*:axis = "X" ;
 
 	float elevation;
 		*:long_name = "Elevation above mean seal level" ;
 		*:standard_name = "height_above_mean_sea_level" ;
 		*:_CoordinateAxisType = "Z" ;
+		*:_value = {Station_Elevation};
 		*:units = "m" ;
 		*:axis = "Z" ;
 
@@ -150,13 +154,46 @@ variables:
 		*:least_significant_digit=0;
 		*:_FillValue = -999.0;
 
+    # flag_masks and flag_meanings are populated automatically with the content of qc-flags.csv
 	uint QC(time) ;
 	    *:long_name = "QC flag status";
 	    *:comment = "Flag=1 means QC test failed";
-	    *:coordinates = "time latitude longitude elevation "
-	    *:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
-	    *:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
-        *:_FillValue = 0;
+	    *:standard_name = "quality_flag";
+	    *:coordinates = "time latitude longitude elevation"
+
+    # flag_masks and flag_meanings are populated automatically with the content of qc-flags.csv
+    uint QC_run(time) ;
+	    *:long_name = "QC flag run";
+	    *:standard_name = "quality_flag_processed";
+	    *:comment = "Flag=1 means QC test has run. 0 means it was outside of flag domain";
+	    *:coordinates = "time latitude longitude elevation"
+
+    int QC_level_GHI(time) ;
+	    *:long_name = "QC level for GHI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation";
+        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
+        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
+        *:ancillary_variables = "GHI";
+        *:_FillValue = -1;
+
+    int QC_level_DHI(time) ;
+	    *:long_name = "QC level for DHI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation"
+        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
+        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
+        *:ancillary_variables = "DHI";
+        *:_FillValue = -1;
+
+    int QC_level_BNI(time) ;
+	    *:long_name = "QC level for BNI";
+	    *:standard_name = "aggregate_quality_flag";
+        *:coordinates = "time latitude longitude elevation";
+        *:flag_values = -5, -1, 0, 10, 15, 21, 22, 24, 30
+        *:flag_meanings = "night missing_data failed_all passed_1c_test outside_2c_domain passed_2c_test_dif passed_2c_test_dni passed_2c_tests_all passed_3c_tests"
+        *:ancillary_variables = "BNI";
+        *:_FillValue = -1;
 
 # Global attributes
 
@@ -204,9 +241,9 @@ variables:
     :geospatial_bounds_crs = "EPSG:4326";
 
     # Time information
-    :time_coverage_start = "{Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
-    :time_coverage_end = "{Station_EndDate}T00:00:00";  # Last data [Dataset Discovery v1.0]
-    :time_coverage_resolution = "P{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
+    :time_coverage_start = "{!Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
+    :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
+    :time_coverage_resolution = "P{!Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
     :local_time_zone = "{Station_Timezone}" ;
     :date_created = "{CreationTime}";
     :date_modified = "{UpdateTime}";
@@ -228,9 +265,9 @@ variables:
 
     # Location of station
     :network_region = "{Network_Region}";
-    :station_address =  "{Station_Address}" ;
-    :station_city =  "{Station_City}" ;
-    :station_country =  "{Station_Country}" ;
+    :station_address = "{Station_Address}" ;
+    :station_city = "{Station_City}" ;
+    :station_country = "{Station_Country}" ;
 
     # Commission / decommission dates
     :station_commision_date  =  "{Station_CommissionDate}";

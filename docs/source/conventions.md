@@ -80,7 +80,7 @@ The timezone should be in UTC. The specific local time zone can optionally be sp
 Here is an example of a CDL of a Time variable :
 
 ```
-int Time(time) ;
+int time(time) ;
     Time:long_name = "Time of measurement" ;
     Time:standard_name = "time" ;
     Time:units = "seconds since 1970-01-01 00:00:00";
@@ -271,6 +271,30 @@ float P(time) ;
     P:_FillValue = -999.0;
 
 ```
+
+{#quality-flags}
+## Quality flags 
+
+Optionally, we propose to include quality check (QC) flags directly in the NetCDF file, as bitmap variable. 
+
+We follow the recommendations of [CF convention on flags](https://cfconventions.org/Data/cf-conventions/cf-conventions-1.10/cf-conventions.html#flags) for encoding and meta data.
+We use *unsigned int* variable named **QC** with each bit assigned to a given flag.
+
+Here is the corresponding CDL
+
+```
+uint QC(time) ;
+    QC:long_name = "QC flag status";
+    QC:comment = "Flag=1 means QC test failed";
+    QC:coordinates = "time latitude longitude elevation "
+    QC:flag_masks = 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024;
+    QC:flag_meanings = "T1C_ppl_GHI T1C_erl_GHI T1C_ppl_DIF T1C_erl_DIF T1C_ppl_DNI T1C_erl_DNI T2C_bsrn_kt T2C_seri_kn_kt T2C_seri_k_kt T3C_bsrn_3cmp tracker_off";
+    QC:_FillValue = 0;
+```
+
+The list of flags si up to the producer of data and depends on the usage.
+
+The list of flags currently produced by *libinsitu* are detailed [in a dedicated section](qc.md#qc-flags)
 
 
 ## Global attributes 
