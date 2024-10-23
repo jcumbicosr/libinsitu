@@ -1,7 +1,13 @@
-*:
-* Added support for *.tsv files. Default to TSV for unknown extension
+1.6.2 :
+* Added support for *.tsv files. Default to TSV for unknown extensions
 * ins-cat : By default output values of flags
 * Fixed Python Handler for SOLRAD 
+* Fixed E2E test
+* Relaxed dependencies (with ~=) for better support of Python3.9 to Python 3.11 : 
+  Python3.12 not supported yet due to usage of Pandas 1.X
+
+1.6.1:
+* Fix dependencies, preventing numpy2
 
 1.6:
 * Improved generic encoding (yaml config file, extra options)
