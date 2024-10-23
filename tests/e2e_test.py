@@ -16,6 +16,7 @@ from libinsitu import dataframe_to_netcdf, netcdf_to_dataframe, ELEVATION_VAR, L
     STATION_NAME_VAR, write_flags
 from libinsitu.cli import transform, cat, qc
 
+pd.set_option('display.max_columns', 50)
 
 CURR_DIR = path.dirname(__file__)
 print("Current folder : %s" % CURR_DIR)
@@ -95,6 +96,7 @@ def check_output(filter=None) :
         "-s": None,
         "-t": "csv",
         "-o": outcsv,
+        "-qf": "none", # Hide Qc values
     }
 
     if filter :
@@ -107,7 +109,12 @@ def check_output(filter=None) :
     expected_df = read_csv(expected_csv, parse_dates=["time"])
     actual_df = read_csv(outcsv, parse_dates=["time"])
 
-    assert_frame_equal(expected_df, actual_df)
+    try:
+        assert_frame_equal(expected_df, actual_df)
+    except Exception as e:
+        print("Expected", expected_df)
+        print("Actuel", actual_df)
+        raise e
 
 def generic_round_trip_test(network, station, filter=None):
     """Round trip test using generic CSV with extra options """
