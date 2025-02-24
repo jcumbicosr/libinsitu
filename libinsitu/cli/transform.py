@@ -351,8 +351,12 @@ def dataframe_to_netcdf(
 
 
 def _freq(df) :
+
     """Guess the frequerncy of a Timeseries and returns timedelta from it"""
     freq_str = df.index.inferred_freq
+
+    if freq_str is None:
+        raise Exception("Cannnot guess time resolution empty timeseries")
 
     # Overcome bug https://github.com/pandas-dev/pandas/issues/36769
     if not freq_str[0].isdigit():
