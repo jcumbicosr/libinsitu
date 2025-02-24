@@ -49,7 +49,6 @@ with open("requirements.txt", "r") as f :
                 yield line
 
     requirements = [
-            #str(requirement).replace("==", ">=")
             str(requirement)
             for requirement
             in pkg_resources.parse_requirements(extract_extra_index(f))]
@@ -70,7 +69,7 @@ print("Requirements", requirements)
 
 setup(
     name = name,
-    python_requires='>3.7',
+    python_requires='>=3.9, <3.12',
     author = "OIE - Mines ParisTech",
     author_email = "raphael.jolivet@mines-paristech.fr",
     description = ("This library provides tools to transform solar irradiation data from various networks to uniform NetCDF files. "
@@ -90,7 +89,6 @@ setup(
         'write_to': 'build/lib/libinsitu/_version.py',
         'write_to_template': '__version__ = "{version}"',
     },
-    entry_points={'console_scripts': entry_points}
-)
+    entry_points={'console_scripts': entry_points})
 
 
