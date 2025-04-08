@@ -31,6 +31,3 @@ class NetCDFHandler(GenericHandler) :
 
         return df
 
-    def list_files(self, folder):
-        return list_dataset_urls(folder)
-

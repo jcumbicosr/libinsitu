@@ -33,6 +33,7 @@ class CDLType:
     INT = "int"
     SHORT = "short"
     UINT = "uint"
+    INT64 = "int64"
 
 class NetCDFType :
     CHAR = "c"
@@ -40,6 +41,7 @@ class NetCDFType :
     FLOAT = "f4"
     DOUBLE = "f8"
     INT = "i4"
+    INT64 = "i8"
     SHORT = "i2"
     UINT = "u4"
 
@@ -51,7 +53,8 @@ CDL_TYPES_MAP = {
     CDLType.DOUBLE: NetCDFType.DOUBLE,
     CDLType.INT: NetCDFType.INT,
     CDLType.SHORT: NetCDFType.SHORT,
-    CDLType.UINT: NetCDFType.UINT}
+    CDLType.UINT: NetCDFType.UINT,
+    CDLType.INT64: NetCDFType.INT64}
 
 
 

@@ -8,7 +8,7 @@ from libinsitu.cdl import *
 from libinsitu.common import *
 from libinsitu.common import _prepare_properties
 from libinsitu.handlers import HANDLERS, InSituHandler, listNetworks
-from libinsitu.handlers.GenericCSVHandler import GenericCSVHandler
+from libinsitu.handlers.GenericMappingHandler import GenericMappingHandler
 from libinsitu.handlers.NetCDFHandler import NetCDFHandler
 from libinsitu.log import debug, info, warning, logger, LogContext
 
@@ -70,9 +70,10 @@ def list_files(in_files, handler) :
 
     return in_files
 
-def is_tds(in_files) :
+def is_netcdf(in_files) :
     for file in in_files:
-        if file.startswith("http") :
+        file, ext = os.path.splitext(file)
+        if file.startswith("http") or ext == ".nc" :
             return True
     return False
 
@@ -93,10 +94,11 @@ def process_network(network, station_id, args) :
         if not args.station_metadata :
             raise Exception("Missing file path for custom station metadata")
 
-        if is_tds(args.in_files) :
+        if is_netcdf(args.in_files) :
+            info("Netcdf input file detected")
             handler = NetCDFHandler(properties, args.mapping)
         else:
-            handler = GenericCSVHandler(properties, args.mapping)
+            handler = GenericMappingHandler(properties, args.mapping)
     else:
 
         # Check network
