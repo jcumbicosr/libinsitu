@@ -62,7 +62,7 @@ The source code is available of our {gitref}`gitlab </>`
 maxdepth: 2
 ---
 Introduction <self>
-example-notebook
+notebooks
 api/index
 cli/index
 data
