@@ -119,7 +119,7 @@ variables:
     # Time information
     :time_coverage_start = "{Station_StartDate}T00:00:00" ;  # First data [Dataset Discovery v1.0]
     :time_coverage_end = "{LastData}";  # Last data [Dataset Discovery v1.0]
-    :time_coverage_resolution = "P{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
+    :time_coverage_resolution = "PT{Station_TimeResolution}"; # Resolution in  ISO 8601:2004 duration format [Dataset Discovery v1.0]
     :local_time_zone = "{Station_Timezone}" ;
     :date_created = "{CreationTime}";
     :date_modified = "{UpdateTime}";
