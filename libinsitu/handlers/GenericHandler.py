@@ -161,6 +161,7 @@ class GenericHandler(InSituHandler) :
 
         self.time_mapping = TimeMapping(mapping["time"])
         self.separator = js.get("separator", ",")
+        self.comment = js.get("comment", None)
         self.skip_lines = js.get("skip_lines", None)
 
         if isinstance(self.skip_lines, list) :

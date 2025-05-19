@@ -41,6 +41,9 @@ class GenericMappingHandler(GenericHandler) :
         if self.separator and extension == ".csv":
             args["sep"] = self.separator
 
+        if self.comment :
+            args["comment"] = self.comment
+
         if self.skip_lines is not None:
             args["skiprows"] = self.skip_lines
 

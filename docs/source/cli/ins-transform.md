@@ -39,6 +39,7 @@ It should follow this format :
 ```python
 {
     "separator" : ";",  # [Optional] Separator for CSV files. Default : ","
+    "comment" : "#", # Optional : first letter for comment lines to skip
     "skip_lines": [1, 2, 4], # [Optional ] list of header lines to skip, starting at one. Default : None 
     "mapping" : { # Actual mapping of variables. Keys are destination variables as found in the CDL schema.
         "time" : "timetamp", # Compact format for time mapping, with single column name 
