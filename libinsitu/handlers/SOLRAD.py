@@ -16,6 +16,9 @@ class SOLRADHandler(InSituHandler) :
             "dni" : DIRECT_VAR,
             "dhi" : DIFFUSE_VAR}
 
+        if isinstance(data, tuple) :
+            data, metadat = data
+
         data = map_cols(data, mapping)
 
         return data

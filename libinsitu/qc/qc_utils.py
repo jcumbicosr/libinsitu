@@ -79,13 +79,18 @@ def get_flags() :
     return _FLAGS
 
 
-
 def flagData(meas_df, sp_df):
     """
     :param meas_df: In situ measurements
     :param sp_df: Sun pos / theoretical measurements
     :return: QC flags. -1: no processed. 0: processed and ok. 1: Processed and failed
     """
+
+    # Create nan series if missing
+    for comp in ["GHI", "BNI", "DHI"] :
+        if not comp in meas_df.columns :
+            meas_df[comp] = np.nan
+
 
     # Setup alias as local variables for evualuation of the flags
     GHI = meas_df.GHI
@@ -688,7 +693,7 @@ def visual_qc(
         return graph.plot_individual(graph_id)
 
 
-def update_qc_flags(ncfile, start_time=None, end_time=None) :
+def update_qc_flags(ncfile, start_time=None, end_time=None, update_qc_levels=False) :
 
     """ Compute and update QC flags on NCFile """
 
@@ -702,8 +707,9 @@ def update_qc_flags(ncfile, start_time=None, end_time=None) :
     write_flags(ncfile, flags_df)
 
     # Update QC levels
-    qc_levels = compute_qc_level(flags_df=flags_df, meas_df=meas_df, sp_df=sp_df)
-    write_qc_levels(ncfile, qc_levels)
+    if update_qc_levels :
+        qc_levels = compute_qc_level(flags_df=flags_df, meas_df=meas_df, sp_df=sp_df)
+        write_qc_levels(ncfile, qc_levels)
 
 
 def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None):

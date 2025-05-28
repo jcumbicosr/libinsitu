@@ -46,6 +46,7 @@ class InSituHandler :
         if filename.endswith(".gz") :
             with open(filename, "rb") as f:
                 stream =  TextIOWrapper(GzipFile(fileobj=f), encoding=encoding)
+                filename = filename.replace(".gz", "")
                 return self._read_chunk(stream, entryname=filename)
 
         elif filename.endswith('.zip'):  # check if file is a zipped (.zip) file

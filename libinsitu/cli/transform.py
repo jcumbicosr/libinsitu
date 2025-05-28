@@ -198,7 +198,8 @@ def process_network(network, station_id, args) :
         update_qc_flags(
             ncfile,
             start_time=min_date,
-            end_time=max_date)
+            end_time=max_date,
+            update_qc_levels=args.qc_levels)
 
 
 def idx2slice(idx) :
@@ -519,6 +520,7 @@ def parser() :
         '--strict-resolution', '-sr', default=False, action='store_true',
         help="Skip chunks having a different resulution")
     parser.add_argument('--no-qc', default=False, action='store_true', help="Do not compute QC flags")
+    parser.add_argument('--qc-levels', default=False, action='store_true', help="Also compute qc levels")
     parser.add_argument('--check', '-c', default=False, action='store_true', help="Check potential override of data")
     parser.add_argument(
         '--status-folder', '-f',

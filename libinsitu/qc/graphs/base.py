@@ -840,7 +840,13 @@ class BaseGraphs:
                 FlagLevel.NIGHT:'night',
                 FlagLevel.MISSING:'n/a'})
 
-            grouped.plot.area(color=colors, ax=ax)
+            # pure matplotlib stackplot
+            ax.stackplot(
+                grouped.index,
+                grouped.T.values,
+                labels=grouped.columns,
+                colors=[colors[c] for c in grouped.columns])
+
             ax.set_ylabel('samples/day')
             ax.set_ylim([0, 1440])
 
