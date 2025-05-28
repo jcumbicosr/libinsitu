@@ -9,8 +9,9 @@ from dotenv import load_dotenv
 
 from libinsitu import openNetCDF, getNetworkId, readShortname, info, older_than, update_qc_flags, GraphId
 from libinsitu.common import netcdf_to_dataframe
-from libinsitu.log import set_log_context
+from libinsitu.log import set_log_context, error
 from libinsitu.qc.qc_utils import visual_qc
+import sys
 
 
 def parser() :
@@ -69,6 +70,10 @@ def main() :
     if args.output :
 
         df = netcdf_to_dataframe(ncfile, **params)
+
+        if len(df) == 0:
+            error("Empty data, exiting")
+            sys.exit(1)
 
         visual_qc(
             df,
