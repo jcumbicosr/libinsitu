@@ -60,10 +60,10 @@ def read_mesor(stream, na_values=NA_VALUES):
     data = pd.read_csv(
         stream,
         header=None,
-        delimiter='\t',
+        delimiter='\s+',
         comment='#',
-        parse_dates=[0],
-        index_col=0,
+        parse_dates={'datetime':[0, 1]},
+        index_col='datetime',
         na_values=na_values,
         date_parser=safe_date)
 

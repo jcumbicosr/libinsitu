@@ -159,11 +159,16 @@ def process_network(network, station_id, args) :
 
                 data = handler.read_chunk(in_entry)
 
-                chunk_start, chunk_end = process_chunck(
+                start_end = process_chunck(
                     data, ncfile, properties,
                     check=args.check,
                     strict_resolution=args.strict_resolution,
                     custom_cdl=args.cdl)
+
+                if start_end is None:
+                    continue
+
+                chunk_start, chunk_end = start_end
 
                 # Store extent of update
                 min_date = nmin(chunk_start, min_date)
