@@ -36,7 +36,7 @@ class GenericMappingHandler(GenericHandler) :
 
         args = dict(
             usecols=all_cols,
-            dtype=self._dtypes())
+            low_memory=False)
 
         if self.separator and extension == ".csv":
             args["sep"] = self.separator
@@ -46,6 +46,9 @@ class GenericMappingHandler(GenericHandler) :
 
         if self.skip_lines is not None:
             args["skiprows"] = self.skip_lines
+            
+        if self.encoding is not None:
+            args["encoding"] = self.encoding
 
         # Mapping done by index : no header, overriding it
         headers = self._generate_header()
@@ -58,18 +61,24 @@ class GenericMappingHandler(GenericHandler) :
             df = pd.read_excel(stream, **args, engine='openpyxl')
         elif extension == ".xls":
             df = pd.read_excel(stream, **args, engine="xlrd")
-        elif extension == ".csv":
-            df = pd.read_csv(stream, **args)
-        elif extension == ".tsv":
-            if not "sep" in args:
-                args["sep"] = "\t"
-            df = pd.read_csv(stream, **args)
         else:
-            warning(f"Unkown extension {extension}. Assuming CSV like")
-            df = pd.read_csv(stream, **args)
+            # CSV like
+            args["on_bad_lines"] = "warn"
+
+            if extension == ".csv":
+                df = pd.read_csv(stream, **args)
+            elif extension == ".tsv":
+                if not "sep" in args:
+                    args["sep"] = "\t"
+                df = pd.read_csv(stream, **args)
+            else:
+                warning(f"Unkown extension {extension}. Assuming CSV like")
+                df = pd.read_csv(stream, **args)
 
         # Parse time and remove source columns
         df = self.time_mapping.parse_time(df)
+
+        df = df.apply(lambda x: pd.to_numeric(x, errors="coerce"))
 
         df = self._transform(df)
 

@@ -128,6 +128,8 @@ def process_network(network, station_id, args) :
     min_date = None
     max_date = None
 
+    nb_err = 0
+
     # Loop on input files
     for in_entry in in_files :
 
@@ -195,6 +197,8 @@ def process_network(network, station_id, args) :
                 # Do not fail : just log and process the next file
                 logger.exception(e)
 
+                nb_err += 1
+
     if (not args.no_qc) and (min_date is not None) :
         # We need to wait for everything to be processed before computing QC (instead of computing it chunk by chunk),
         # because some provider split components into several input files (like SKYNET)
@@ -205,6 +209,12 @@ def process_network(network, station_id, args) :
             start_time=min_date,
             end_time=max_date,
             update_qc_levels=args.qc_levels)
+
+    if len(in_files) > 0 and len(in_files) == nb_err :
+        # All files failed => return non zero code
+        sys.exit(1)
+
+
 
 
 def idx2slice(idx) :

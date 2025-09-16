@@ -163,6 +163,7 @@ class GenericHandler(InSituHandler) :
         self.separator = js.get("separator", ",")
         self.comment = js.get("comment", None)
         self.skip_lines = js.get("skip_lines", None)
+        self.encoding = js.get("encoding", None)
 
         if isinstance(self.skip_lines, list) :
             self.skip_lines = [i-1 for i in self.skip_lines]
