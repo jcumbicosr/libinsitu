@@ -170,6 +170,8 @@ class Graphs(BaseGraphs):
         if not graph_id in INDIVIDUAL_PLOTS :
             raise Exception("Graph %s not found. List of valid graphs : %s" % (graph_id, str(list(INDIVIDUAL_PLOTS.keys()))))
 
+        fig = plt.figure(figsize=(10, 6))
+
         graph_method = INDIVIDUAL_PLOTS[graph_id]
 
         # Standalone individual graph ?
@@ -182,6 +184,8 @@ class Graphs(BaseGraphs):
             "ytick.labelsize": font_size-2}) :
 
             graph_method(self)
+        
+        return fig
 
 
     #
