@@ -824,7 +824,7 @@ class BaseGraphs:
         def plot_component(ax, comp, show_x_labels=True):
 
             # Group by value and resample
-            grouped = self.qc_level[comp].groupby(self.qc_level[comp]).resample("%dD" % nb_days, origin=start).count().unstack(level=0) / nb_days
+            grouped = self.qc_level[comp].groupby(self.qc_level[comp]).resample("%dh" % (nb_days * 24), origin=start).count().unstack(level=0) / nb_days
 
             colors = {
                 "night": "grey",
