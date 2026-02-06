@@ -1135,7 +1135,9 @@ def set_date_axis(ax=None, show=True) :
     if ax is None :
         ax = plt.gca()
 
-    ax.xaxis_date()
+    # FIX: Only set xaxis_date if no converter is set (avoids Pandas conflict)
+    if ax.xaxis.converter is None:
+        ax.xaxis_date()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
 
     if show:
