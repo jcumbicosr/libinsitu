@@ -28,12 +28,12 @@ curr_branch = curr_branch.replace(" ", "").replace("*", "")
 
 name = "libinsitu"
 
-if curr_branch not in  ["master", "main"] :
+# if curr_branch not in  ["master", "main"] :
 
-    if curr_branch != "dev" :
-        raise Exception("Only main, master and dev branch supported")
+#     if curr_branch != "dev" :
+#         raise Exception("Only main, master and dev branch supported")
 
-    name += "_dev"
+#     name += "_dev"
 
 
 extra_urls= []
@@ -69,7 +69,7 @@ print("Extra URLs : %s" % extra_urls)
 
 setup(
     name = name,
-    python_requires='>=3.9, <3.12',
+    python_requires='>=3.9',
     author = "OIE - Mines ParisTech",
     author_email = "raphael.jolivet@mines-paristech.fr",
     description = ("This library provides tools to transform solar irradiation data from various networks to uniform NetCDF files. "
