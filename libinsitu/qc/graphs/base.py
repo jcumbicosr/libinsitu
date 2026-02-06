@@ -972,6 +972,7 @@ class BaseGraphs:
         label_font_size = 5 if self.within_main_layout else 7
         cbaxes = inset_axes(
             ax, width="50%", height="3%", loc="upper center",
+            bbox_to_anchor=(0, 0, 1, 1),  # Explicitly anchor to full axes
             bbox_transform=ax.transAxes)
         cbar = plt.colorbar(scat, cax=cbaxes, orientation='horizontal')
         cbar.solids.set(alpha=1)
