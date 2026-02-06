@@ -360,7 +360,7 @@ def cleanup_data(df, freq=None):
             warning("Missing var %s, adding NaNs" % varname)
             df[varname] = np.nan
 
-    freq_s = str(freq) + "S"
+    freq_s = str(freq) + "s"
 
     df = df.resample(freq_s).ffill()
     df = df.asfreq(freq_s)
