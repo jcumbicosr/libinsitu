@@ -424,29 +424,29 @@ class BaseGraphs:
         for limit in limits :
 
             # In main layout, only show limit for flags, and show text with pct
-            if self.within_main_layout :
+            #if self.within_main_layout :
 
-                if limit.flag :
-                    flag_name = limit.flag_name or limit.flag
+            if limit.flag :
+                flag_name = limit.flag_name or limit.flag
 
-                    # Show name of flag and percentage
-                    label = "%s (%.2f %%)" % (flag_name, self.stat_test[limit.flag])
+                # Show name of flag and percentage
+                label = "%s (%.2f %%)" % (flag_name, self.stat_test[limit.flag])
 
-                    plt.text(
-                        limit.text_x,
-                        limit.text_y,
-                        label,
-                        size=TEXT_ANNOTATION_SIZE,
-                        rotation=limit.text_rotation,
-                        horizontalalignment='left',
-                        verticalalignment='bottom',
-                        rotation_mode='anchor')
-                else:
-                    # skip this limit
-                    continue
-
-            if limit.reference is None and not self.within_main_layout :
+                plt.text(
+                    limit.text_x,
+                    limit.text_y,
+                    label,
+                    size=TEXT_ANNOTATION_SIZE,
+                    rotation=limit.text_rotation,
+                    horizontalalignment='left',
+                    verticalalignment='bottom',
+                    rotation_mode='anchor')
+            else:
+                # skip this limit
                 continue
+
+            # if limit.reference is None and not self.within_main_layout :
+            #     continue
 
             color = "black" if self.within_main_layout else limit.color
 
@@ -461,7 +461,10 @@ class BaseGraphs:
 
 
         if not self.within_main_layout :
-            plt.legend(loc=legend_pos, fontsize=LEGEND_FONT_SIZE)
+            # FIX: Check if there are handles/labels before creating a legend
+            handles, labels = plt.gca().get_legend_handles_labels()
+            if labels:
+                plt.legend(loc=legend_pos, fontsize=LEGEND_FONT_SIZE)
 
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
