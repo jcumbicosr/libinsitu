@@ -950,10 +950,10 @@ class BaseGraphs:
 
         ixAnalysis = np.where((self.GHI > 0) & (SolElev > 0))[0]
 
-        dfSunPos = DataFrame({'ixSunPos': ixSunPos[ixAnalysis],
-                                 'SolElev': SolElev[ixAnalysis],
-                                 'SolAzim': SolAzim[ixAnalysis],
-                                 'deltaG_Closure': diff[ixAnalysis],
+        dfSunPos = DataFrame({'ixSunPos': ixSunPos.iloc[ixAnalysis],
+                                 'SolElev': SolElev.iloc[ixAnalysis],
+                                 'SolAzim': SolAzim.iloc[ixAnalysis],
+                                 'deltaG_Closure': diff.iloc[ixAnalysis],
                                  'count': np.ones(ixAnalysis.shape)})
 
         dfSunPosAvg = dfSunPos.groupby(['ixSunPos']).mean()
@@ -1032,9 +1032,9 @@ class BaseGraphs:
 
         # Prevent crash when empty data
         if len(vK) > np.sum(vK.isna()):
-            x = vSAA[idx_sort] * 180 / np.pi
-            y = vSEA[idx_sort] * 180 / np.pi
-            c = vK[idx_sort]
+            x = vSAA.iloc[idx_sort] * 180 / np.pi
+            y = vSEA.iloc[idx_sort] * 180 / np.pi
+            c = vK.iloc[idx_sort]
         else:
             x = []
             y = []
