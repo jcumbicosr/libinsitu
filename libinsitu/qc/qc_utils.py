@@ -94,8 +94,8 @@ def flagData(meas_df, sp_df):
     BNI = meas_df.BNI
     DNI = BNI # Alias
 
-    TOA = sp_df.TOA
-    TOANI = sp_df.TOANI
+    TOA = sp_df.TOA  # horizontal extraterrestrial irradiance
+    TOANI = sp_df.TOANI # normal extraterrestrial irradiance
     THETA_Z = sp_df.THETA_Z
 
     GHI_est = DHI + BNI * np.cos(THETA_Z)
@@ -103,9 +103,9 @@ def flagData(meas_df, sp_df):
 
     size = len(meas_df.GHI)
 
-    Kt = GHI / TOA
-    Kn = BNI / TOANI
-    K = DIF / GHI
+    Kt = GHI / TOA # Global clearness index
+    Kn = BNI / TOANI # Normal clearness index
+    K = DIF / GHI # Diffuse fraction
 
     flag_df = DataFrame(index=meas_df.index)
 
@@ -362,11 +362,27 @@ def cleanup_data(df, freq=None):
 
     freq_s = str(freq) + "s"
 
-    df = df.resample(freq_s).ffill()
+    
+    # df = df.resample(freq_s).ffill()
     df = df.asfreq(freq_s)
 
     start_date = df.index.min().normalize()
-    end_date = df.index.max().normalize() + np.timedelta64(24 * 60 - 1, "m")
+    end_date = df.index.max().normalize() #+ np.timedelta64(24 * 60 - 1, "m")
+
+    # Convert frequency to a Timedelta object
+    freq_delta = pd.to_timedelta(freq_s)
+    # Define the duration of one day
+    one_day = pd.Timedelta("1D")
+    # Calculate the offset for the last valid time
+    # If the day divides evenly by the frequency (e.g., 1H, 15T), subtract one period.
+    if one_day % freq_delta == pd.Timedelta(0):
+        time_offset = one_day - freq_delta
+    else:
+        # If it doesn't divide evenly (e.g., 5H), take the largest multiple that fits.
+        time_offset = (one_day // freq_delta) * freq_delta
+
+    # Apply the offset
+    end_date = end_date + time_offset
 
     df = df.reindex(pd.date_range(start_date, end_date, freq=freq_s))
 
@@ -609,10 +625,10 @@ def visual_qc(
     """
 
     # Resample to the minute to produce graph
-    resolution_sec = 60
+    # resolution_sec = 60
 
     # Clean data
-    df = cleanup_data(df, resolution_sec)
+    df = cleanup_data(df)
 
     # Get meta data from parameters or from attributes attached to the Dataframe
     lat = latitude if latitude else  float(df.attrs[LATITUDE_VAR])

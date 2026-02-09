@@ -21,6 +21,7 @@ from hashlib import md5
 from libinsitu._version import __version__ as libinsitu_version
 from os import path
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from libinsitu.common import get_df_resolution
 
 from libinsitu.log import error
 
@@ -265,15 +266,19 @@ class BaseGraphs:
 
     def plot_heatmap_timeseries(self, label, data, cmax, show_x=True):
 
-        info("plotting heatmap timeseries for %s " % label)
+        info("plotting heatmap timeseries for %s " % label) 
 
         index = data.index
         axe = gca()
 
-        nb_days = np.int64(len(index) / NB_MIN_IN_DAY)
+        # Calculate the samples per day based on the resolution of the data
+        dt_sec = get_df_resolution(data)
+        samples_per_day = int(24 * 3600 / dt_sec)
+
+        nb_days = np.int64(len(index) / samples_per_day)
         values = copy.deepcopy(data.values)
-        M2D = np.reshape(values, (nb_days, NB_MIN_IN_DAY)).T
-        deltaT = int(np.round(self.longitude / 360 * 24 * 60))
+        M2D = np.reshape(values, (nb_days, samples_per_day)).T
+        deltaT = int(np.round(self.longitude / 360 * samples_per_day))
         M2D2 = np.roll(M2D, deltaT, axis=0)
         M2D2[M2D2 < -100] = np.nan
 
@@ -294,7 +299,10 @@ class BaseGraphs:
 
         # Plot sunrise and sunset
         def plot_limit(limit) :
-            h_lt = limit + float(deltaT) / 60
+            # deltaT is in samples. Convert to hours:
+            shift_hours = (deltaT / samples_per_day) * 24
+
+            h_lt = limit + shift_hours
             h_lt[h_lt > 24] = h_lt[h_lt > 24] - 24
             h_lt[h_lt < 0] = h_lt[h_lt < 0] + 24
             axe.plot(mdates.date2num(index), h_lt, 'k--', linewidth=0.75, alpha=0.8)
