@@ -630,6 +630,28 @@ def _data_cols(df) :
     var_attrs = __all_attributes(df)["variables"]
     return [col for col in df.columns if not "flag_meanings" in var_attrs[col]]
 
+def filter_dataframe(df, drop_duplicates=True, skip_na=False, skip_qc=False, qc_varname=None):
+    """
+    Filters the dataframe based on duplication, NA values, and QC flags.
+    """
+    # Drop duplicated : only keep last
+    if drop_duplicates:
+        df = df[~df.index.duplicated(keep="last")]
+
+    # Drop NA ?
+    if skip_na:
+        # Assuming _data_cols is defined in the module scope
+        subset = _data_cols(df)
+        df = df.dropna(axis=0, how='all', subset=subset)
+
+    # Filter based on QC
+    if skip_qc and qc_varname is not None:
+        # Assuming _skip_qc_to_mask is defined in the module scope
+        qc_mask = _skip_qc_to_mask(df, skip_qc)
+        # Use bitwise AND to check if any forbidden flags are set
+        df = df[(df[qc_varname] & qc_mask) == 0]
+
+    return df
 
 def __nc2df(
         ncfile : Union[Dataset, str],
@@ -695,18 +717,14 @@ def __nc2df(
         # Add meta data to attributes of the Dataframe
         df.attrs.update(__all_attributes(ncfile))
 
-        # Drop duplicated : only keep last
-        if drop_duplicates :
-            df = df[~df.index.duplicated(keep="last")]
-
-        # Drop NA ?
-        if skip_na :
-            subset = _data_cols(df)
-            df = df.dropna(axis=0, how='all', subset=subset)
-
-        if skip_qc and qc_varname is not None :
-            qc_mask = _skip_qc_to_mask(df, skip_qc)
-            df = df[(df[qc_varname] & qc_mask) == 0]
+        # Filter dataframe
+        df = filter_dataframe(
+            df, 
+            drop_duplicates=drop_duplicates, 
+            skip_na=skip_na, 
+            skip_qc=skip_qc, 
+            qc_varname=qc_varname
+        )
 
         if expand_qc and qc_varname is not None:
             flags = _expand_qc(df, qc_varname, qc_run_varname)
