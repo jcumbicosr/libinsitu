@@ -722,12 +722,14 @@ def update_qc_flags(ncfile, start_time=None, end_time=None) :
     write_qc_levels(ncfile, qc_levels)
 
 
-def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None):
+def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None, join_flags=False):
     """
     :param meas_df: Dataframe of irradiance
     :param lat: Latitude (or passed in df.attrs)
     :param lon: Longitude (or passed in df.attrs)
     :param alt: Altitude (or passed in df.attrs)
+    :param sp_df: Optional dataframe of sun position and theoretical irradiance. 
+    :param join_flags: If True, adds a QC_FLAGS_VAR column to the output dataframe, which is a bitmask combining all individual flags.
     :return: New dataframe of QC flags. This dataframe may contain additional timestamps to fill complete days.
     """
 
@@ -735,4 +737,48 @@ def compute_qc_flags(meas_df, lat=None, lon=None, alt=None, sp_df=None):
     if sp_df is None:
         sp_df = compute_sun_pos(meas_df, lat=lat, lon=lon, alt=alt)
 
-    return flagData(meas_df, sp_df)
+    flags_df = flagData(meas_df, sp_df)
+    
+    if join_flags:
+        flags_df = join_qc_flags(flags_df)
+
+    return flags_df
+
+def join_qc_flags(flags_df):
+    """
+    Combines individual QC flag columns into a single bitmask Series,
+    replicating the logic of how QC_FLAGS_VAR is written to NetCDF.
+    
+    Args:
+        flags_df (pd.DataFrame): The dataframe returned by compute_qc_flags
+                                 containing values -1 (not run), 0 (pass), 1 (fail).
+                                 
+    Returns:
+        pd.Series: A single column where each integer is the bitwise OR 
+                   of the masks of all failing tests.
+    """
+    # 1. Get the flag definitions (mapping names to bit positions)
+    flags_dict = get_flags()
+    
+    # 2. Create a map of {column_name: bitmask_value}
+    #    QCFlag.mask() returns 2**(bit-1)
+    flag_masks = {name: flag.mask() for name, flag in flags_dict.items()}
+    
+    # 3. Initialize the result Series with zeros
+    combined_series = pd.Series(0, index=flags_df.index, dtype=int)
+    
+    # 4. Iterate over columns that exist in both the dataframe and our definitions
+    valid_cols = [col for col in flags_df.columns if col in flag_masks]
+    
+    for col in valid_cols:
+        mask_val = flag_masks[col]
+        
+        # 5. Identify failures. 
+        #    In write_flags, it uses: write_flags(QC_FLAGS_VAR, flags_df == 1)
+        #    We only want to add the bitmask if the test resulted in 1 (Fail).
+        is_failing = (flags_df[col] == 1).astype(int)
+        
+        # 6. Add the mask value where failures occurred
+        combined_series += is_failing * mask_val
+        
+    return combined_series
