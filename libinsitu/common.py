@@ -648,6 +648,12 @@ def filter_dataframe(df, drop_duplicates=True, skip_na=False, skip_qc=False, qc_
     if skip_qc and qc_varname is not None:
         # Assuming _skip_qc_to_mask is defined in the module scope
         qc_mask = _skip_qc_to_mask(df, skip_qc)
+        # Checks if conversion to uint32 is necessary and performs it safely
+        if (np.dtype(df[qc_varname].dtype) != np.uint32):
+            if np.any(df[qc_varname] < 0):
+                warning("Negative QC flags found. Forcing conversion to uint32 set negative values to 0.")
+                df[qc_varname] = df[qc_varname].clip(lower=0)
+            df[qc_varname] = df[qc_varname].astype(np.uint32)
         # Use bitwise AND to check if any forbidden flags are set
         df = df[(df[qc_varname] & qc_mask) == 0]
 
