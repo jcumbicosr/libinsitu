@@ -2,7 +2,7 @@ import os
 import pkgutil
 import subprocess
 
-import pkg_resources
+# import pkg_resources
 from setuptools import setup, find_packages
 
 curr_path = os.path.dirname(__file__)
@@ -38,21 +38,26 @@ name = "libinsitu"
 
 extra_urls= []
 
-with open("requirements.txt", "r") as f :
+def parse_requirements(filename):
+    """Load requirements from a pip requirements file."""
+    lineiter = (line.strip() for line in open(filename))
+    return [line for line in lineiter if line and not line.startswith("#")]
 
-    def extract_extra_index(strs) :
-        for line in strs :
-            if line.startswith("--extra-index-url") :
-                _, url, rest = line.split(" ")
-                extra_urls.append(url)
-                yield rest
-            else:
-                yield line
-
-    requirements = [
-            str(requirement)
-            for requirement
-            in pkg_resources.parse_requirements(extract_extra_index(f))]
+with open("requirements.txt", "r") as f:
+    # Simplified extraction of extra-index-url
+    # We read the file lines manually instead of using pkg_resources
+    lines = f.readlines()
+    requirements = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith("--extra-index-url"):
+            _, url, rest = line.split(" ", 2)
+            extra_urls.append(url)
+            # If there is a package after the url, add it
+            if rest: 
+                requirements.append(rest)
+        elif line and not line.startswith("#"):
+            requirements.append(line)
 
 
 
