@@ -63,7 +63,7 @@ class TimeMapping(Mapping) :
         time = pd.to_datetime(
             time_str,
             format=self.format,
-            infer_datetime_format=(self.format == None),
+            # infer_datetime_format=(self.format == None),
             errors="coerce")
 
         # Add timzone as suffix

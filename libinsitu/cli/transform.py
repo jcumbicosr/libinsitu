@@ -347,7 +347,7 @@ def process_chunck(data, ncfile, properties, strict_resolution=False, check=Fals
     data = data[~data.index.duplicated(keep="last")]
 
     # Reshape : regular time is faster to write in NetCDF (as slice)
-    data = data.asfreq("%dS" % resolution_s)
+    data = data.asfreq("%ds" % resolution_s)
 
     # Transform time to seconds since start date and time idx
     chunk_dates : NDArray[datetime64] = data.index.values
