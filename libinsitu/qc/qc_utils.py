@@ -370,16 +370,8 @@ def cleanup_data(df, freq=None):
     end_date = df.index.max().normalize() #+ np.timedelta64(24 * 60 - 1, "m")
 
     # Convert frequency to a Timedelta object
-    freq_delta = pd.to_timedelta(freq_s)
-    # Define the duration of one day
-    one_day = pd.Timedelta("1D")
-    # Calculate the offset for the last valid time
-    # If the day divides evenly by the frequency (e.g., 1H, 15T), subtract one period.
-    if one_day % freq_delta == pd.Timedelta(0):
-        time_offset = one_day - freq_delta
-    else:
-        # If it doesn't divide evenly (e.g., 5H), take the largest multiple that fits.
-        time_offset = (one_day // freq_delta) * freq_delta
+    freq_delta = pd.Timedelta(freq_s)
+    time_offset = (samples_per_period(df) - 1) * freq_delta 
 
     # Apply the offset
     end_date = end_date + time_offset
@@ -782,3 +774,92 @@ def join_qc_flags(flags_df):
         combined_series += is_failing * mask_val
         
     return combined_series
+
+def samples_per_period(df: pd.DataFrame, period: str = '1D') -> int:
+    """
+    Calculates the theoretical number of samples expected in a specific period 
+    based on the DataFrame's frequency.
+
+    Args:
+        df: DataFrame with a DatetimeIndex.
+        period: The target duration to count samples for (default '1D' for 1 Day).
+
+    Returns:
+        int: The number of samples expected in that period.
+    """
+    # Infer the frequency of the index
+    freq_alias = get_df_resolution(df)
+    # If the frequency is returned as an integer, assume it's in seconds
+    if isinstance(freq_alias, int):
+        freq_alias = f"{freq_alias}s" 
+
+    freq_delta = pd.Timedelta(freq_alias)
+    total_period = pd.Timedelta(period)
+
+    samples_per_period = int(total_period / freq_delta)
+    return samples_per_period
+
+def _get_strict_daily_mask(df: pd.DataFrame, columns: list, expected_rows: int) -> pd.Series:
+    """
+    Generates a boolean mask for the original DataFrame.
+    True = The row belongs to a 'Strictly Complete' day.
+    False = The row belongs to a day with NaNs OR missing timestamps.
+    """
+    # Grouping Key: Normalize index to Midnight (identifies the day)
+    day_key = df.index.normalize()
+
+    # Check 1: Validity - Check if current row has NaN in specific cols
+    row_is_nan = df[columns].isna().any(axis=1)
+    #    - Broadcast: If ANY row in a day is NaN, the whole day is "Dirty"
+    day_has_nan = row_is_nan.groupby(day_key).transform('any')
+
+    # Check 2: Completeness  - Count rows per day
+    #    - Broadcast: Apply that count to every row in that day
+    day_row_count = df[columns].groupby(day_key).transform('size')
+    
+    # Combine Logic
+    #    Valid if: (No NaNs in day) AND (Row count matches expectation)
+    mask = (~day_has_nan) & (day_row_count == expected_rows)
+    
+    return mask
+
+def count_days(df: pd.DataFrame, columns: list, expected_rows: int=None) -> dict:
+    """
+    Counts strictly complete and incomplete days in the DataFrame.
+    Args:
+        df: Input DataFrame with a DateTimeIndex.
+        columns: List of column names to check for NaNs.
+        expected_rows: Expected number of rows per day. If None, it will be calculated based on the DataFrame's frequency.
+    Returns:
+        Dictionary with counts of complete, incomplete, and total days.
+    """
+    # Get the expected number of rows per day based on the DataFrame's frequency
+    if expected_rows is None:
+        expected_rows = samples_per_period(df)
+    # Get the boolean mask (True for every row in a valid day)
+    mask = _get_strict_daily_mask(df, columns, expected_rows)
+    
+    # We can't just sum the mask (that counts rows, not days).
+    # We must normalize to unique days.
+    # We filter the index using the mask, then count unique days.
+    valid = df.index[mask].normalize().nunique()
+    total = df.index.normalize().nunique()
+    
+    return {
+        "complete": valid,
+        "incomplete": total - valid,
+        "total": total
+    }
+
+def filter_incomplete_days(df: pd.DataFrame, columns: list, expected_rows: int=None) -> pd.DataFrame:
+    """
+    Returns a DataFrame containing ONLY rows from strictly complete days.
+    """
+    # Get the expected number of rows per day based on the DataFrame's frequency
+    if expected_rows is None:
+        expected_rows = samples_per_period(df)
+    # Get the boolean mask
+    mask = _get_strict_daily_mask(df, columns, expected_rows)
+    
+    # Apply mask to filter
+    return df[mask]
