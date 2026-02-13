@@ -13,8 +13,18 @@ class ABOMHandler(InSituHandler) :
             return pd.to_datetime(strs)
 
         data = pd.read_csv(
-            stream, skipinitialspace=True, index_col="datetime",
-            parse_dates=dict(datetime=[2, 3, 4, 5, 6]), date_parser=date_parser)
+            stream, skipinitialspace=True)
+        
+        data.index = date_parser(data.iloc[:, 2].astype(str), 
+                                 data.iloc[:, 3].astype(str), 
+                                 data.iloc[:, 4].astype(str), 
+                                 data.iloc[:, 5].astype(str), 
+                                 data.iloc[:, 6].astype(str)
+                                 )
+        data.index.name = "datetime"
+        # Drop the columns we just used (indices 2, 3, 4, 5, 6)
+        cols_to_drop = data.columns[[2, 3, 4, 5, 6]]
+        data.drop(columns=cols_to_drop, inplace=True)
 
         ghi_col = data.columns[2]
         dir_col = data.columns[7]
