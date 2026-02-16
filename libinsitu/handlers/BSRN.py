@@ -1,7 +1,7 @@
 
 
 import pandas as pd
-from pvlib.iotools import parse_bsrn
+from pvlib.iotools import read_bsrn
 
 from libinsitu.common import GLOBAL_VAR, DIRECT_VAR, DIFFUSE_VAR, TEMP_VAR, HUMIDITY_VAR, PRESSURE_VAR
 from libinsitu.handlers.base_handler import InSituHandler, map_cols, ZERO_DEG_K
@@ -19,7 +19,7 @@ class BSRNHandler(InSituHandler) :
 
     def _read_chunk(self, stream, entryname=None) :
 
-        data, metadata = parse_bsrn(stream)
+        data, metadata = read_bsrn(stream)
 
         data = map_cols(data, MAPPING)
 
