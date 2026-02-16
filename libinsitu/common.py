@@ -686,9 +686,9 @@ def __nc2df(
     size = len(timeVar)
 
     if rel_start_time is not None :
-        start_time = end_date64(ncfile).astype(datetime) + rel_start_time
+        start_time = pd.to_datetime(end_date64(ncfile)).to_pydatetime() + rel_start_time
     if rel_end_time is not None :
-        end_time = start_date64(ncfile).astype(datetime) + rel_end_time
+        end_time = pd.to_datetime(start_date64(ncfile)).to_pydatetime() + rel_end_time
 
     start_idx = max(0, date_to_timeidx(ncfile, start_time)) if start_time else 0
     end_idx = min(date_to_timeidx(ncfile, end_time)+1, size) if end_time else size
