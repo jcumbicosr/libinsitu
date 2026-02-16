@@ -231,7 +231,7 @@ def is_uniform(vector) :
 def get_origin_time(ncfile) -> datetime64 :
     timeVar = getTimeVar(ncfile)
     start_time = num2date(0, timeVar.units, timeVar.calendar)
-    return np.datetime64(start_time)
+    return np.datetime64(start_time, "ns")
 
 def to_int(vals) :
     """Transform single val or array to int """
