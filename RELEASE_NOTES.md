@@ -1,3 +1,9 @@
+1.7
+* Added support for Python 3.12
+* Refactored code to ensure compatibility with pandas 3.0.0
+* Relaxed constraints and improved compatibility with recent library versions
+* Refactored requirements parsing in setup.py
+
 1.6.2 :
 * Added support for *.tsv files. Default to TSV for unknown extensions
 * ins-cat : By default output values of flags
