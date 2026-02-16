@@ -100,7 +100,8 @@ def individual_graph(graph_id) :
 def makeCustomColormap(NWhite=2, ColorGrey=0.8, NGrey=25, cmColor='viridis', NColor=100):
 
     cmpGrey = ColorGrey * np.ones((1, 3))
-    cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
+    # cmpColor = cm.get_cmap(cmColor, 256)(np.linspace(0, 1, NColor + 10))[10:, :]
+    cmpColor = plt.get_cmap(cmColor)(np.linspace(0, 1, NColor + 10))[10:, :]
     M0 = np.hstack((np.ones((NGrey, 1)) @ cmpGrey + (np.expand_dims((np.linspace(0, 1, NGrey)), axis=0).T) @ (
                 cmpColor[0, 0:3] - cmpGrey), np.ones((NGrey, 1))))
     cmWGC = ListedColormap(np.vstack((np.ones((NWhite, 4)), M0, cmpColor)), name='jet_ymsd')
