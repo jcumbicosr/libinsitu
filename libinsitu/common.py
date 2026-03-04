@@ -427,7 +427,7 @@ def get_df_resolution(df) :
         return df.attrs[GLOBAL_TIME_RESOLUTION_ATTR]
 
     # Guess it from data
-    return df.index.to_series().diff().median().total_seconds()
+    return int(df.index.to_series().diff().median().total_seconds())
 
 def netcdf_to_dataframe(
         ncfile : Union[Dataset, str],

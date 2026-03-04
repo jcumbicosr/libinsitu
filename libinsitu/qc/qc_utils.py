@@ -792,6 +792,8 @@ def samples_per_period(df: pd.DataFrame, period: str = '1D') -> int:
     # If the frequency is returned as an integer, assume it's in seconds
     if isinstance(freq_alias, int):
         freq_alias = f"{freq_alias}s" 
+    else:
+        raise
 
     freq_delta = pd.Timedelta(freq_alias)
     total_period = pd.Timedelta(period)
@@ -799,67 +801,101 @@ def samples_per_period(df: pd.DataFrame, period: str = '1D') -> int:
     samples_per_period = int(total_period / freq_delta)
     return samples_per_period
 
-def _get_strict_daily_mask(df: pd.DataFrame, columns: list, expected_rows: int) -> pd.Series:
+def valid_values(df: pd.DataFrame) -> pd.Series:
     """
-    Generates a boolean mask for the original DataFrame.
-    True = The row belongs to a 'Strictly Complete' day.
-    False = The row belongs to a day with NaNs OR missing timestamps.
+    Calculates the total number of valid (non-NaN) measurements per day.
+
+    Args:
+        df: A time-series DataFrame with a DatetimeIndex.
+
+    Returns:
+        pd.Series: A Series where the index is the normalized date (midnight) 
+                   and the values are the total count of valid data points 
+                   across all columns for that day.
     """
-    # Grouping Key: Normalize index to Midnight (identifies the day)
+    # Extract the date to group the data day-by-day
     day_key = df.index.normalize()
 
-    # Check 1: Validity - Check if current row has NaN in specific cols
-    row_is_nan = df[columns].isna().any(axis=1)
-    #    - Broadcast: If ANY row in a day is NaN, the whole day is "Dirty"
-    day_has_nan = row_is_nan.groupby(day_key).transform('any')
+    # Count valid (non-NaN) values per day across all columns
+    # We sum across columns first (axis=1), then group by day and sum
+    daily_valid_counts = df.notna().sum(axis=1).groupby(day_key).sum()
 
-    # Check 2: Completeness  - Count rows per day
-    #    - Broadcast: Apply that count to every row in that day
-    day_row_count = df[columns].groupby(day_key).transform('size')
-    
-    # Combine Logic
-    #    Valid if: (No NaNs in day) AND (Row count matches expectation)
-    mask = (~day_has_nan) & (day_row_count == expected_rows)
-    
-    return mask
+    return daily_valid_counts
 
-def count_days(df: pd.DataFrame, columns: list, expected_rows: int=None) -> dict:
+def count_days(
+        df: pd.DataFrame, 
+        samples_per_day: int = -1
+) -> dict[str, int]:
     """
-    Counts strictly complete and incomplete days in the DataFrame.
+    Categorizes and counts the days based on data completeness.
+
+    A day is considered 'complete' only if it contains the exact theoretical 
+    maximum number of valid data points. It is 'missing' if there are zero 
+    valid points, and 'incomplete' if it falls anywhere in between.
+
     Args:
-        df: Input DataFrame with a DateTimeIndex.
-        columns: List of column names to check for NaNs.
-        expected_rows: Expected number of rows per day. If None, it will be calculated based on the DataFrame's frequency.
+        df: A time-series DataFrame with a DatetimeIndex.
+        samples_per_day: The theoretical expected number of rows per day 
+                         (e.g., 24 for hourly data, 1440 for minutely).
+
     Returns:
-        Dictionary with counts of complete, incomplete, and total days.
+        Dict[str, int]: A dictionary containing counts for 'total_days', 
+                        'complete_days', 'missing_days', and 'incomplete_days'.
     """
-    # Get the expected number of rows per day based on the DataFrame's frequency
-    if expected_rows is None:
-        expected_rows = samples_per_period(df)
-    # Get the boolean mask (True for every row in a valid day)
-    mask = _get_strict_daily_mask(df, columns, expected_rows)
+    if samples_per_day < 0:
+        samples_per_day = samples_per_period(df, period='1D')
+
+    # Absolute theoretical max valid data points per day across all columns
+    expected_total_values = samples_per_day * len(df.columns)
+
+    valid_counts = valid_values(df)
+
+    # Calculate categories
+    total_days = len(valid_counts)
     
-    # We can't just sum the mask (that counts rows, not days).
-    # We must normalize to unique days.
-    # We filter the index using the mask, then count unique days.
-    valid = df.index[mask].normalize().nunique()
-    total = df.index.normalize().nunique()
+    # A day is only complete if it matches the theoretical expected count perfectly
+    complete_days = int((valid_counts == expected_total_values).sum())
     
+    # A day is entirely missing if there are exactly 0 valid measurements
+    missing_days = int((valid_counts == 0).sum())
+    
+    # Everything else falls into incomplete (partial data)
+    incomplete_days = total_days - complete_days - missing_days
+
     return {
-        "complete": valid,
-        "incomplete": total - valid,
-        "total": total
+        "total": total_days,
+        "complete": complete_days,
+        "missing": missing_days,
+        "incomplete": incomplete_days
     }
 
-def filter_incomplete_days(df: pd.DataFrame, columns: list, expected_rows: int=None) -> pd.DataFrame:
+
+def filter_incomplete_days(
+        df: pd.DataFrame,
+        samples_per_day: int = -1
+) -> pd.DataFrame:
     """
-    Returns a DataFrame containing ONLY rows from strictly complete days.
+    Filters the DataFrame to retain only strictly complete days.
+
+    Args:
+        df: A time-series DataFrame with a DatetimeIndex.
+        samples_per_day: The theoretical expected number of rows per day.
+
+    Returns:
+        pd.DataFrame: A filtered DataFrame containing only data from days 
+                      that are 100% complete.
     """
-    # Get the expected number of rows per day based on the DataFrame's frequency
-    if expected_rows is None:
-        expected_rows = samples_per_period(df)
-    # Get the boolean mask
-    mask = _get_strict_daily_mask(df, columns, expected_rows)
+    day_key = df.index.normalize()
+
+    if samples_per_day < 0:
+        samples_per_day = samples_per_period(df, period='1D')
+
+    expected_total_values = samples_per_day * len(df.columns)
+
+    valid_counts = valid_values(df)
+
+    # Extract the dates (the index) of the days that match the expected total
+    complete_dates = valid_counts[valid_counts == expected_total_values].index
     
-    # Apply mask to filter
-    return df[mask]
+    # Keep only the rows whose normalized date is in our list of complete dates
+    return df[day_key.isin(complete_dates)]
