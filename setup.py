@@ -91,7 +91,7 @@ setup(
     setup_requires=['setuptools_scm'],
     install_requires=requirements,
     use_scm_version={
-        'write_to': 'build/lib/libinsitu/_version.py',
+        'write_to': 'libinsitu/_version.py',
         'write_to_template': '__version__ = "{version}"',
     },
     entry_points={'console_scripts': entry_points})
