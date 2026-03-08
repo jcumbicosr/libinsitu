@@ -850,14 +850,21 @@ def count_days(
 
     valid_counts = valid_values(df)
 
+    # A day is only complete if it matches the theoretical expected count perfectly
+    complete_mask = (valid_counts == expected_total_values)
+    # A day is entirely missing if there are exactly 0 valid measurements
+    missing_mask = (valid_counts == 0)
+
+    # Create histogram
+    incomplete_mask = ~(complete_mask | missing_mask)
+    counts_porcentage = valid_counts[incomplete_mask]
+    counts_porcentage = (1. - (counts_porcentage / expected_total_values)) * 100.
+    histogram = counts_porcentage.value_counts(bins=100, sort=False).values
+    
     # Calculate categories
     total_days = len(valid_counts)
-    
-    # A day is only complete if it matches the theoretical expected count perfectly
-    complete_days = int((valid_counts == expected_total_values).sum())
-    
-    # A day is entirely missing if there are exactly 0 valid measurements
-    missing_days = int((valid_counts == 0).sum())
+    complete_days = int(complete_mask.sum())
+    missing_days = int(missing_mask.sum())
     
     # Everything else falls into incomplete (partial data)
     incomplete_days = total_days - complete_days - missing_days
@@ -866,7 +873,8 @@ def count_days(
         "total": total_days,
         "complete": complete_days,
         "missing": missing_days,
-        "incomplete": incomplete_days
+        "incomplete": incomplete_days,
+        "histogram": histogram
     }
 
 
